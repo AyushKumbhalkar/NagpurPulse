@@ -105,7 +105,8 @@ class MessageRepository @Inject constructor(
             val hiddenIds = client.postgrest["conversation_hidden_for_users"].select {
                 filter { eq("user_id", myId) }
             }.decodeList<HiddenConversationRow>().map { it.conversation_id }.toSet()
-            Result.success(rows.filterNot { it.id in hiddenIds || it.lastMessage.isNullOrBlank() }.map { enrichConversation(it, myId) })
+            val visibleRows = rows.filterNot { it.id in hiddenIds || it.lastMessage.isNullOrBlank() }
+            Result.success(enrichConversations(visibleRows, myId))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -361,6 +362,37 @@ class MessageRepository @Inject constructor(
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+    /**
+     * Enrich an inbox page with one profile query instead of one query per conversation.
+     * This keeps inbox loading from scaling to N+1 network requests as chats grow.
+     */
+    private suspend fun enrichConversations(rows: List<Conversation>, myId: String): List<Conversation> {
+        if (rows.isEmpty()) return emptyList()
+
+        val otherIds = rows.map { conv ->
+            if (conv.participantOne == myId) conv.participantTwo else conv.participantOne
+        }.distinct()
+        val profilesById = try {
+            client.postgrest["profiles"].select {
+                filter { isIn("id", otherIds) }
+            }.decodeList<com.nagpurpulse.data.model.Profile>().associateBy { it.id }
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
+        return rows.map { conv ->
+            val otherId = if (conv.participantOne == myId) conv.participantTwo else conv.participantOne
+            val unread = if (conv.participantOne == myId) conv.unreadCountOne else conv.unreadCountTwo
+            val profile = profilesById[otherId]
+            conv.copy(
+                otherUsername = profile?.username,
+                otherAvatarSeed = profile?.username ?: otherId,
+                otherUserId = otherId,
+                myUnreadCount = unread
+            )
+        }
+    }
+
     private suspend fun enrichConversation(conv: Conversation, myId: String): Conversation {
         val otherId = if (conv.participantOne == myId) conv.participantTwo else conv.participantOne
         val unread  = if (conv.participantOne == myId) conv.unreadCountOne else conv.unreadCountTwo
