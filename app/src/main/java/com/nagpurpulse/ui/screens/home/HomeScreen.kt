@@ -59,6 +59,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.PostRepository
+import com.nagpurpulse.data.repository.MessageRepository
 import com.nagpurpulse.data.repository.SavedPostsRepository
 import com.nagpurpulse.ui.components.*
 import com.nagpurpulse.ui.navigation.BottomNavBar
@@ -98,7 +99,8 @@ class HomeViewModel @Inject constructor(
     private val savedPostsRepository: SavedPostsRepository,
     private val weatherRepository: WeatherRepository,
     private val locationHelper: LocationHelper,
-    private val adminRepository: AdminRepository
+    private val adminRepository: AdminRepository,
+    private val messageRepository: MessageRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
@@ -111,6 +113,29 @@ class HomeViewModel @Inject constructor(
         loadWeather()
         loadLocation()
         checkAdminStatus()
+        loadUnreadMessages()
+        subscribeToUnreadMessages()
+    }
+
+    private fun loadUnreadMessages() {
+        viewModelScope.launch {
+            messageRepository.getConversations().onSuccess { conversations ->
+                _uiState.value = _uiState.value.copy(
+                    unreadMsgCount = conversations.sumOf { it.myUnreadCount }
+                )
+            }
+        }
+    }
+
+    private fun subscribeToUnreadMessages() {
+        viewModelScope.launch {
+            messageRepository.subscribeToConversations().collect { updated ->
+                val conversations = messageRepository.getConversations().getOrNull().orEmpty()
+                _uiState.value = _uiState.value.copy(
+                    unreadMsgCount = conversations.sumOf { it.myUnreadCount }
+                )
+            }
+        }
     }
 
     private fun checkAdminStatus() {
@@ -609,24 +634,6 @@ fun HomeScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                            } else {
-                                // Always show badge with count for demo (like image shows "3")
-                                Box(
-                                    modifier = Modifier
-                                        .size(14.dp)
-                                        .clip(CircleShape)
-                                        .background(OrangePrimary)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 3.dp, y = (-3).dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "3",
-                                        color = Color.White,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
                             }
                         }
 
@@ -760,7 +767,7 @@ fun HomeScreen(
                 onCreatePost = onCreatePost,
                 onProfileClick = onProfileClick,
                 hasAlertBadge = false,
-                messageCount = 0
+                messageCount = uiState.unreadMsgCount
             )
         }
     ) { paddingValues ->
