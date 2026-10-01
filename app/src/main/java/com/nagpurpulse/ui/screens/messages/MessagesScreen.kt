@@ -103,6 +103,10 @@ fun MessagesScreen(
     val swipeRefreshState = rememberSwipeRefreshState(uiState.isRefreshing)
     val filtered          = viewModel.filteredConversations()
     val totalUnread       = uiState.conversations.sumOf { it.myUnreadCount }
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
+    }
     var headerVisible     by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
 
@@ -112,6 +116,7 @@ fun MessagesScreen(
 
     Scaffold(
         containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AnimatedVisibility(headerVisible, enter = fadeIn(tween(350)) + slideInVertically { -30 }) {
                 Column(modifier = Modifier.background(Brush.verticalGradient(
