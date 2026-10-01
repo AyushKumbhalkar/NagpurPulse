@@ -421,25 +421,31 @@ fun ConversationRow(
                 Icon(Icons.Filled.MoreVert, contentDescription = "Conversation options", tint = SecondaryText)
             }
         }
-        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, modifier = Modifier.background(SurfaceAlt)) {
-            DropdownMenuItem(
-                text = { Text("Open chat") },
-                leadingIcon = { Icon(Icons.Filled.ChatBubbleOutline, null) },
-                onClick = { showMenu = false; onClick() }
+        if (showMenu) {
+            AlertDialog(
+                onDismissRequest = { showMenu = false },
+                title = { Text("Conversation options") },
+                text = {
+                    Column {
+                        TextButton(onClick = { showMenu = false; onClick() }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.ChatBubbleOutline, null); Spacer(Modifier.width(12.dp)); Text("Open chat")
+                        }
+                        TextButton(onClick = { showMenu = false; onViewProfile() }, enabled = !conv.otherUserId.isNullOrBlank(), modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.Person, null); Spacer(Modifier.width(12.dp)); Text("View profile")
+                        }
+                        TextButton(onClick = { showMenu = false; onCopyConversationId() }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.ContentCopy, null); Spacer(Modifier.width(12.dp)); Text("Copy conversation ID")
+                        }
+                        TextButton(onClick = { showMenu = false; onDeleteForMe() }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.DeleteOutline, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for me", color = RedAlert)
+                        }
+                        TextButton(onClick = { showMenu = false; confirmDeleteBoth = true }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.DeleteForever, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for both", color = RedAlert)
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showMenu = false }) { Text("Close") } }
             )
-            DropdownMenuItem(
-                text = { Text("View profile") },
-                leadingIcon = { Icon(Icons.Filled.Person, null) },
-                enabled = !conv.otherUserId.isNullOrBlank(),
-                onClick = { showMenu = false; onViewProfile() }
-            )
-            DropdownMenuItem(
-                text = { Text("Copy conversation ID") },
-                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
-                onClick = { showMenu = false; onCopyConversationId() }
-            )
-            DropdownMenuItem(text = { Text("Delete for me", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteOutline, null) }, onClick = { showMenu = false; onDeleteForMe() })
-            DropdownMenuItem(text = { Text("Delete for both", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteForever, null) }, onClick = { showMenu = false; confirmDeleteBoth = true })
         }
     }
     HorizontalDivider(color = Divider.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 80.dp))
