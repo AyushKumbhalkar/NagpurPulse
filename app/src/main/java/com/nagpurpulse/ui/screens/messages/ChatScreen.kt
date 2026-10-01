@@ -102,6 +102,7 @@ class ChatViewModel @Inject constructor(
                         otherUsername = conv?.otherUsername ?: "Chat",
                         otherAvatarSeed = conv?.otherAvatarSeed ?: "anon",
                         otherUserId = conv?.otherUserId ?: "",
+                        isOtherOnline = (conv?.otherUserId ?: "") in presenceRepository.onlineUserIds.value,
                         isLoading = false
                     )
                     messageRepository.markConversationRead(conversationId)
