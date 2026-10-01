@@ -932,8 +932,8 @@ fun ThreadDetailScreen(
                                 .padding(horizontal = DensityManager.cardPadding.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Upvote
@@ -993,7 +993,7 @@ fun ThreadDetailScreen(
                                     .padding(horizontal = 12.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Filled.MailOutline, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Filled.ChatBubbleOutline, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(5.dp))
                                 AnimatedContent(
                                     uiState.comments.size,
@@ -1033,6 +1033,9 @@ fun ThreadDetailScreen(
                                 }
                             }
 
+                            /*
+                            // View count hidden from the thread UI for now.
+                            // Keep this code commented out so it can be restored later if needed.
                             if (post.viewCount > 0) {
                                 Text(
                                     "${formatCount(post.viewCount)} views",
@@ -1040,6 +1043,7 @@ fun ThreadDetailScreen(
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
+                            */
                         }
 
                         Spacer(Modifier.height(16.dp))
