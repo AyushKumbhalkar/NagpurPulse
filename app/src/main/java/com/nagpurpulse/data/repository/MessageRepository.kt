@@ -59,8 +59,27 @@ class MessageRepository @Inject constructor(
                 }
             }.decodeList<Conversation>().firstOrNull()
 
-            if (existing != null) {
-                return Result.success(enrichConversation(existing, myId))
+            // A hidden conversation must not be reused for this user.
+            val hiddenIds = client.postgrest["conversation_hidden_for_users"].select {
+                filter { eq("user_id", myId) }
+            }.decodeList<HiddenConversationRow>().map { it.conversation_id }.toSet()
+            val visibleExisting = client.postgrest["conversations"].select {
+                filter {
+                    or {
+                        and {
+                            eq("participant_one", myId)
+                            eq("participant_two", otherUserId)
+                        }
+                        and {
+                            eq("participant_one", otherUserId)
+                            eq("participant_two", myId)
+                        }
+                    }
+                }
+            }.decodeList<Conversation>().firstOrNull { it.id !in hiddenIds }
+
+            if (visibleExisting != null) {
+                return Result.success(enrichConversation(visibleExisting, myId))
             }
 
             // Create new
@@ -212,9 +231,10 @@ class MessageRepository @Inject constructor(
     }
 
     suspend fun deleteConversationForBoth(conversationId: String): Result<Unit> = try {
-        client.postgrest["messages"].delete { filter { eq("conversation_id", conversationId) } }
-        client.postgrest["conversation_hidden_for_users"].delete { filter { eq("conversation_id", conversationId) } }
-        client.postgrest["conversations"].delete { filter { eq("id", conversationId) } }
+        client.postgrest.rpc(
+            "delete_conversation_for_both",
+            buildJsonObject { put("p_conversation_id", conversationId) }
+        )
         Result.success(Unit)
     } catch (e: Exception) { Result.failure(e) }
 
@@ -227,7 +247,10 @@ class MessageRepository @Inject constructor(
     }
 
     suspend fun deleteMessageForBoth(messageId: String): Result<Unit> = try {
-        client.postgrest["messages"].update(buildJsonObject { put("content", "This message was deleted") }) { filter { eq("id", messageId) } }
+        client.postgrest.rpc(
+            "delete_message_for_both",
+            buildJsonObject { put("p_message_id", messageId) }
+        )
         Result.success(Unit)
     } catch (e: Exception) { Result.failure(e) }
 
