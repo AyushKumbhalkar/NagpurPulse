@@ -7,6 +7,7 @@ import com.nagpurpulse.ui.navigation.BottomNavBar
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -180,20 +181,29 @@ fun MessagesScreen(
                                 "unread" -> uiState.conversations.count { it.myUnreadCount > 0 }
                                 else     -> 0
                             }
-                            Tab(selected = sel, onClick = { viewModel.setFilter(filter) }, text = {
-                                Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(22.dp))
-                                        .background(if (sel) OrangePrimary else SurfaceAlt)
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = filter.replaceFirstChar{it.uppercase()} + if (count > 0) "  $count" else "",
-                                        color = if (sel) Color.White else SecondaryText,
-                                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                }
-                            })
+                            val pillColor by animateColorAsState(
+                                targetValue = if (sel) OrangePrimary else SurfaceAlt,
+                                animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                                label = "message_filter_pill"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(pillColor)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                    ) { viewModel.setFilter(filter) }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = filter.replaceFirstChar { it.uppercase() } + if (count > 0) "  $count" else "",
+                                    color = if (sel) Color.White else SecondaryText,
+                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
