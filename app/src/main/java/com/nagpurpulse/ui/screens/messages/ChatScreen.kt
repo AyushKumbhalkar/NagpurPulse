@@ -238,6 +238,9 @@ fun ChatScreen(
         uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
     }
     var showChatMenu by remember { mutableStateOf(false) }
+    var editingMessage by remember { mutableStateOf<Message?>(null) }
+    var editText by remember { mutableStateOf("") }
+    var deletingMessage by remember { mutableStateOf<Message?>(null) }
     val reversedMessages = remember(uiState.messages) { uiState.messages.asReversed() }
     LaunchedEffect(uiState.messages.size) {
 
@@ -261,6 +264,24 @@ fun ChatScreen(
         label = "send_bg"
     )
 
+    if (editingMessage != null) {
+        AlertDialog(
+            onDismissRequest = { editingMessage = null },
+            title = { Text("Edit message") },
+            text = { OutlinedTextField(value = editText, onValueChange = { editText = it }, modifier = Modifier.fillMaxWidth(), maxLines = 5) },
+            confirmButton = { TextButton(onClick = { editingMessage?.let { viewModel.editMessage(it.id, editText) }; editingMessage = null }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { editingMessage = null }) { Text("Cancel") } }
+        )
+    }
+    if (deletingMessage != null) {
+        AlertDialog(
+            onDismissRequest = { deletingMessage = null },
+            title = { Text("Delete message for both?") },
+            text = { Text("This replaces the message content for both participants.") },
+            confirmButton = { TextButton(onClick = { deletingMessage?.let { viewModel.deleteMessageForBoth(it.id) }; deletingMessage = null }) { Text("Delete for both", color = RedAlert) } },
+            dismissButton = { TextButton(onClick = { deletingMessage = null }) { Text("Cancel") } }
+        )
+    }
     Scaffold(
         containerColor = Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -455,7 +476,9 @@ fun ChatScreen(
                 MessageBubble(
                     msg      = msg,
                     isMe     = isMe,
-                    onDelete = { if (isMe) viewModel.deleteMessage(msg.id) },
+                    onEdit = { if (isMe) { editingMessage = msg; editText = msg.content } },
+                    onDeleteForMe = { viewModel.deleteMessageForMe(msg.id) },
+                    onDeleteForBoth = { if (isMe) deletingMessage = msg },
                     onCopy = { text ->
                         clipboardManager.setText(AnnotatedString(text))
                         screenScope.launch { snackbarHostState.showSnackbar("Message copied") }
@@ -471,7 +494,9 @@ fun ChatScreen(
 private fun MessageBubble(
     msg: Message,
     isMe: Boolean,
-    onDelete: () -> Unit,
+    onEdit: () -> Unit,
+    onDeleteForMe: () -> Unit,
+    onDeleteForBoth: () -> Unit,
     onCopy: (String) -> Unit
 ) {
     var showOptions by remember { mutableStateOf(false) }
@@ -534,10 +559,11 @@ private fun MessageBubble(
                 modifier          = Modifier.background(SurfaceAlt)
             ) {
                 if (isMe) {
-                    DropdownMenuItem(
-                        text    = { Text("Delete message", color = RedAlert) },
-                        onClick = { showOptions = false; onDelete() }
-                    )
+                    DropdownMenuItem(text = { Text("Edit message") }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { showOptions = false; onEdit() })
+                }
+                DropdownMenuItem(text = { Text("Delete for me", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteOutline, null) }, onClick = { showOptions = false; onDeleteForMe() })
+                if (isMe) {
+                    DropdownMenuItem(text = { Text("Delete for both", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteForever, null) }, onClick = { showOptions = false; onDeleteForBoth() })
                 }
                 DropdownMenuItem(
                     text    = { Text("Copy", color = PrimaryText) },
