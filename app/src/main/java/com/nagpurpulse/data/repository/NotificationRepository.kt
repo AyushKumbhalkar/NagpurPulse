@@ -177,7 +177,6 @@ class NotificationRepository @Inject constructor(
                 "notif_upvotes"  -> prefs.notifUpvotes
                 "notif_mentions" -> prefs.notifMentions
                 "notif_messages" -> prefs.notifMessages
-                "notif_messages" -> prefs.notifMessages
                 else             -> true
             }
         } catch (_: Exception) { true }
