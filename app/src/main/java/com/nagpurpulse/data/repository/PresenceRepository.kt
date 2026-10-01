@@ -79,19 +79,25 @@ class PresenceRepository @Inject constructor(
         }
     }
 
+    @Synchronized
     fun stop() {
+        // Reset lifecycle state immediately. onStart() can happen very quickly
+        // when the user returns from Android Recents; if we wait until the
+        // asynchronous channel cleanup finishes, start() may see the old job
+        // as active and skip reconnecting presence.
         val activeChannel = channel
         channel = null
+
+        channelJob?.cancel()
+        channelJob = null
+        _onlineUserIds.value = emptySet()
+
         scope.launch {
             try {
                 activeChannel?.untrack()
                 activeChannel?.let { client.realtime.removeChannel(it) }
             } catch (e: Exception) {
                 Log.w("NP_PRESENCE", "Presence disconnect failed", e)
-            } finally {
-                _onlineUserIds.value = emptySet()
-                channelJob?.cancel()
-                channelJob = null
             }
         }
     }
