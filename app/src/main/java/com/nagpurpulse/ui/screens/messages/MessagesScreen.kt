@@ -62,7 +62,7 @@ class MessagesViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MessagesUiState())
     val uiState: StateFlow<MessagesUiState> = _uiState
 
-    init { load(); subscribeRealtime() }
+    init { presenceRepository.start(); load(); subscribeRealtime() }
 
     fun load(refresh: Boolean = false) {
         viewModelScope.launch {
