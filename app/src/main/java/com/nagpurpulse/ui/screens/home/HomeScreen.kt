@@ -60,6 +60,7 @@ import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.MessageRepository
+import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.data.repository.SavedPostsRepository
 import com.nagpurpulse.ui.components.*
 import com.nagpurpulse.ui.navigation.BottomNavBar
@@ -100,7 +101,8 @@ class HomeViewModel @Inject constructor(
     private val weatherRepository: WeatherRepository,
     private val locationHelper: LocationHelper,
     private val adminRepository: AdminRepository,
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val presenceRepository: PresenceRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
@@ -115,6 +117,7 @@ class HomeViewModel @Inject constructor(
         checkAdminStatus()
         loadUnreadMessages()
         subscribeToUnreadMessages()
+        startPresenceWhenAuthenticated()
     }
 
     private fun loadUnreadMessages() {
@@ -129,11 +132,28 @@ class HomeViewModel @Inject constructor(
 
     private fun subscribeToUnreadMessages() {
         viewModelScope.launch {
-            messageRepository.subscribeToConversations().collect { updated ->
-                val conversations = messageRepository.getConversations().getOrNull().orEmpty()
-                _uiState.value = _uiState.value.copy(
-                    unreadMsgCount = conversations.sumOf { it.myUnreadCount }
-                )
+            messageRepository.subscribeToConversations().collect {
+                loadUnreadMessages()
+            }
+        }
+        // Realtime is the fast path; periodic refresh recovers missed events and
+        // keeps the Home badge consistent across devices.
+        viewModelScope.launch {
+            while (true) {
+                delay(15_000)
+                loadUnreadMessages()
+            }
+        }
+    }
+
+    private fun startPresenceWhenAuthenticated() {
+        viewModelScope.launch {
+            repeat(30) {
+                if (authRepository.currentUserId != null) {
+                    presenceRepository.start()
+                    return@launch
+                }
+                delay(1_000)
             }
         }
     }
