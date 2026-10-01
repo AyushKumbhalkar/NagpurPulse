@@ -39,6 +39,7 @@ import androidx.lifecycle.viewModelScope
 import com.nagpurpulse.data.model.Message
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.MessageRepository
+import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.components.shimmerEffect
 import com.nagpurpulse.ui.theme.*
@@ -56,13 +57,15 @@ data class ChatUiState(
     val otherUserId: String = "",
     val isLoading: Boolean = true,
     val isSending: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isOtherOnline: Boolean = false
 )
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val authRepository: AuthRepository,
+    private val presenceRepository: PresenceRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     val conversationId: String = savedStateHandle["conversationId"] ?: ""
@@ -71,7 +74,18 @@ class ChatViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState
 
-    init { loadMessages(); subscribeRealtime() }
+    init {
+        presenceRepository.start()
+        viewModelScope.launch {
+            presenceRepository.onlineUserIds.collect { ids ->
+                _uiState.value = _uiState.value.copy(
+                    isOtherOnline = _uiState.value.otherUserId in ids
+                )
+            }
+        }
+        loadMessages()
+        subscribeRealtime()
+    }
 
     private fun loadMessages() {
         viewModelScope.launch {
@@ -265,7 +279,7 @@ fun ChatScreen(
                     uiState.otherUserId.takeIf { it.isNotBlank() }?.let(onOtherProfileClick)
                 })) {
                     Text(uiState.otherUsername, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("View profile", color = SecondaryText, fontSize = 11.sp)
+                    Text(if (uiState.isOtherOnline) "Online" else "View profile", color = if (uiState.isOtherOnline) Color(0xFF22C55E) else SecondaryText, fontSize = 11.sp)
                 }
 
                 Box {
