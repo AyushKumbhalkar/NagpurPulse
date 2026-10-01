@@ -227,7 +227,7 @@ fun PostCard(
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
-                            maxLines = 3,
+                            maxLines = if (maxWidth < 340.dp) 3 else 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
