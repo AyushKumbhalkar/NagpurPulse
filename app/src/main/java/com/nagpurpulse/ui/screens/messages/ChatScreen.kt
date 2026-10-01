@@ -129,35 +129,22 @@ class ChatViewModel @Inject constructor(
         if (content.isBlank() || _uiState.value.isSending) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSending = true, error = null)
-            // Optimistic insert
-            val optimistic = Message(
-                id             = java.util.UUID.randomUUID().toString(),
-                conversationId = conversationId,
-                senderId       = myUserId,
-                content        = content,
-                createdAt      = java.time.Instant.now().toString()
-            )
-            _uiState.value = _uiState.value.copy(
-                messages = _uiState.value.messages + optimistic
-            )
-            // Real send
+            // Use the server-confirmed message as the single source of truth.
+            // Optimistic + Realtime + request-response inserts made the same
+            // message appear to animate twice on slower connections.
             messageRepository.sendMessage(conversationId, content).fold(
                 onSuccess = { real ->
-                    // Realtime may deliver the server message before this request
-                    // returns. Remove the optimistic row and deduplicate by server ID.
-                    val updated = _uiState.value.messages
-                        .filterNot { it.id == optimistic.id }
-                        .toMutableList()
-                    if (updated.none { it.id == real.id }) updated.add(real)
+                    val updated = _uiState.value.messages.toMutableList()
+                    val existingIndex = updated.indexOfFirst { it.id == real.id }
+                    if (existingIndex >= 0) updated[existingIndex] = real
+                    else updated.add(real)
                     _uiState.value = _uiState.value.copy(
                         messages = updated,
                         isSending = false
                     )
                 },
                 onFailure = { e ->
-                    // Remove optimistic on failure
                     _uiState.value = _uiState.value.copy(
-                        messages = _uiState.value.messages.filter { it.id != optimistic.id },
                         isSending = false,
                         error = e.message
                     )
@@ -465,13 +452,13 @@ private fun MessageBubble(
 
     // Entrance animation
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(30); visible = true }
+    LaunchedEffect(Unit) { visible = true }
 
     AnimatedVisibility(
         visible = visible,
-        enter   = fadeIn(tween(160)) + slideInHorizontally(
-            initialOffsetX = { if (isMe) 18 else -18 },
-            animationSpec  = tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+        enter   = fadeIn(tween(120)) + androidx.compose.animation.scaleIn(
+            initialScale = 0.98f,
+            animationSpec = tween(120, easing = androidx.compose.animation.core.FastOutSlowInEasing)
         )
     ) {
         Column(
