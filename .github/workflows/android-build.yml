@@ -1,0 +1,28 @@
+name: Android build
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, feature/messages-chat-polish]
+
+permissions:
+  contents: read
+
+jobs:
+  assemble-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+      - name: Assemble debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
