@@ -590,7 +590,6 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f, fill = false)
                         )
 
-                        Spacer(Modifier.weight(1f))
 
                         // Search
                         HeaderIcon(Icons.Filled.Search, badge = 0, size = headerIconSize) {
@@ -625,7 +624,7 @@ fun HomeScreen(
                             )
                         }
 
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(headerIconSpacing))
 
                         // Notifications — with badge + pulse
                         Box(
@@ -665,7 +664,7 @@ fun HomeScreen(
                             }
                         }
 
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(headerIconSpacing))
 
                         // Messages button
                         Box(
@@ -730,7 +729,10 @@ fun HomeScreen(
                             Text(
                                 text = " ${uiState.currentArea}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
@@ -975,7 +977,7 @@ private fun HeaderIcon(
             .pressScale(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(if (size < 36.dp) 18.dp else 20.dp))
         if (badge > 0) {
             Box(
                 modifier = Modifier
