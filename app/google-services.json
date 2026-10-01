@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "249353068594",
+    "project_id": "nagpurpulse-a7a82",
+    "storage_bucket": "nagpurpulse-a7a82.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249353068594:android:49f29a380aff6109969c2b",
+        "android_client_info": {
+          "package_name": "com.nagpurpulse"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "249353068594-p97cgjkv5c3dkpuqkqvtvd4ld04fc3be.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nagpurpulse",
+            "certificate_hash": "200472b29080ccd621c353ee7c1976177b4e4589"
+          }
+        },
+        {
+          "client_id": "249353068594-l3mpp7e89ah3d0bu08pihs4r16cm23r7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIVVgUg7kZDT-bULXQdi4gCrUvyx4gfOo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249353068594-0tpbik5v3pl7470gt2ppbqdjq1d7ih12.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

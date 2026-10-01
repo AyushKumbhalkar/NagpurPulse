@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Default theme (required by Manifest) -->
+    <style
+        name="Theme.NagpurPulse"
+        parent="Theme.NagpurPulse.Light" />
+
+    <!-- Light Theme -->
+    <style
+        name="Theme.NagpurPulse.Light"
+        parent="Theme.Material3.Light">
+
+        <item name="android:windowBackground">@android:color/white</item>
+
+        <item name="android:statusBarColor">@android:color/transparent</item>
+
+        <item name="android:navigationBarColor">@android:color/white</item>
+
+        <item name="android:windowLightStatusBar">true</item>
+
+        <item name="android:windowLightNavigationBar">true</item>
+
+    </style>
+
+    <!-- Dark Theme -->
+    <style
+        name="Theme.NagpurPulse.Dark"
+        parent="Theme.Material3.Dark">
+
+        <item name="android:windowBackground">@color/background_dark</item>
+
+        <item name="android:statusBarColor">@android:color/transparent</item>
+
+        <item name="android:navigationBarColor">@color/background_dark</item>
+
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:windowLightNavigationBar">false</item>
+
+    </style>
+
+</resources>

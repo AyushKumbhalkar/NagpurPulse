@@ -1,0 +1,181 @@
+//java/com/nagpurpulse/ui/screens/splash/SplashScreen.kt
+package com.nagpurpulse.ui.screens.splash
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.nagpurpulse.ui.theme.*
+import kotlinx.coroutines.delay
+
+@Composable
+fun SplashScreen(onFinished: () -> Unit) {
+    var logoVisible by remember { mutableStateOf(false) }
+    var textVisible by remember { mutableStateOf(false) }
+    var tagVisible  by remember { mutableStateOf(false) }
+    var exitAnim    by remember { mutableStateOf(false) }
+
+    val t = rememberInfiniteTransition(label = "splash")
+    val glowAlpha by t.animateFloat(0.3f, 0.9f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
+    val ringRotation by t.animateFloat(0f, 360f, infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart), label = "orbit")
+    val floatY by t.animateFloat(0f, -10f, infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "float")
+
+    val logoScale by animateFloatAsState(if (logoVisible) 1f else 0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow), label = "logo_scale")
+    val exitAlpha by animateFloatAsState(if (exitAnim) 0f else 1f, tween(500, easing = FastOutSlowInEasing), label = "exit_alpha")
+
+    LaunchedEffect(Unit) {
+        delay(100); logoVisible = true
+        delay(300); textVisible = true
+        delay(200); tagVisible  = true
+        delay(1200); exitAnim   = true
+        delay(550); onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(500.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            OrangePrimary.copy(
+                                alpha = if (LocalIsDarkTheme.current)
+                                    glowAlpha * 0.07f
+                                else
+                                    glowAlpha * 0.12f
+                            ),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier.graphicsLayer { alpha = exitAlpha },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Logo
+            Box(modifier = Modifier.size(140.dp).offset(y = floatY.dp).scale(logoScale), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(136.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    OrangePrimary.copy(
+                                        alpha = if (LocalIsDarkTheme.current)
+                                            glowAlpha * 0.12f
+                                        else
+                                            glowAlpha * 0.18f
+                                    ),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                Box(modifier = Modifier.size(110.dp).graphicsLayer { rotationZ = ringRotation }.border(
+                    1.5.dp,
+                    Brush.sweepGradient(
+                        listOf(
+                            Color.Transparent,
+                            OrangePrimary.copy(
+                                alpha = if (LocalIsDarkTheme.current)
+                                    glowAlpha * 0.6f
+                                else
+                                    glowAlpha * 0.85f
+                            ),
+                            OrangePrimary.copy(
+                                alpha = if (LocalIsDarkTheme.current)
+                                    glowAlpha
+                                else
+                                    1f
+                            ),
+                            OrangePrimary.copy(
+                                alpha = if (LocalIsDarkTheme.current)
+                                    glowAlpha * 0.6f
+                                else
+                                    glowAlpha * 0.85f
+                            ),
+                            Color.Transparent
+                        )
+                    ),
+                    CircleShape
+                ))
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                if (LocalIsDarkTheme.current) {
+                                    listOf(
+                                        Color(0xFF1A0D00),
+                                        Color(0xFF0A0600)
+                                    )
+                                } else {
+                                    listOf(
+                                        OrangePrimary.copy(alpha = 0.12f),
+                                        OrangePrimary.copy(alpha = 0.05f)
+                                    )
+                                }
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            OrangePrimary.copy(alpha = 0.6f),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("∿", color = OrangePrimary, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            AnimatedVisibility(textVisible, enter = fadeIn(tween(500)) + slideInVertically { 30 }) {
+                Text(buildAnnotatedString {
+                    withStyle(SpanStyle(color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 36.sp)) { append("Nagpur ") }
+                    withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.Black, fontSize = 36.sp)) { append("Pulse") }
+                })
+            }
+            Spacer(Modifier.height(10.dp))
+            AnimatedVisibility(tagVisible, enter = fadeIn(tween(500)) + slideInVertically { 20 }) {
+                Text("Your city. Your community. Your pulse.", color = SecondaryText, fontSize = 14.sp)
+            }
+            Spacer(Modifier.height(60.dp))
+            AnimatedVisibility(tagVisible, enter = fadeIn(tween(400, 300))) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    repeat(3) { i ->
+                        val dotAlpha by t.animateFloat(0.2f, 1f, infiniteRepeatable(tween(600, delayMillis = i * 200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "dot_$i")
+                        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(OrangePrimary.copy(dotAlpha)))
+                    }
+                }
+            }
+        }
+    }
+}
