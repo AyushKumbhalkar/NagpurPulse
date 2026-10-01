@@ -10,6 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -113,11 +117,28 @@ fun MessagesScreen(
         uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
     }
     var headerVisible     by remember { mutableStateOf(false) }
+    var showSafetyDialog by remember { mutableStateOf(false) }
+    val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
 
     // Only show filters backed by working data. Pinned chats and message
     // requests are not persisted/implemented yet, so don't expose dead tabs.
     val filterLabels = listOf("all", "unread")
+
+    if (showSafetyDialog) {
+        AlertDialog(
+            onDismissRequest = { showSafetyDialog = false },
+            icon = { Icon(Icons.Filled.Shield, contentDescription = null, tint = GreenSuccess) },
+            title = { Text("Private by design") },
+            text = {
+                Text("You're in a space designed for private conversations. Your chats are intended for you and the person you're messaging. Still, never share passwords, OTPs, financial details, or anything you wouldn't want the other person to save or screenshot.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showSafetyDialog = false }) { Text("Got it") }
+            },
+            containerColor = Surface
+        )
+    }
 
     Scaffold(
         containerColor = Background,
@@ -167,7 +188,7 @@ fun MessagesScreen(
                             "Start a chat from a profile",
                             GreenSuccess,
                             Modifier.weight(1f)
-                        ) { navController.navigate(Screen.UserSearch.route) }
+                        ) { showSafetyDialog = true }
                     }
 
                     // Filter tabs
@@ -237,7 +258,19 @@ fun MessagesScreen(
                 else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
                     itemsIndexed(filtered) { i, conv ->
                         StaggeredItem(i) {
-                            ConversationRow(conv = conv, isOnline = conv.otherUserId in onlineUserIds, onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) })
+                            ConversationRow(
+                                conv = conv,
+                                isOnline = conv.otherUserId in onlineUserIds,
+                                onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) },
+                                onViewProfile = {
+                                    conv.otherUserId?.takeIf { it.isNotBlank() }?.let {
+                                        navController.navigate(Screen.UserProfile.createRoute(it))
+                                    }
+                                },
+                                onCopyConversationId = {
+                                    clipboardManager.setText(AnnotatedString(conv.id))
+                                }
+                            )
                         }
                     }
                 }
@@ -301,63 +334,87 @@ private fun ActionCard(
 }
 
 @Composable
-fun ConversationRow(conv: Conversation, isOnline: Boolean = false, onClick: () -> Unit) {
-    val seed        = conv.otherAvatarSeed ?: conv.otherUserId ?: "anon"
+fun ConversationRow(
+    conv: Conversation,
+    isOnline: Boolean = false,
+    onClick: () -> Unit,
+    onViewProfile: () -> Unit = {},
+    onCopyConversationId: () -> Unit = {}
+) {
+    val seed = conv.otherAvatarSeed ?: conv.otherUserId ?: "anon"
     val displayName = conv.otherUsername ?: "Incognito"
-    val hasUnread   = conv.myUnreadCount > 0
+    val hasUnread = conv.myUnreadCount > 0
     val avatarColor = incognitoColor(seed)
+    var showMenu by remember(conv.id) { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier.fillMaxWidth()
-            .background(if (hasUnread) OrangePrimary.copy(0.03f) else Color.Transparent)
-            .pressScale(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(contentAlignment = Alignment.BottomEnd) {
-            Box(
-                modifier = Modifier.size(52.dp).clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(avatarColor.copy(0.5f), avatarColor.copy(0.2f))))
-                    .border(1.5.dp, avatarColor.copy(0.5f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) { Text(incognitoEmoji(seed), fontSize = 22.sp) }
-            if (isOnline) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .background(if (hasUnread) OrangePrimary.copy(0.03f) else Color.Transparent)
+                .pointerInput(conv.id) {
+                    detectTapGestures(onTap = { onClick() }, onLongPress = { showMenu = true })
+                }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(contentAlignment = Alignment.BottomEnd) {
                 Box(
-                    Modifier.size(13.dp).clip(CircleShape)
-                        .background(Color(0xFF22C55E))
-                        .border(2.dp, Background, CircleShape)
-                )
-            }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(displayName, color = PrimaryText, fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (conv.isPinned) Icon(Icons.Filled.PushPin, null, tint = OrangePrimary, modifier = Modifier.size(13.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(formatConvTime(conv.lastMessageAt), color = TertiaryText, style = MaterialTheme.typography.bodySmall)
-            }
-            Spacer(Modifier.height(3.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(conv.lastMessage ?: "", color = if (hasUnread) SecondaryText else TertiaryText,
-                    style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
-                if (hasUnread) {
-                    Box(Modifier.size(22.dp).clip(CircleShape).background(OrangePrimary), contentAlignment = Alignment.Center) {
-                        Text(if (conv.myUnreadCount > 99) "99+" else "${conv.myUnreadCount}", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                    }
-                } else if (conv.isMuted) {
-                    Icon(Icons.Filled.NotificationsOff, null, tint = TertiaryText, modifier = Modifier.size(14.dp))
+                    modifier = Modifier.size(52.dp).clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(avatarColor.copy(0.5f), avatarColor.copy(0.2f))))
+                        .border(1.5.dp, avatarColor.copy(0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) { Text(incognitoEmoji(seed), fontSize = 22.sp) }
+                if (isOnline) {
+                    Box(Modifier.size(13.dp).clip(CircleShape).background(Color(0xFF22C55E)).border(2.dp, Background, CircleShape))
                 }
             }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(displayName, color = PrimaryText, fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (conv.isPinned) Icon(Icons.Filled.PushPin, null, tint = OrangePrimary, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(formatConvTime(conv.lastMessageAt), color = TertiaryText, style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(conv.lastMessage ?: "", color = if (hasUnread) SecondaryText else TertiaryText,
+                        style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    if (hasUnread) {
+                        Box(Modifier.size(22.dp).clip(CircleShape).background(OrangePrimary), contentAlignment = Alignment.Center) {
+                            Text(if (conv.myUnreadCount > 99) "99+" else "${conv.myUnreadCount}", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
+                    } else if (conv.isMuted) {
+                        Icon(Icons.Filled.NotificationsOff, null, tint = TertiaryText, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "Conversation options", tint = SecondaryText)
+            }
+        }
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, modifier = Modifier.background(SurfaceAlt)) {
+            DropdownMenuItem(
+                text = { Text("Open chat") },
+                leadingIcon = { Icon(Icons.Filled.ChatBubbleOutline, null) },
+                onClick = { showMenu = false; onClick() }
+            )
+            DropdownMenuItem(
+                text = { Text("View profile") },
+                leadingIcon = { Icon(Icons.Filled.Person, null) },
+                enabled = !conv.otherUserId.isNullOrBlank(),
+                onClick = { showMenu = false; onViewProfile() }
+            )
+            DropdownMenuItem(
+                text = { Text("Copy conversation ID") },
+                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
+                onClick = { showMenu = false; onCopyConversationId() }
+            )
         }
     }
-    HorizontalDivider(
-        color = Divider.copy(alpha = 0.5f),
-        thickness = 0.5.dp,
-        modifier = Modifier.padding(start = 80.dp)
-    )
+    HorizontalDivider(color = Divider.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 80.dp))
 }
 
 @Composable
