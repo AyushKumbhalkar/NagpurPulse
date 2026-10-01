@@ -35,6 +35,7 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.nagpurpulse.data.model.Conversation
 import com.nagpurpulse.data.repository.MessageRepository
+import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.ui.components.*
 import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.theme.*
@@ -54,8 +55,10 @@ data class MessagesUiState(
 
 @HiltViewModel
 class MessagesViewModel @Inject constructor(
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val presenceRepository: PresenceRepository
 ) : ViewModel() {
+    val onlineUserIds: StateFlow<Set<String>> = presenceRepository.onlineUserIds
     private val _uiState = MutableStateFlow(MessagesUiState())
     val uiState: StateFlow<MessagesUiState> = _uiState
 
@@ -101,6 +104,7 @@ fun MessagesScreen(
     viewModel: MessagesViewModel = hiltViewModel()
 ) {
     val uiState           = viewModel.uiState.collectAsState().value
+    val onlineUserIds     = viewModel.onlineUserIds.collectAsState().value
     val swipeRefreshState = rememberSwipeRefreshState(uiState.isRefreshing)
     val filtered          = viewModel.filteredConversations()
     val totalUnread       = uiState.conversations.sumOf { it.myUnreadCount }
@@ -233,7 +237,7 @@ fun MessagesScreen(
                 else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
                     itemsIndexed(filtered) { i, conv ->
                         StaggeredItem(i) {
-                            ConversationRow(conv = conv, onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) })
+                            ConversationRow(conv = conv, isOnline = conv.otherUserId in onlineUserIds, onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) })
                         }
                     }
                 }
@@ -297,7 +301,7 @@ private fun ActionCard(
 }
 
 @Composable
-fun ConversationRow(conv: Conversation, onClick: () -> Unit) {
+fun ConversationRow(conv: Conversation, isOnline: Boolean = false, onClick: () -> Unit) {
     val seed        = conv.otherAvatarSeed ?: conv.otherUserId ?: "anon"
     val displayName = conv.otherUsername ?: "Incognito"
     val hasUnread   = conv.myUnreadCount > 0
@@ -317,7 +321,13 @@ fun ConversationRow(conv: Conversation, onClick: () -> Unit) {
                     .border(1.5.dp, avatarColor.copy(0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) { Text(incognitoEmoji(seed), fontSize = 22.sp) }
-
+            if (isOnline) {
+                Box(
+                    Modifier.size(13.dp).clip(CircleShape)
+                        .background(Color(0xFF22C55E))
+                        .border(2.dp, Background, CircleShape)
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
