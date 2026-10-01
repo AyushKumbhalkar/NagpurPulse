@@ -552,22 +552,32 @@ private fun MessageBubble(
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
             )
 
-            // Options dropdown (long-press)
-            DropdownMenu(
-                expanded          = showOptions,
-                onDismissRequest  = { showOptions = false },
-                modifier          = Modifier.background(SurfaceAlt)
-            ) {
-                if (isMe) {
-                    DropdownMenuItem(text = { Text("Edit message") }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { showOptions = false; onEdit() })
-                }
-                DropdownMenuItem(text = { Text("Delete for me", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteOutline, null) }, onClick = { showOptions = false; onDeleteForMe() })
-                if (isMe) {
-                    DropdownMenuItem(text = { Text("Delete for both", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteForever, null) }, onClick = { showOptions = false; onDeleteForBoth() })
-                }
-                DropdownMenuItem(
-                    text    = { Text("Copy", color = PrimaryText) },
-                    onClick = { showOptions = false; onCopy(msg.content) }
+            // Keep message actions in a predictable centered popup.
+            if (showOptions) {
+                AlertDialog(
+                    onDismissRequest = { showOptions = false },
+                    title = { Text("Message options") },
+                    text = {
+                        Column {
+                            if (isMe) {
+                                TextButton(onClick = { showOptions = false; onEdit() }, modifier = Modifier.fillMaxWidth()) {
+                                    Icon(Icons.Filled.Edit, null); Spacer(Modifier.width(12.dp)); Text("Edit message")
+                                }
+                            }
+                            TextButton(onClick = { showOptions = false; onDeleteForMe() }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Filled.DeleteOutline, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for me", color = RedAlert)
+                            }
+                            if (isMe) {
+                                TextButton(onClick = { showOptions = false; onDeleteForBoth() }, modifier = Modifier.fillMaxWidth()) {
+                                    Icon(Icons.Filled.DeleteForever, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for both", color = RedAlert)
+                                }
+                            }
+                            TextButton(onClick = { showOptions = false; onCopy(msg.content) }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Filled.ContentCopy, null); Spacer(Modifier.width(12.dp)); Text("Copy")
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { showOptions = false }) { Text("Close") } }
                 )
             }
         }
