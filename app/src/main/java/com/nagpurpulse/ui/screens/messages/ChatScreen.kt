@@ -190,17 +190,30 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun deleteMessage(messageId: String) {
+    fun deleteMessageForMe(messageId: String) {
         viewModelScope.launch {
-            messageRepository.deleteMessage(messageId).fold(
-                onSuccess = {
-                    _uiState.value = _uiState.value.copy(
-                        messages = _uiState.value.messages.filter { it.id != messageId }
-                    )
-                },
-                onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(error = e.message)
-                }
+            messageRepository.deleteMessageForMe(messageId).fold(
+                onSuccess = { _uiState.value = _uiState.value.copy(messages = _uiState.value.messages.filterNot { it.id == messageId }) },
+                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+            )
+        }
+    }
+
+    fun deleteMessageForBoth(messageId: String) {
+        viewModelScope.launch {
+            messageRepository.deleteMessageForBoth(messageId).fold(
+                onSuccess = { _uiState.value = _uiState.value.copy(messages = _uiState.value.messages.map { if (it.id == messageId) it.copy(content = "This message was deleted") else it }) },
+                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+            )
+        }
+    }
+
+    fun editMessage(messageId: String, content: String) {
+        if (content.isBlank()) return
+        viewModelScope.launch {
+            messageRepository.editMessage(messageId, content.trim()).fold(
+                onSuccess = { _uiState.value = _uiState.value.copy(messages = _uiState.value.messages.map { if (it.id == messageId) it.copy(content = content.trim()) else it }) },
+                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
             )
         }
     }
