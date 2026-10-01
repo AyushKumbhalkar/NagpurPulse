@@ -446,7 +446,8 @@ fun ConversationRow(
                     }
                 }
             }
-        }, thickness = 0.5.dp, modifier = Modifier.padding(start = 80.dp))
+        }
+    }
 }
 
 @Composable
