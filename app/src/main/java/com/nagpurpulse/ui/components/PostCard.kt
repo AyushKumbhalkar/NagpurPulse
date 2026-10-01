@@ -214,7 +214,8 @@ fun PostCard(
                 // matter what shape the source photo is, so rows scan fast
                 // and stay perfectly aligned.
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val thumbnailSize = if (maxWidth < 340.dp) 64.dp else 76.dp
+                    val isNarrowScreen = maxWidth < 340.dp
+                    val thumbnailSize = if (isNarrowScreen) 64.dp else 76.dp
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -227,7 +228,7 @@ fun PostCard(
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
-                            maxLines = if (maxWidth < 340.dp) 3 else 2,
+                            maxLines = if (isNarrowScreen) 3 else 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
