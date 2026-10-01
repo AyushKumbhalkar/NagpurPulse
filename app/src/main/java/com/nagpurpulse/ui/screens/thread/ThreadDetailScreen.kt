@@ -966,25 +966,6 @@ fun ThreadDetailScreen(
                                 }
                             }
 
-                            // Downvote
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .pressScale {
-
-                                        if (uiState.voteLoaded) {
-                                            viewModel.vote("down")
-                                        }
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 7.dp)
-                            ) {
-                                Icon(Icons.Filled.KeyboardArrowDown, null, tint = if (uiState.voteLoaded && uiState.userVote == "down")
-                                    BlueInfo
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                            }
-
                             // Comments count
                             Row(
                                 modifier = Modifier
