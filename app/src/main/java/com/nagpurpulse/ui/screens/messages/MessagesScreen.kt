@@ -104,7 +104,9 @@ class MessagesViewModel @Inject constructor(
         viewModelScope.launch {
             messageRepository.subscribeToConversations().collect { updatedConv ->
                 val current = _uiState.value.conversations.toMutableList()
-                if (updatedConv.lastMessage == "__NAGPURPULSE_CONVERSATION_DELETED__") {
+                if (updatedConv.lastMessage == "__NAGPURPULSE_CONVERSATION_DELETED__" || updatedConv.lastMessage.isNullOrBlank()) {
+                    // A conversation row is created when opening a chat, but it
+                    // should not appear in either inbox until a message exists.
                     current.removeAll { it.id == updatedConv.id }
                 } else {
                     val idx = current.indexOfFirst { it.id == updatedConv.id }
