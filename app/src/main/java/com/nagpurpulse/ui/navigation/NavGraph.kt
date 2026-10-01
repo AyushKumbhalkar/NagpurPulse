@@ -566,7 +566,10 @@ fun NagpurPulseNavGraph(
         ) { back ->
             ChatScreen(
                 conversationId = back.arguments?.getString("conversationId") ?: "",
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOtherProfileClick = { userId ->
+                    navController.navigate(Screen.UserProfile.createRoute(userId))
+                }
             )
         }
 
