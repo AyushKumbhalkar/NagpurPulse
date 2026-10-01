@@ -113,7 +113,13 @@ object AppModule {
     fun provideMessageRepository(
         client: SupabaseClient,
         authRepository: AuthRepository,
-        profileRepository: ProfileRepository
-    ): MessageRepository = MessageRepository(client, authRepository, profileRepository)
+        profileRepository: ProfileRepository,
+        notificationRepository: NotificationRepository
+    ): MessageRepository = MessageRepository(
+        client,
+        authRepository,
+        profileRepository,
+        notificationRepository
+    )
 
 }
