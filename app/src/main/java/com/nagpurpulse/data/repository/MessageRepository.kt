@@ -20,6 +20,8 @@ import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.Serializable
@@ -303,7 +305,7 @@ class MessageRepository @Inject constructor(
             table = "conversations"
         }.map { action ->
             // Internal marker lets the inbox remove a deleted conversation immediately.
-            action.decodeRecord<Conversation>().copy(lastMessage = "__NAGPURPULSE_CONVERSATION_DELETED__")
+            Json.decodeFromJsonElement<Conversation>(action.oldRecord).copy(lastMessage = "__NAGPURPULSE_CONVERSATION_DELETED__")
         }
 
         // Register all event flows before subscribing, including deletions, so
