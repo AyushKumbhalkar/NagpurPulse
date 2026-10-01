@@ -128,12 +128,20 @@ fun AdminQueueContent(
                         item      = item,
                         isLoading = item.id in loadingIds,
                         onView = {
-                            navController.navigate(
-                                Screen.Thread.createRoute(
-                                    postId = if (item.type == "post") item.targetId else item.postId,
-                                    commentId = if (item.type == "comment") item.commentId else null
+                            val postId = if (item.type == "post") item.targetId else item.postId
+                            if (postId.isBlank()) {
+                                Log.w(
+                                    "ADMIN_MODERATION",
+                                    "Cannot open reported item: missing postId (type=${item.type}, itemId=${item.id}, targetId=${item.targetId})"
                                 )
-                            )
+                            } else {
+                                navController.navigate(
+                                    Screen.Thread.createRoute(
+                                        postId = postId,
+                                        commentId = if (item.type == "comment") item.commentId else null
+                                    )
+                                )
+                            }
                         },
                         onDelete  = { showDeleteId = item.id; pendingItem = item },
                         onIgnore  = { viewModel.dismissReport(item) },
