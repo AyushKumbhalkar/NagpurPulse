@@ -53,6 +53,7 @@ data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val otherUsername: String = "Chat",
     val otherAvatarSeed: String = "anon",
+    val otherUserId: String = "",
     val isLoading: Boolean = true,
     val isSending: Boolean = false,
     val error: String? = null
@@ -82,6 +83,7 @@ class ChatViewModel @Inject constructor(
                         messages       = msgs,
                         otherUsername  = conv?.otherUsername ?: "Chat",
                         otherAvatarSeed = conv?.otherAvatarSeed ?: "anon",
+                        otherUserId = conv?.otherUserId ?: "",
                         isLoading      = false
                     )
                     messageRepository.markConversationRead(conversationId)
@@ -204,6 +206,7 @@ class ChatViewModel @Inject constructor(
 fun ChatScreen(
     conversationId: String,
     onBack: () -> Unit,
+    onOtherProfileClick: (String) -> Unit,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState      = viewModel.uiState.collectAsState().value
@@ -271,13 +274,11 @@ fun ChatScreen(
 
                 Spacer(Modifier.width(10.dp))
 
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).pressScale(onClick = {
+                    uiState.otherUserId.takeIf { it.isNotBlank() }?.let(onOtherProfileClick)
+                })) {
                     Text(uiState.otherUsername, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(6.dp).clip(CircleShape).background(GreenSuccess))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Private conversation", color = SecondaryText, fontSize = 11.sp)
-                    }
+                    Text("View profile", color = SecondaryText, fontSize = 11.sp)
                 }
 
                 Box {
@@ -289,11 +290,21 @@ fun ChatScreen(
                         onDismissRequest = { showChatMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Refresh messages") },
-                            leadingIcon = { Icon(Icons.Filled.Refresh, null) },
+                            text = { Text("View profile") },
+                            leadingIcon = { Icon(Icons.Filled.Person, null) },
+                            enabled = uiState.otherUserId.isNotBlank(),
                             onClick = {
                                 showChatMenu = false
-                                viewModel.refreshMessages()
+                                uiState.otherUserId.takeIf { it.isNotBlank() }?.let(onOtherProfileClick)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Copy conversation ID") },
+                            leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
+                            onClick = {
+                                showChatMenu = false
+                                clipboardManager.setText(AnnotatedString(conversationId))
+                                screenScope.launch { snackbarHostState.showSnackbar("Conversation ID copied") }
                             }
                         )
                     }
@@ -458,9 +469,9 @@ private fun MessageBubble(
 
     AnimatedVisibility(
         visible = visible,
-        enter   = fadeIn(tween(200)) + slideInHorizontally(
-            initialOffsetX = { if (isMe) it / 3 else -it / 3 },
-            animationSpec  = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
+        enter   = fadeIn(tween(160)) + slideInHorizontally(
+            initialOffsetX = { if (isMe) 18 else -18 },
+            animationSpec  = tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
         )
     ) {
         Column(
