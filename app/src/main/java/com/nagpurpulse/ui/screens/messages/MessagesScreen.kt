@@ -106,8 +106,12 @@ class MessagesViewModel @Inject constructor(
         viewModelScope.launch {
             messageRepository.subscribeToConversations().collect { updatedConv ->
                 val current = _uiState.value.conversations.toMutableList()
-                val idx = current.indexOfFirst { it.id == updatedConv.id }
-                if (idx >= 0) current[idx] = updatedConv else current.add(0, updatedConv)
+                if (updatedConv.lastMessage == "__NAGPURPULSE_CONVERSATION_DELETED__") {
+                    current.removeAll { it.id == updatedConv.id }
+                } else {
+                    val idx = current.indexOfFirst { it.id == updatedConv.id }
+                    if (idx >= 0) current[idx] = updatedConv else current.add(0, updatedConv)
+                }
                 _uiState.value = _uiState.value.copy(conversations = current.sortedByDescending { it.lastMessageAt })
             }
         }
