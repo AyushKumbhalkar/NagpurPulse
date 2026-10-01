@@ -12,8 +12,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -140,7 +138,6 @@ fun MessagesScreen(
     }
     var headerVisible     by remember { mutableStateOf(false) }
     var showSafetyDialog by remember { mutableStateOf(false) }
-    val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
 
     // Only show filters backed by working data. Pinned chats and message
@@ -289,9 +286,6 @@ fun MessagesScreen(
                                         navController.navigate(Screen.UserProfile.createRoute(it))
                                     }
                                 },
-                                onCopyConversationId = {
-                                    clipboardManager.setText(AnnotatedString(conv.id))
-                                },
                                 onDeleteForMe = { viewModel.deleteConversationForMe(conv.id) },
                                 onDeleteForBoth = { viewModel.deleteConversationForBoth(conv.id) }
                             )
@@ -363,7 +357,6 @@ fun ConversationRow(
     isOnline: Boolean = false,
     onClick: () -> Unit,
     onViewProfile: () -> Unit = {},
-    onCopyConversationId: () -> Unit = {},
     onDeleteForMe: () -> Unit = {},
     onDeleteForBoth: () -> Unit = {}
 ) {
@@ -426,33 +419,57 @@ fun ConversationRow(
             }
         }
         if (showMenu) {
-            AlertDialog(
-                onDismissRequest = { showMenu = false },
-                title = { Text("Conversation options") },
-                text = {
-                    Column {
-                        TextButton(onClick = { showMenu = false; onClick() }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.ChatBubbleOutline, null); Spacer(Modifier.width(12.dp)); Text("Open chat")
-                        }
-                        TextButton(onClick = { showMenu = false; onViewProfile() }, enabled = !conv.otherUserId.isNullOrBlank(), modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.Person, null); Spacer(Modifier.width(12.dp)); Text("View profile")
-                        }
-                        TextButton(onClick = { showMenu = false; onCopyConversationId() }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.ContentCopy, null); Spacer(Modifier.width(12.dp)); Text("Copy conversation ID")
-                        }
-                        TextButton(onClick = { showMenu = false; onDeleteForMe() }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.DeleteOutline, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for me", color = RedAlert)
-                        }
-                        TextButton(onClick = { showMenu = false; confirmDeleteBoth = true }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.DeleteForever, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for both", color = RedAlert)
-                        }
+            Dialog(onDismissRequest = { showMenu = false }) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 12.dp
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
+                        Text(
+                            text = "Conversation options",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryText,
+                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
+                        )
+                        ConversationOption(icon = Icons.Filled.ChatBubbleOutline, label = "Open chat", onClick = { showMenu = false; onClick() })
+                        ConversationOption(icon = Icons.Filled.Person, label = "View profile", enabled = !conv.otherUserId.isNullOrBlank(), onClick = { showMenu = false; onViewProfile() })
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Divider.copy(alpha = 0.65f))
+                        ConversationOption(icon = Icons.Filled.DeleteOutline, label = "Delete for me", destructive = true, onClick = { showMenu = false; onDeleteForMe() })
+                        ConversationOption(icon = Icons.Filled.DeleteForever, label = "Delete for both", destructive = true, onClick = { showMenu = false; confirmDeleteBoth = true })
+                        TextButton(onClick = { showMenu = false }, modifier = Modifier.align(Alignment.End).padding(top = 4.dp)) { Text("Cancel") }
                     }
-                },
-                confirmButton = { TextButton(onClick = { showMenu = false }) { Text("Close") } }
-            )
-        }
+                }
+            }
+        }, thickness = 0.5.dp, modifier = Modifier.padding(start = 80.dp))
+}
+
+@Composable
+private fun ConversationOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean = true,
+    destructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    val contentColor = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        destructive -> RedAlert
+        else -> PrimaryText
     }
-    HorizontalDivider(color = Divider.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 80.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(21.dp))
+        Spacer(Modifier.width(14.dp))
+        Text(text = label, color = contentColor, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+    }
 }
 
 @Composable
