@@ -19,6 +19,7 @@ import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -229,14 +230,17 @@ class MessageRepository @Inject constructor(
     fun subscribeToConversations(): Flow<Conversation> = flow {
         val myId = authRepository.currentUserId ?: return@flow
         val channel = client.realtime.channel("conversations_$myId")
-        val changes = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
+        val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
             table = "conversations"
-        }
+        }.map { it.decodeRecord<Conversation>() }
+        val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
+            table = "conversations"
+        }.map { it.decodeRecord<Conversation>() }
 
-        // Creating a change flow alone does not start delivery; subscribe before collecting.
+        // Register both event flows before subscribing, so newly created chats
+        // and message/unread updates can refresh the inbox in real time.
         channel.subscribe(blockUntilSubscribed = true)
-        changes.collect { action ->
-            val conv = action.decodeRecord<Conversation>()
+        merge(inserts, updates).collect { conv ->
             emit(enrichConversation(conv, myId))
         }
     }
