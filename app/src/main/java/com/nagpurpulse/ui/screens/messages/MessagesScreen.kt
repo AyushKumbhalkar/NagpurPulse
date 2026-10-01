@@ -89,8 +89,6 @@ class MessagesViewModel @Inject constructor(
 
     fun filteredConversations(): List<Conversation> = when (_uiState.value.activeFilter) {
         "unread"   -> _uiState.value.conversations.filter { it.myUnreadCount > 0 }
-        "pinned"   -> _uiState.value.conversations.filter { it.isPinned }
-        "requests" -> emptyList()
         else       -> _uiState.value.conversations
     }
 }
@@ -108,7 +106,9 @@ fun MessagesScreen(
     var headerVisible     by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
 
-    val filterLabels = listOf("all", "unread", "pinned", "requests")
+    // Only show filters backed by working data. Pinned chats and message
+    // requests are not persisted/implemented yet, so don't expose dead tabs.
+    val filterLabels = listOf("all", "unread")
 
     Scaffold(
         containerColor = Background,
@@ -130,11 +130,13 @@ fun MessagesScreen(
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(Modifier.weight(1f))
-                        TopBarIcon(Icons.Filled.Search)    { navController.navigate(Screen.UserSearch.route) }
+                        TopBarIcon(Icons.Filled.Search, "Search people") {
+                            navController.navigate(Screen.UserSearch.route)
+                        }
                         Spacer(Modifier.width(8.dp))
-                        TopBarIcon(Icons.Filled.Tune)      { }
-                        Spacer(Modifier.width(8.dp))
-                        TopBarIcon(Icons.Filled.MoreVert)  { }
+                        TopBarIcon(Icons.Filled.AddComment, "New message") {
+                            navController.navigate(Screen.UserSearch.route)
+                        }
                     }
                     Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 14.dp))
@@ -150,20 +152,12 @@ fun MessagesScreen(
                         ) { navController.navigate(Screen.UserSearch.route) }
 
                         ActionCard(
-                            Icons.Filled.VisibilityOff,
-                            "Random Chat",
-                            "Chat with someone new",
-                            PurpleNight,
-                            Modifier.weight(1f)
-                        ) { }
-
-                        ActionCard(
                             Icons.Filled.Shield,
-                            "Safe & Private",
-                            "No names. 100% private",
+                            "Private by design",
+                            "Start a chat from a profile",
                             GreenSuccess,
                             Modifier.weight(1f)
-                        ) { }
+                        ) { navController.navigate(Screen.UserSearch.route) }
                     }
 
                     // Filter tabs
@@ -179,7 +173,6 @@ fun MessagesScreen(
                             val count = when(filter) {
                                 "all"    -> uiState.conversations.size
                                 "unread" -> uiState.conversations.count { it.myUnreadCount > 0 }
-                                "pinned" -> uiState.conversations.count { it.isPinned }
                                 else     -> 0
                             }
                             Tab(selected = sel, onClick = { viewModel.setFilter(filter) }, text = {
@@ -237,6 +230,7 @@ fun MessagesScreen(
 @Composable
 private fun TopBarIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
     onClick: () -> Unit
 ) {
     Box(
@@ -249,7 +243,7 @@ private fun TopBarIcon(
     ) {
         Icon(
             icon,
-            contentDescription = null,
+            contentDescription = contentDescription,
             tint = SecondaryText,
             modifier = Modifier.size(20.dp)
         )
