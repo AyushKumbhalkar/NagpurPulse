@@ -307,7 +307,7 @@ fun ConversationRow(conv: Conversation, onClick: () -> Unit) {
                     .border(1.5.dp, avatarColor.copy(0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) { Text(incognitoEmoji(seed), fontSize = 22.sp) }
-            Box(Modifier.size(12.dp).clip(CircleShape).background(GreenSuccess).border(2.dp, Background, CircleShape))
+
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
