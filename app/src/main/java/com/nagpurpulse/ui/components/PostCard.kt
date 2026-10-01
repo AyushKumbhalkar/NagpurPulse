@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -211,36 +213,38 @@ fun PostCard(
                 // "Compact" list style — every thumbnail is the same size no
                 // matter what shape the source photo is, so rows scan fast
                 // and stay perfectly aligned.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        text = post.title,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        lineHeight = 20.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    if (hasImage) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(post.imageUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(76.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val thumbnailSize = if (maxWidth < 340.dp) 64.dp else 76.dp
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = post.title,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
+
+                        if (hasImage) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(post.imageUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(thumbnailSize)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                     }
                 }
 
@@ -315,9 +319,13 @@ fun PostCard(
                     color = OrangePrimary,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable {
-                        if (!post.isAnonymous) onUserClick(post.userId)
-                    }
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clickable {
+                            if (!post.isAnonymous) onUserClick(post.userId)
+                        }
                 )
 
                 if (post.isVerified) {
@@ -345,7 +353,10 @@ fun PostCard(
                     Text(
                         text = post.areaTag,
                         color = TextTertiary,
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 104.dp)
                     )
                 }
 
@@ -366,11 +377,22 @@ fun PostCard(
 
 
             // ── Row 4: action bar ─────────────────────────────────────────
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
             ) {
+                val useScrollableActions = maxWidth < 320.dp
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (useScrollableActions) Modifier.horizontalScroll(rememberScrollState())
+                            else Modifier
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                 // Upvote
                 Row(
                     modifier = Modifier
@@ -444,7 +466,11 @@ fun PostCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.titleSmall)
                 }
 
-                Spacer(Modifier.weight(1f))
+                if (useScrollableActions) {
+                    Spacer(Modifier.width(8.dp))
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
 
                 // Save
                 Box(
@@ -482,6 +508,7 @@ fun PostCard(
                 }
 
 
+                }
             }
         }
     }
