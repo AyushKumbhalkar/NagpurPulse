@@ -104,7 +104,7 @@ class MessageRepository @Inject constructor(
             val hiddenIds = client.postgrest["conversation_hidden_for_users"].select {
                 filter { eq("user_id", myId) }
             }.decodeList<HiddenConversationRow>().map { it.conversation_id }.toSet()
-            Result.success(rows.filterNot { it.id in hiddenIds }.map { enrichConversation(it, myId) })
+            Result.success(rows.filterNot { it.id in hiddenIds || it.lastMessage.isNullOrBlank() }.map { enrichConversation(it, myId) })
         } catch (e: Exception) {
             Result.failure(e)
         }
