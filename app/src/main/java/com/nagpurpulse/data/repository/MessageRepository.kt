@@ -43,22 +43,7 @@ class MessageRepository @Inject constructor(
         val myId = authRepository.currentUserId
             ?: return Result.failure(Exception("Not logged in"))
         return try {
-            // Check both orderings (p1,p2) and (p2,p1)
-            val existing = client.postgrest["conversations"].select {
-                filter {
-                    or {
-                        and {
-                            eq("participant_one", myId)
-                            eq("participant_two", otherUserId)
-                        }
-                        and {
-                            eq("participant_one", otherUserId)
-                            eq("participant_two", myId)
-                        }
-                    }
-                }
-            }.decodeList<Conversation>().firstOrNull()
-
+            // Check both orderings and skip conversations hidden by this user.
             // A hidden conversation must not be reused for this user.
             val hiddenIds = client.postgrest["conversation_hidden_for_users"].select {
                 filter { eq("user_id", myId) }
