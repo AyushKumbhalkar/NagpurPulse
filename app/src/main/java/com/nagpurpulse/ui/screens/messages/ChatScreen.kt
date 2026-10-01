@@ -345,10 +345,7 @@ fun ChatScreen(
                                 viewModel.sendMessage(messageText)
                                 messageText = ""
 
-                                kotlinx.coroutines.CoroutineScope(
-                                    kotlinx.coroutines.Dispatchers.Main
-                                ).launch {
-
+                                screenScope.launch {
                                     listState.animateScrollToItem(0)
                                 }
 
@@ -385,14 +382,36 @@ fun ChatScreen(
             return@Scaffold
         }
 
-        LazyColumn(
+        if (uiState.messages.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(28.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier.size(76.dp).clip(CircleShape)
+                            .background(OrangePrimary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Forum, contentDescription = null,
+                            tint = OrangePrimary, modifier = Modifier.size(34.dp))
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text("Your conversation starts here", color = PrimaryText,
+                        fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Send a message to start a private conversation.",
+                        color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp)
+                }
+            }
+        } else LazyColumn(
             state          = listState,
             reverseLayout = true,
             modifier       = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            itemsIndexed(reversedMessages) { idx, msg ->
+            itemsIndexed(reversedMessages, key = { _, msg -> msg.id }) { idx, msg ->
                 val isMe = msg.senderId == myId
                 // Show date separator when day changes
                 val showDate = idx == 0 ||
