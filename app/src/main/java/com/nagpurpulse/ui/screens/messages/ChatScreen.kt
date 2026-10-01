@@ -211,6 +211,10 @@ fun ChatScreen(
     var messageText  by remember { mutableStateOf("") }
     val listState    = rememberLazyListState()
     val clipboardManager = LocalClipboardManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
+    }
     var showChatMenu by remember { mutableStateOf(false) }
     val reversedMessages = remember(uiState.messages) { uiState.messages.asReversed() }
     LaunchedEffect(uiState.messages.size) {
@@ -237,6 +241,7 @@ fun ChatScreen(
 
     Scaffold(
         containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Row(
                 modifier = Modifier
