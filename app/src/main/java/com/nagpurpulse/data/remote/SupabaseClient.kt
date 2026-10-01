@@ -20,12 +20,16 @@ object SupabaseClientProvider {
         supabaseKey = BuildConfig.SUPABASE_ANON_KEY
     ) {
 
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-
         httpEngine = OkHttp.create {
-            addInterceptor(loggingInterceptor)
+            // Avoid logging private request/response bodies in production.
+            // Basic request/response metadata is useful only during debug builds.
+            if (BuildConfig.DEBUG) {
+                addInterceptor(
+                    HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BASIC
+                    }
+                )
+            }
         }
 
         install(Auth) {
