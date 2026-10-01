@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -63,7 +62,12 @@ class PresenceRepository @Inject constructor(
                 }
                 presenceChannel.subscribe(blockUntilSubscribed = true)
                 if (profile.showOnlineStatus) {
-                    presenceChannel.track(PresencePayload(userId = userId))
+                    presenceChannel.track(
+                        buildJsonObject {
+                            put("userId", userId)
+                            put("visible", true)
+                        }
+                    )
                 }
                 collector.join()
             } catch (e: Exception) {
