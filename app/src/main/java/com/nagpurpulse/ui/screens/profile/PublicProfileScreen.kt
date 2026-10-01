@@ -484,16 +484,8 @@ fun PublicProfileScreen(
                                         .background(SurfaceAlt),
                                     contentScale = ContentScale.Crop
                                 )
-                                // Online dot
-                                Box(
-                                    Modifier.size(14.dp).clip(CircleShape).background(GreenSuccess)
-                                        .border(
-                                            2.dp,
-                                            Background,
-                                            CircleShape
-                                        ).align(Alignment.BottomEnd)
-                                )
-                            }
+
+}
                         }
                         Spacer(Modifier.height(14.dp))
 
