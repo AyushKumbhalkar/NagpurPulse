@@ -88,8 +88,15 @@ class UserPreferencesRepository @Inject constructor(
     } catch (_: Exception) { "comfortable" }
 
     suspend fun getFeedStyle(): String = try {
-        getPreferences().getOrNull()?.feedStyle ?: "compact"
-    } catch (_: Exception) { "compact" }
+        // Keep the default consistent with FeedLayoutManager and the intended
+        // initial home-feed layout. A missing preference must not switch the
+        // post text to compact mode when the Settings ViewModel loads.
+        getPreferences().getOrNull()?.feedStyle
+            ?.takeIf { it == "compact" || it == "expanded" }
+            ?: "expanded"
+    } catch (_: Exception) {
+        "expanded"
+    }
 
     // ── Notification preferences ──────────────────────────────────────────────
 
