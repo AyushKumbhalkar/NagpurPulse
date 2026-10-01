@@ -102,6 +102,10 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ sent: false, skipped: true, reason: "notification_not_found" }, 404);
     }
 
+    if (!notification.user_id) {
+      return jsonResponse({ sent: false, skipped: true, reason: "notification_has_no_recipient" });
+    }
+
     // Older app builds wrote a second notification row when receiving an FCM push.
     // Those legacy echo rows lack sender profile fields. Only apply the short
     // duplicate guard to such rows; do not suppress two legitimate, identical
