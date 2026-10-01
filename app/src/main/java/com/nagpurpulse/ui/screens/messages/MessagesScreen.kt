@@ -84,6 +84,24 @@ class MessagesViewModel @Inject constructor(
 
     fun setFilter(filter: String) { _uiState.value = _uiState.value.copy(activeFilter = filter) }
 
+    fun deleteConversationForMe(conversationId: String) {
+        viewModelScope.launch {
+            messageRepository.deleteConversationForMe(conversationId).fold(
+                onSuccess = { _uiState.value = _uiState.value.copy(conversations = _uiState.value.conversations.filterNot { it.id == conversationId }) },
+                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+            )
+        }
+    }
+
+    fun deleteConversationForBoth(conversationId: String) {
+        viewModelScope.launch {
+            messageRepository.deleteConversationForBoth(conversationId).fold(
+                onSuccess = { _uiState.value = _uiState.value.copy(conversations = _uiState.value.conversations.filterNot { it.id == conversationId }) },
+                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+            )
+        }
+    }
+
     private fun subscribeRealtime() {
         viewModelScope.launch {
             messageRepository.subscribeToConversations().collect { updatedConv ->
@@ -269,7 +287,9 @@ fun MessagesScreen(
                                 },
                                 onCopyConversationId = {
                                     clipboardManager.setText(AnnotatedString(conv.id))
-                                }
+                                },
+                                onDeleteForMe = { viewModel.deleteConversationForMe(conv.id) },
+                                onDeleteForBoth = { viewModel.deleteConversationForBoth(conv.id) }
                             )
                         }
                     }
@@ -339,13 +359,19 @@ fun ConversationRow(
     isOnline: Boolean = false,
     onClick: () -> Unit,
     onViewProfile: () -> Unit = {},
-    onCopyConversationId: () -> Unit = {}
+    onCopyConversationId: () -> Unit = {},
+    onDeleteForMe: () -> Unit = {},
+    onDeleteForBoth: () -> Unit = {}
 ) {
     val seed = conv.otherAvatarSeed ?: conv.otherUserId ?: "anon"
     val displayName = conv.otherUsername ?: "Incognito"
     val hasUnread = conv.myUnreadCount > 0
     val avatarColor = incognitoColor(seed)
     var showMenu by remember(conv.id) { mutableStateOf(false) }
+    var confirmDeleteBoth by remember(conv.id) { mutableStateOf(false) }
+    if (confirmDeleteBoth) {
+        AlertDialog(onDismissRequest = { confirmDeleteBoth = false }, title = { Text("Delete chat for both?") }, text = { Text("This deletes the shared conversation and its messages for both participants.") }, confirmButton = { TextButton(onClick = { confirmDeleteBoth = false; onDeleteForBoth() }) { Text("Delete for both", color = RedAlert) } }, dismissButton = { TextButton(onClick = { confirmDeleteBoth = false }) { Text("Cancel") } })
+    }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -412,6 +438,8 @@ fun ConversationRow(
                 leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
                 onClick = { showMenu = false; onCopyConversationId() }
             )
+            DropdownMenuItem(text = { Text("Delete for me", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteOutline, null) }, onClick = { showMenu = false; onDeleteForMe() })
+            DropdownMenuItem(text = { Text("Delete for both", color = RedAlert) }, leadingIcon = { Icon(Icons.Filled.DeleteForever, null) }, onClick = { showMenu = false; confirmDeleteBoth = true })
         }
     }
     HorizontalDivider(color = Divider.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 80.dp))
