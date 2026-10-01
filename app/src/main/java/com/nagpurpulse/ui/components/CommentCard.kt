@@ -176,20 +176,15 @@ fun CommentCard(
                         )
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
 
                                 Row(
-                                    modifier = Modifier
-                                        .weight(1f, fill = false)
-                                        .clickable {
-                                            if (!comment.isAnonymous) {
-                                                navController.navigate("user_profile/${comment.userId}")
-                                            }
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable {
+                                        if (!comment.isAnonymous) {
+                                            navController.navigate("user_profile/${comment.userId}")
+                                        }
+                                    }
                                 ) {
                                     if (comment.isAnonymous) {
                                         Icon(
@@ -210,9 +205,7 @@ fun CommentCard(
                                             else
                                                 OrangePrimary,
                                         style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                                 // Alias badge — shows this is a consistent anonymous identity
@@ -236,8 +229,7 @@ fun CommentCard(
                                 Text(
                                     comment.timeAgo(),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                                 if (comment.editedAt != null && !comment.editedByAdmin) {
                                     Text(

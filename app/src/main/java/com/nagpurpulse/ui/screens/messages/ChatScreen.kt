@@ -30,7 +30,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -318,21 +317,8 @@ fun ChatScreen(
                 Column(Modifier.weight(1f).pressScale(onClick = {
                     uiState.otherUserId.takeIf { it.isNotBlank() }?.let(onOtherProfileClick)
                 })) {
-                    Text(
-                        text = uiState.otherUsername,
-                        color = PrimaryText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = if (uiState.isOtherOnline) "Online" else "View profile",
-                        color = if (uiState.isOtherOnline) Color(0xFF22C55E) else SecondaryText,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Text(uiState.otherUsername, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(if (uiState.isOtherOnline) "Online" else "View profile", color = if (uiState.isOtherOnline) Color(0xFF22C55E) else SecondaryText, fontSize = 11.sp)
                 }
 
                 Box {
