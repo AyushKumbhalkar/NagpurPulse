@@ -87,18 +87,19 @@ class NotificationsViewModel @Inject constructor(
 
     init {
         load()
+        startRealtimeUpdates()
         checkBannerState()
     }
 
     // ── Load ──────────────────────────────────────────────────────────────────
 
-    fun load() {
+    fun load(showLoading: Boolean = true) {
         val uid = authRepository.currentUserId ?: run {
             _s.value = _s.value.copy(isLoading = false)
             return
         }
         viewModelScope.launch {
-            _s.value = _s.value.copy(isLoading = true)
+            _s.value = _s.value.copy(isLoading = showLoading)
             notificationRepository.getNotifications(uid).fold(
                 onSuccess = { list ->
                     _s.value = _s.value.copy(notifications = list, isLoading = false, error = null)
@@ -107,6 +108,15 @@ class NotificationsViewModel @Inject constructor(
                     _s.value = _s.value.copy(isLoading = false, error = e.message)
                 }
             )
+        }
+    }
+
+    private fun startRealtimeUpdates() {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            notificationRepository.subscribeToNotifications(uid).collect {
+                load(showLoading = false)
+            }
         }
     }
 

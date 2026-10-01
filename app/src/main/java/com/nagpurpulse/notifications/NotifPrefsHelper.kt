@@ -49,6 +49,7 @@ object NotifPrefsHelper {
             "trending"                  -> isTrendingEnabled(ctx)
             "community"                 -> isCommunityEnabled(ctx)
             "digest"                    -> isDigestEnabled(ctx)
+            "alerts_summary"             -> isAlertsSummaryEnabled(ctx)
             else                        -> true
         }
     }

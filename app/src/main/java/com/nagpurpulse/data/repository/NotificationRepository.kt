@@ -8,6 +8,14 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 
 class NotificationRepository @Inject constructor(
@@ -43,8 +51,6 @@ class NotificationRepository @Inject constructor(
         if (userId == null) return@runCatching
 
         val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
-
-        android.util.Log.d("FCM_DEBUG", "FCM Token = $fcmToken")
 
         try {
 
@@ -141,18 +147,19 @@ class NotificationRepository @Inject constructor(
         )
     }
 
+
     /**
-     * Called by FCM service when a push arrives while the app is foregrounded.
-     * Writes to the in-app DB so the bell icon stays accurate.
+     * Emits when a notification for this user is inserted in Supabase.
+     * The ViewModel reloads the inbox to keep new items and unread counts fresh.
      */
-    suspend fun writeInAppNotification(
-        title:         String,
-        body:          String?,
-        type:          String,
-        relatedPostId: String? = null
-    ): Result<Unit> = runCatching {
-        val userId = authRepository.currentUserId ?: return@runCatching
-        createNotification(userId, type, title, body, relatedPostId)
+    fun subscribeToNotifications(userId: String): Flow<Unit> = flow {
+        val channel = client.realtime.channel("notifications_$userId")
+        val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
+            table = "notifications"
+            filter("user_id", FilterOperator.EQ, userId)
+        }
+        channel.subscribe(blockUntilSubscribed = true)
+        inserts.collect { emit(Unit) }
     }
 
     // ── Preference check (used by PostRepository before creating notif) ───────
