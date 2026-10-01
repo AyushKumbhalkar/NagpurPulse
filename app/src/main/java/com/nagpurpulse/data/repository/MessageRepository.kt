@@ -314,12 +314,22 @@ class MessageRepository @Inject constructor(
         val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
             table = "conversations"
         }.map { it.decodeRecord<Conversation>() }
+        val deletes = channel.postgresChangeFlow<PostgresAction.Delete>(schema = "public") {
+            table = "conversations"
+        }.map { action ->
+            // Internal marker lets the inbox remove a deleted conversation immediately.
+            action.decodeRecord<Conversation>().copy(lastMessage = "__NAGPURPULSE_CONVERSATION_DELETED__")
+        }
 
-        // Register both event flows before subscribing, so newly created chats
-        // and message/unread updates can refresh the inbox in real time.
+        // Register all event flows before subscribing, including deletions, so
+        // both participants' inboxes update without requiring a manual refresh.
         channel.subscribe(blockUntilSubscribed = true)
-        merge(inserts, updates).collect { conv ->
-            emit(enrichConversation(conv, myId))
+        merge(inserts, updates, deletes).collect { conv ->
+            if (conv.lastMessage == "__NAGPURPULSE_CONVERSATION_DELETED__") {
+                emit(conv)
+            } else {
+                emit(enrichConversation(conv, myId))
+            }
         }
     }
 
