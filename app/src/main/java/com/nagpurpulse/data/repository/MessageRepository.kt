@@ -38,7 +38,8 @@ private data class HiddenConversationRow(val conversation_id: String = "")
 class MessageRepository @Inject constructor(
     private val client: SupabaseClient,
     private val authRepository: AuthRepository,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val notificationRepository: NotificationRepository
 ) {
     // ── Get or create a conversation between two users ────────────────────────
     suspend fun getOrCreateConversation(otherUserId: String): Result<Conversation> {
@@ -173,6 +174,29 @@ class MessageRepository @Inject constructor(
                         put("unread_count_one", conv.unreadCountOne + 1)
                 }
             ) { filter { eq("id", conversationId) } }
+
+            // Create a durable in-app notification for the recipient. Push delivery
+            // is handled by the single notifications-table webhook.
+            val recipientId = if (isParticipantOne) conv.participantTwo else conv.participantOne
+            if (recipientId != myId) {
+                try {
+                    if (notificationRepository.targetUserWantsNotif(recipientId, "notif_messages")) {
+                        val senderName = profileRepository.getProfile(myId).getOrNull()?.username ?: "Someone"
+                        notificationRepository.createNotification(
+                            targetUserId = recipientId,
+                            type = "message",
+                            title = "$senderName sent you a message",
+                            body = content.take(120),
+                            senderUserId = myId,
+                            relatedConversationId = conversationId
+                        ).onFailure { error ->
+                            android.util.Log.w("MESSAGE_NOTIFICATION", "Failed to create message notification", error)
+                        }
+                    }
+                } catch (notificationError: Exception) {
+                    android.util.Log.w("MESSAGE_NOTIFICATION", "Could not create message notification", notificationError)
+                }
+            }
 
             Result.success(enrichMessage(msg))
         } catch (e: Exception) {

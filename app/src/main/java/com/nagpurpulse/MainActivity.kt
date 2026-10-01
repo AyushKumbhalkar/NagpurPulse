@@ -68,6 +68,9 @@ class MainActivity : FragmentActivity() {
         intent?.getStringExtra("post_id")?.let {
             NotifDeepLink.pendingPostId.value = it
         }
+        intent?.getStringExtra("conversation_id")?.let {
+            NotifDeepLink.pendingConversationId.value = it
+        }
 
         setContent {
             // Load display preferences
@@ -113,6 +116,17 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
 
+                            LaunchedEffect(navController, "conversation-notification-deeplink") {
+                                NotifDeepLink.pendingConversationId.collect { conversationId ->
+                                    if (conversationId != null) {
+                                        navController.navigate(Screen.Chat.createRoute(conversationId)) {
+                                            launchSingleTop = true
+                                        }
+                                        NotifDeepLink.pendingConversationId.value = null
+                                    }
+                                }
+                            }
+
                             NagpurPulseNavGraph(
                                 navController    = navController,
                                 startDestination = Screen.Splash.route,
@@ -141,6 +155,9 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         intent.getStringExtra("post_id")?.let {
             NotifDeepLink.pendingPostId.value = it
+        }
+        intent.getStringExtra("conversation_id")?.let {
+            NotifDeepLink.pendingConversationId.value = it
         }
     }
 }

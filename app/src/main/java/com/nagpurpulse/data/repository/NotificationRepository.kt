@@ -122,7 +122,8 @@ class NotificationRepository @Inject constructor(
         title:          String,
         body:           String?,
         relatedPostId:  String?  = null,
-        senderUserId:   String?  = null
+        senderUserId:   String?  = null,
+        relatedConversationId: String? = null
     ): Result<Unit> = runCatching {
         // Fetch sender profile for avatar display
         val sender: Profile? = senderUserId?.takeIf { it.isNotBlank() }?.let { uid ->
@@ -141,6 +142,7 @@ class NotificationRepository @Inject constructor(
                 "body"              to body,
                 "is_read"           to false,
                 "related_post_id"   to relatedPostId,
+                "related_conversation_id" to relatedConversationId,
                 "sender_username"   to sender?.username,
                 "sender_avatar_url" to sender?.avatarUrl
             )
@@ -174,6 +176,7 @@ class NotificationRepository @Inject constructor(
                 "notif_replies"  -> prefs.notifReplies
                 "notif_upvotes"  -> prefs.notifUpvotes
                 "notif_mentions" -> prefs.notifMentions
+                "notif_messages" -> prefs.notifMessages
                 "notif_messages" -> prefs.notifMessages
                 else             -> true
             }

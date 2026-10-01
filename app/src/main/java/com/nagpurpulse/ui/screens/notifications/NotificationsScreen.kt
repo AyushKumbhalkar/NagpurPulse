@@ -431,7 +431,9 @@ fun NotificationsScreen(
                                         notif  = notif,
                                         onTap  = {
                                             viewModel.markOneRead(notif.id)
-                                            notif.relatedPostId?.let { onPostClick(it) }
+                                            notif.relatedConversationId?.let {
+                                                navController.navigate(Screen.Chat.createRoute(it))
+                                            } ?: notif.relatedPostId?.let { onPostClick(it) }
                                         }
                                     )
                                     if (i < todayNotifs.lastIndex) {
@@ -471,7 +473,9 @@ fun NotificationsScreen(
                                         notif = notif,
                                         onTap = {
                                             viewModel.markOneRead(notif.id)
-                                            notif.relatedPostId?.let { onPostClick(it) }
+                                            notif.relatedConversationId?.let {
+                                                navController.navigate(Screen.Chat.createRoute(it))
+                                            } ?: notif.relatedPostId?.let { onPostClick(it) }
                                         }
                                     )
                                     if (i < earlierNotifs.lastIndex) {

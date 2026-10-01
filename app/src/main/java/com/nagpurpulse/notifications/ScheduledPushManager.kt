@@ -23,6 +23,7 @@ const val CHANNEL_TRENDING  = "nagpur_trending"
 const val CHANNEL_ALERTS    = "nagpur_alerts"
 const val CHANNEL_COMMUNITY = "nagpur_community"
 const val CHANNEL_DIGEST    = "nagpur_digest"
+const val CHANNEL_MESSAGES  = "nagpur_messages"
 
 fun createNotificationChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -31,7 +32,8 @@ fun createNotificationChannels(context: Context) {
         Triple(CHANNEL_TRENDING,  "Trending in Nagpur",  NotificationManager.IMPORTANCE_DEFAULT),
         Triple(CHANNEL_ALERTS,    "Live Alerts",         NotificationManager.IMPORTANCE_HIGH),
         Triple(CHANNEL_COMMUNITY, "Community Updates",   NotificationManager.IMPORTANCE_DEFAULT),
-        Triple(CHANNEL_DIGEST,    "Daily Digest",        NotificationManager.IMPORTANCE_LOW)
+        Triple(CHANNEL_DIGEST,    "Daily Digest",        NotificationManager.IMPORTANCE_LOW),
+        Triple(CHANNEL_MESSAGES,  "Direct Messages",     NotificationManager.IMPORTANCE_HIGH)
     ).forEach { (id, name, importance) ->
         nm.createNotificationChannel(
             NotificationChannel(id, name, importance).apply {

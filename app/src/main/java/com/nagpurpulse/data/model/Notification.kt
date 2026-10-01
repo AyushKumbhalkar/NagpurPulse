@@ -13,6 +13,7 @@ data class Notification(
     val body: String? = null,
     @SerialName("is_read")          val isRead: Boolean = false,
     @SerialName("related_post_id")  val relatedPostId: String? = null,
+    @SerialName("related_conversation_id") val relatedConversationId: String? = null,
     @SerialName("sender_username")  val senderUsername: String? = null,
     @SerialName("sender_avatar_url")val senderAvatarUrl: String? = null,
     @SerialName("created_at")       val createdAt: String = ""

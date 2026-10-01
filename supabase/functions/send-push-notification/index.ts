@@ -8,6 +8,7 @@ type NotificationRow = {
   title: string;
   body: string | null;
   related_post_id: string | null;
+  related_conversation_id: string | null;
   sender_username: string | null;
   sender_avatar_url: string | null;
   created_at: string;
@@ -79,7 +80,7 @@ Deno.serve(async (req: Request) => {
     // Resolve all notification fields from the database, not from webhook input.
     const { data: notification, error: notificationError } = await supabase
       .from("notifications")
-      .select("id,user_id,type,title,body,related_post_id,sender_username,sender_avatar_url,created_at")
+      .select("id,user_id,type,title,body,related_post_id,related_conversation_id,sender_username,sender_avatar_url,created_at")
       .eq("id", payload.record.id)
       .maybeSingle();
 
@@ -110,6 +111,11 @@ Deno.serve(async (req: Request) => {
       duplicateQuery = duplicateQuery.eq("related_post_id", notification.related_post_id);
     } else {
       duplicateQuery = duplicateQuery.is("related_post_id", null);
+    }
+    if (notification.related_conversation_id) {
+      duplicateQuery = duplicateQuery.eq("related_conversation_id", notification.related_conversation_id);
+    } else {
+      duplicateQuery = duplicateQuery.is("related_conversation_id", null);
     }
     const { data: priorNotifications, error: duplicateError } = await duplicateQuery;
     if (duplicateError) throw duplicateError;
@@ -148,6 +154,7 @@ Deno.serve(async (req: Request) => {
       notification_id: String(notification.id),
       type: String(notification.type || "general"),
       post_id: notification.related_post_id ? String(notification.related_post_id) : "",
+      conversation_id: notification.related_conversation_id ? String(notification.related_conversation_id) : "",
       sender_username: notification.sender_username || "",
       sender_avatar_url: notification.sender_avatar_url || "",
     };
