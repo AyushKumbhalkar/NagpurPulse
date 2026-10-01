@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.rememberNavController
 import com.nagpurpulse.data.repository.AuthRepository
+import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.data.repository.UserPreferencesRepository
 import com.nagpurpulse.notifications.NotifDeepLink
 import com.nagpurpulse.notifications.NotifPrefsHelper
@@ -33,6 +34,7 @@ import javax.inject.Inject
 class MainActivity : FragmentActivity() {
 
     @Inject lateinit var authRepository: AuthRepository
+    @Inject lateinit var presenceRepository: PresenceRepository
     @Inject lateinit var userPreferencesRepository: UserPreferencesRepository
 
     // ── Deep link from cold-start tap on a notification ───────────────────────
@@ -122,6 +124,16 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        presenceRepository.start()
+    }
+
+    override fun onStop() {
+        presenceRepository.stop()
+        super.onStop()
     }
 
     // ── Deep link from warm-start tap (app already running) ───────────────────
