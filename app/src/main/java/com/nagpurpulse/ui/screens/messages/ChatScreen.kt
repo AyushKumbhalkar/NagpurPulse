@@ -45,6 +45,7 @@ import com.nagpurpulse.ui.components.shimmerEffect
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -89,16 +90,19 @@ class ChatViewModel @Inject constructor(
 
     private fun loadMessages() {
         viewModelScope.launch {
-            messageRepository.getMessages(conversationId).fold(
+            val messagesTask = async { messageRepository.getMessages(conversationId) }
+            val conversationTask = async { messageRepository.getConversationById(conversationId) }
+            val messagesResult = messagesTask.await()
+            val conversationResult = conversationTask.await()
+            messagesResult.fold(
                 onSuccess = { msgs ->
-                    val conv = messageRepository.getConversations().getOrNull()
-                        ?.firstOrNull { it.id == conversationId }
-                    _uiState.value = ChatUiState(
-                        messages       = msgs,
-                        otherUsername  = conv?.otherUsername ?: "Chat",
+                    val conv = conversationResult.getOrNull()
+                    _uiState.value = _uiState.value.copy(
+                        messages = msgs,
+                        otherUsername = conv?.otherUsername ?: "Chat",
                         otherAvatarSeed = conv?.otherAvatarSeed ?: "anon",
                         otherUserId = conv?.otherUserId ?: "",
-                        isLoading      = false
+                        isLoading = false
                     )
                     messageRepository.markConversationRead(conversationId)
                 },
