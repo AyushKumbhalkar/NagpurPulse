@@ -263,7 +263,14 @@ class MessageRepository @Inject constructor(
 
         val channel = client.realtime.channel("messages_$conversationId")
 
-        val changes = channel.postgresChangeFlow<PostgresAction.Insert>(
+        val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(
+            schema = "public"
+        ) {
+            table = "messages"
+            filter("conversation_id", FilterOperator.EQ, conversationId)
+        }
+
+        val updates = channel.postgresChangeFlow<PostgresAction.Update>(
             schema = "public"
         ) {
             table = "messages"
@@ -284,7 +291,7 @@ class MessageRepository @Inject constructor(
             "After subscribe"
         )
 
-        changes.collect { action ->
+        merge(inserts, updates).collect { action ->
 
             android.util.Log.d(
                 "CHAT_RT",
