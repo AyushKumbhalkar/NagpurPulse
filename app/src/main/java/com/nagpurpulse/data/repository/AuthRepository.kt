@@ -4,6 +4,8 @@ package com.nagpurpulse.data.repository
 
 
 
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import io.github.jan.supabase.storage.storage
@@ -42,6 +44,7 @@ class AuthRepository @Inject constructor(
                     karma = 0
                 )
             )
+            registerFcmTokenForCurrentUser()
             Result.success(Unit)
         } catch (e: Exception) {
             android.util.Log.e(
@@ -62,6 +65,7 @@ class AuthRepository @Inject constructor(
     suspend fun signIn(email: String, password: String): Result<Unit> {
         return try {
             client.auth.signInWith(Email) { this.email = email; this.password = password }
+            registerFcmTokenForCurrentUser()
             Result.success(Unit)
         } catch (e: Exception) {
             android.util.Log.e(
@@ -84,6 +88,7 @@ class AuthRepository @Inject constructor(
                 provider = Google
             }
 
+            registerFcmTokenForCurrentUser()
             Result.success(Unit)
 
         } catch (e: Exception) {
@@ -100,9 +105,43 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut(): Result<Unit> {
         return try {
+            // Remove this installation's token mapping before signing out so
+            // the previous account cannot keep receiving pushes on this device.
+            removeCurrentDeviceToken()
             client.auth.signOut()
             Result.success(Unit)
         } catch (e: Exception) { Result.failure(e) }
+    }
+
+    private suspend fun registerFcmTokenForCurrentUser() {
+        val userId = currentUserId ?: return
+        try {
+            val token = FirebaseMessaging.getInstance().token.await()
+            client.postgrest["device_tokens"].upsert(
+                mapOf(
+                    "user_id" to userId,
+                    "fcm_token" to token,
+                    "updated_at" to java.time.Instant.now().toString()
+                )
+            ) {
+                onConflict = "user_id"
+            }
+        } catch (e: Exception) {
+            // Push registration must never turn a successful login into a failure.
+            android.util.Log.w("FCM_DEBUG", "Could not register device token after authentication", e)
+        }
+    }
+
+    private suspend fun removeCurrentDeviceToken() {
+        val userId = currentUserId ?: return
+        try {
+            client.postgrest["device_tokens"].delete {
+                filter { eq("user_id", userId) }
+            }
+        } catch (e: Exception) {
+            // Continue sign-out even if the device-token cleanup is temporarily unavailable.
+            android.util.Log.w("FCM_DEBUG", "Could not remove device token during sign-out", e)
+        }
     }
 
     suspend fun getCurrentProfile(): Result<Profile> {
