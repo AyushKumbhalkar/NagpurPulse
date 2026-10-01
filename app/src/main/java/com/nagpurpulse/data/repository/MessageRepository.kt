@@ -94,6 +94,20 @@ class MessageRepository @Inject constructor(
         }
     }
 
+    suspend fun getConversationById(conversationId: String): Result<Conversation?> {
+        val myId = authRepository.currentUserId
+            ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            val row = client.postgrest["conversations"].select {
+                filter { eq("id", conversationId) }
+                limit(1)
+            }.decodeList<Conversation>().firstOrNull()
+            Result.success(row?.let { enrichConversation(it, myId) })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Fetch messages in a conversation ──────────────────────────────────────
     suspend fun getMessages(conversationId: String): Result<List<Message>> {
         return try {
@@ -101,7 +115,7 @@ class MessageRepository @Inject constructor(
                 filter { eq("conversation_id", conversationId) }
                 order("created_at", Order.ASCENDING)
             }.decodeList<Message>()
-            Result.success(msgs.map { enrichMessage(it) })
+            Result.success(msgs)
         } catch (e: Exception) {
             Result.failure(e)
         }
