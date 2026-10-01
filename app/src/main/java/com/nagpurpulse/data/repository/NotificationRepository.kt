@@ -25,52 +25,18 @@ class NotificationRepository @Inject constructor(
 
     // ── FCM token ─────────────────────────────────────────────────────────────
 
-/*
     suspend fun saveFcmToken(token: String? = null): Result<Unit> = runCatching {
-        val userId   = authRepository.currentUserId ?: return@runCatching
+        val userId = authRepository.currentUserId ?: return@runCatching
         val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
+
         client.postgrest["device_tokens"].upsert(
             mapOf(
-                "user_id"    to userId,
-                "fcm_token"  to fcmToken,
+                "user_id" to userId,
+                "fcm_token" to fcmToken,
                 "updated_at" to java.time.Instant.now().toString()
             )
-        )
-    }
-
-
- */
-
-    suspend fun saveFcmToken(token: String? = null): Result<Unit> = runCatching {
-
-        android.util.Log.d("FCM_DEBUG", "saveFcmToken() called")
-
-        val userId = authRepository.currentUserId
-        android.util.Log.d("FCM_DEBUG", "User ID = $userId")
-
-        if (userId == null) return@runCatching
-
-        val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
-
-        try {
-
-            client.postgrest["device_tokens"].upsert(
-                mapOf(
-                    "user_id" to userId,
-                    "fcm_token" to fcmToken,
-                    "updated_at" to java.time.Instant.now().toString()
-                )
-            ) {
-                onConflict = "user_id"
-            }
-
-            android.util.Log.d("FCM_DEBUG", "Token saved successfully")
-
-        } catch (e: Exception) {
-
-            android.util.Log.e("FCM_DEBUG", "UPSERT FAILED", e)
-
-            throw e
+        ) {
+            onConflict = "user_id"
         }
     }
     suspend fun deleteFcmToken(): Result<Unit> = runCatching {
