@@ -226,14 +226,18 @@ class MessageRepository @Inject constructor(
     }
 
     // ── Realtime: subscribe to conversation list updates ──────────────────────
-    fun subscribeToConversations(): Flow<Conversation> {
-        val myId   = authRepository.currentUserId ?: return kotlinx.coroutines.flow.emptyFlow()
-        val channel = client.channel("conversations_$myId")
-        return channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
+    fun subscribeToConversations(): Flow<Conversation> = flow {
+        val myId = authRepository.currentUserId ?: return@flow
+        val channel = client.realtime.channel("conversations_$myId")
+        val changes = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
             table = "conversations"
-        }.map { action ->
+        }
+
+        // Creating a change flow alone does not start delivery; subscribe before collecting.
+        channel.subscribe(blockUntilSubscribed = true)
+        changes.collect { action ->
             val conv = action.decodeRecord<Conversation>()
-            enrichConversation(conv, myId)
+            emit(enrichConversation(conv, myId))
         }
     }
 
