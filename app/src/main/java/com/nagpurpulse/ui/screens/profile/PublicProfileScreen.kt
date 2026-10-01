@@ -39,6 +39,7 @@ import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.model.Profile
 import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.ProfileRepository
+import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.ui.components.*
 import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.theme.*
@@ -58,10 +59,16 @@ data class PublicProfileUiState(
 @HiltViewModel
 class PublicProfileViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val presenceRepository: PresenceRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PublicProfileUiState())
     val uiState: StateFlow<PublicProfileUiState> = _uiState
+    val onlineUserIds: StateFlow<Set<String>> = presenceRepository.onlineUserIds
+
+    init {
+        presenceRepository.start()
+    }
 
     fun load(userId: String) {
         viewModelScope.launch {
@@ -106,6 +113,8 @@ fun PublicProfileScreen(
 ) {
     val uiState     by viewModel.uiState.collectAsState()
     val displayName = uiState.profile?.username ?: "User"
+    val onlineUserIds by viewModel.onlineUserIds.collectAsState()
+    val isProfileOnline = userId in onlineUserIds
     val avatarUrl = uiState.profile?.avatarUrl
     var avatarVisible by remember {
         mutableStateOf(false)
@@ -154,7 +163,12 @@ fun PublicProfileScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = PrimaryText)
                 }
                 Spacer(Modifier.weight(1f))
-                Text("u/$displayName", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("u/$displayName", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    if (isProfileOnline) {
+                        Text("Online", color = Color(0xFF22C55E), fontSize = 11.sp)
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = {}) {
                     Icon(Icons.Filled.Share, null, tint = SecondaryText)
