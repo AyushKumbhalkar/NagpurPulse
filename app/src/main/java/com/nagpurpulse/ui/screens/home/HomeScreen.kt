@@ -48,7 +48,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -544,17 +543,12 @@ fun HomeScreen(
                 ) {
 
                     // ── Row 1: Brand + icons ──────────────────────────
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val isNarrowHeader = maxWidth < 360.dp
-                        val headerIconSize = if (isNarrowHeader) 34.dp else 40.dp
-                        val headerIconSpacing = if (isNarrowHeader) 3.dp else 6.dp
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = if (isNarrowHeader) 10.dp else 16.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         // Brand
                         Text(
                             buildAnnotatedString {
@@ -562,7 +556,7 @@ fun HomeScreen(
                                     SpanStyle(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.Black,
-                                        fontSize = if (isNarrowHeader) 18.sp else 22.sp
+                                        fontSize = 22.sp
                                     )
                                 ) {
                                     append("Nagpur ")
@@ -571,7 +565,7 @@ fun HomeScreen(
                                     SpanStyle(
                                         color = OrangePrimary,
                                         fontWeight = FontWeight.Black,
-                                        fontSize = if (isNarrowHeader) 18.sp else 22.sp
+                                        fontSize = 22.sp
                                     )
                                 ) {
                                     append("Pulse")
@@ -580,28 +574,26 @@ fun HomeScreen(
                                 withStyle(
                                     SpanStyle(
                                         color = OrangePrimary,
-                                        fontSize = if (isNarrowHeader) 12.sp else 14.sp
+                                        fontSize = 14.sp
                                     )
                                 ) {
                                     append(" ·⌇")
                                 }
-                            },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
+                            }
                         )
 
+                        Spacer(Modifier.weight(1f))
 
                         // Search
-                        HeaderIcon(Icons.Filled.Search, badge = 0, size = headerIconSize) {
+                        HeaderIcon(Icons.Filled.Search, badge = 0) {
                             navController.navigate(Screen.Explore.route)
                         }
 
-                        Spacer(Modifier.width(headerIconSpacing))
+                        Spacer(Modifier.width(6.dp))
 
                         Box(
                             modifier = Modifier
-                                .size(headerIconSize)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable {
@@ -621,16 +613,16 @@ fun HomeScreen(
                                         Icons.Filled.LightMode,
                                 contentDescription = "Theme",
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(if (isNarrowHeader) 18.dp else 20.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
-                        Spacer(Modifier.width(headerIconSpacing))
+                        Spacer(Modifier.width(6.dp))
 
                         // Notifications — with badge + pulse
                         Box(
                             modifier = Modifier
-                                .size(headerIconSize)
+                                .size(40.dp)
                                 .scale(bellPulse)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -640,7 +632,7 @@ fun HomeScreen(
                             Icon(
                                 Icons.Filled.Notifications, null,
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(if (isNarrowHeader) 18.dp else 20.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                             if (uiState.unreadNotifCount > 0) {
                                 Box(
@@ -665,12 +657,12 @@ fun HomeScreen(
                             }
                         }
 
-                        Spacer(Modifier.width(headerIconSpacing))
+                        Spacer(Modifier.width(6.dp))
 
                         // Messages button
                         Box(
                             modifier = Modifier
-                                .size(headerIconSize)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable {
@@ -683,7 +675,7 @@ fun HomeScreen(
                                 Icons.Filled.Email,
                                 contentDescription = "Messages",
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(if (isNarrowHeader) 18.dp else 20.dp)
+                                modifier = Modifier.size(20.dp)
                             )
 
                             if (uiState.unreadMsgCount > 0) {
@@ -704,7 +696,6 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                        }
                         }
                     }
 
@@ -730,10 +721,7 @@ fun HomeScreen(
                             Text(
                                 text = " ${uiState.currentArea}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                style = MaterialTheme.typography.labelSmall
                             )
                         }
 
@@ -743,76 +731,47 @@ fun HomeScreen(
 
 
                     // ── Row 3: Weather + AQI + Sort ───────────────────────
-                    BoxWithConstraints(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val isNarrowHomeHeader = maxWidth < 360.dp
+
                         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                         val isDaytime = hour in 5..19
-                        val aqiText = uiState.aqi?.let { "AQI $it" } ?: "AQI --"
-                        val aqiColor = when (uiState.aqi) {
-                            null -> OrangePrimary
-                            in 0..50 -> Color(0xFF4CAF50)
-                            in 51..100 -> Color(0xFFFFC107)
-                            else -> Color(0xFFF44336)
-                        }
 
-                        if (isNarrowHomeHeader) {
-                            // Small phones: keep weather/AQI and sort controls on separate rows.
-                            // This prevents the Top/New/Hot selector from being pushed off-screen.
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    QuickInfoChip(
-                                        icon = if (isDaytime) Icons.Filled.WbSunny else Icons.Filled.DarkMode,
-                                        text = uiState.temperature?.let { "$it°" } ?: "--°",
-                                        color = if (isDaytime) Color(0xFFFFB300) else Color(0xFF5C9EFF)
-                                    )
-                                    QuickInfoChip(
-                                        icon = Icons.Filled.Eco,
-                                        text = aqiText,
-                                        color = aqiColor
-                                    )
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    SortChipGroup(
-                                        selected = uiState.sortBy,
-                                        onSelected = { viewModel.setSortBy(it) }
-                                    )
-                                }
+                        QuickInfoChip(
+                            icon = if (isDaytime) Icons.Filled.WbSunny else Icons.Filled.DarkMode,
+                            text = uiState.temperature?.let { "$it°" } ?: "--°",
+                            color = if (isDaytime) Color(0xFFFFB300) else Color(0xFF5C9EFF)
+                        )
+
+                        val aqiText =
+                            uiState.aqi?.let { "AQI $it" }
+                                ?: "AQI --"
+
+                        QuickInfoChip(
+                            icon = Icons.Filled.Eco,
+                            text = aqiText,
+                            color = when (uiState.aqi) {
+                                null -> OrangePrimary
+                                in 0..50 -> Color(0xFF4CAF50)
+                                in 51..100 -> Color(0xFFFFC107)
+                                else -> Color(0xFFF44336)
                             }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                QuickInfoChip(
-                                    icon = if (isDaytime) Icons.Filled.WbSunny else Icons.Filled.DarkMode,
-                                    text = uiState.temperature?.let { "$it°" } ?: "--°",
-                                    color = if (isDaytime) Color(0xFFFFB300) else Color(0xFF5C9EFF)
-                                )
-                                QuickInfoChip(
-                                    icon = Icons.Filled.Eco,
-                                    text = aqiText,
-                                    color = aqiColor
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                SortChipGroup(
-                                    selected = uiState.sortBy,
-                                    onSelected = { viewModel.setSortBy(it) }
-                                )
-                            }
-                        }
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        SortChipGroup(
+                            selected = uiState.sortBy,
+                            onSelected = { viewModel.setSortBy(it) }
+                        )
                     }
+
+
 
                     Spacer(Modifier.height(2.dp))
                     HorizontalDivider(
@@ -967,18 +926,17 @@ fun HomeScreen(
 private fun HeaderIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     badge: Int = 0,
-    size: androidx.compose.ui.unit.Dp = 40.dp,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .size(size)
+            .size(40.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .pressScale(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(if (size < 36.dp) 18.dp else 20.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
         if (badge > 0) {
             Box(
                 modifier = Modifier
