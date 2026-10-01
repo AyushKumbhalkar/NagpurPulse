@@ -98,10 +98,14 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", notification.user_id)
       .eq("type", notification.type)
       .eq("title", notification.title)
-      .eq("body", notification.body)
       .lt("created_at", notification.created_at)
       .gte("created_at", cutoff)
       .limit(1);
+    if (notification.body === null) {
+      duplicateQuery = duplicateQuery.is("body", null);
+    } else {
+      duplicateQuery = duplicateQuery.eq("body", notification.body);
+    }
     if (notification.related_post_id) {
       duplicateQuery = duplicateQuery.eq("related_post_id", notification.related_post_id);
     } else {

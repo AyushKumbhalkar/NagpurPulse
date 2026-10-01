@@ -1,9 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { JWT } from "npm:google-auth-library@9";
 
+type DeviceToken = { user_id: string; fcm_token: string };
+type Preferences = Record<string, unknown> & { user_id: string };
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
+
 function preferenceForType(type: string): string | null {
   switch (type) {
     case "comment":
@@ -19,18 +26,118 @@ function preferenceForType(type: string): string | null {
     default: return null;
   }
 }
+
 async function getFirebaseAccessToken() {
   const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
   const email = Deno.env.get("FIREBASE_CLIENT_EMAIL");
   const privateKey = Deno.env.get("FIREBASE_PRIVATE_KEY")?.replace(/\\n/g, "\n");
-  if (!projectId || !email || !privateKey) throw new Error("Firebase credentials are not configured");
-  const client = new JWT({ email, key: privateKey, scopes: ["https://www.googleapis.com/auth/firebase.messaging"] });
+  if (!projectId || !email || !privateKey) {
+    throw new Error("Firebase credentials are not configured");
+  }
+  const client = new JWT({
+    email,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
+  });
   const result = await client.authorize();
   if (!result.access_token) throw new Error("Firebase access token was not returned");
   return { accessToken: result.access_token, projectId };
 }
+
+async function deliverBatch(
+  supabase: any,
+  recipients: DeviceToken[],
+  title: string,
+  body: string,
+  postId: string,
+  notificationId: string,
+  type: string,
+  accessToken: string,
+  projectId: string,
+) {
+  if (recipients.length === 0) return { sent: 0, failed: 0, eligible: 0 };
+
+  const userIds = [...new Set(recipients.map((item) => item.user_id))];
+  const { data: preferenceRows, error: preferenceError } = await supabase
+    .from("user_preferences")
+    .select("user_id,notif_push,notif_replies,notif_mentions,notif_messages,notif_upvotes,notif_digest,notif_trending,notif_community,notif_alerts_summary")
+    .in("user_id", userIds);
+  if (preferenceError) throw preferenceError;
+
+  const preferenceByUser = new Map<string, Preferences>();
+  for (const row of (preferenceRows || []) as Preferences[]) {
+    preferenceByUser.set(row.user_id, row);
+  }
+
+  const preferenceField = preferenceForType(type);
+  const eligible = recipients.filter((item) => {
+    const prefs = preferenceByUser.get(item.user_id);
+    if (prefs?.notif_push === false) return false;
+    if (preferenceField && prefs?.[preferenceField] === false) return false;
+    return true;
+  });
+
+  const outcomes = await Promise.all(eligible.map(async (item) => {
+    try {
+      const response = await fetch(
+        "https://fcm.googleapis.com/v1/projects/" + projectId + "/messages:send",
+        {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + accessToken,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: {
+              token: item.fcm_token,
+              notification: { title, body },
+              data: {
+                notification_id: notificationId,
+                post_id: postId,
+                type,
+              },
+              android: { priority: "HIGH" },
+            },
+          }),
+        },
+      );
+      const responseBody = await response.json().catch(() => ({}));
+      if (response.ok) return { sent: 1, failed: 0 };
+
+      const unregistered = responseBody?.error?.details?.some(
+        (detail: { errorCode?: string }) => detail.errorCode === "UNREGISTERED",
+      );
+      if (unregistered) {
+        await supabase.from("device_tokens").delete()
+          .eq("user_id", item.user_id)
+          .eq("fcm_token", item.fcm_token);
+      }
+      return { sent: 0, failed: 1 };
+    } catch {
+      return { sent: 0, failed: 1 };
+    }
+  }));
+
+  return outcomes.reduce(
+    (sum, outcome) => ({
+      sent: sum.sent + outcome.sent,
+      failed: sum.failed + outcome.failed,
+      eligible: sum.eligible + outcome.sent + outcome.failed,
+    }),
+    { sent: 0, failed: 0, eligible: 0 },
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+
+  // This function is server-to-server only. The caller must use the Supabase
+  // service-role JWT; the gateway also verifies JWTs before this handler runs.
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceRole || req.headers.get("Authorization") !== "Bearer " + serviceRole) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
   try {
     const payload = await req.json();
     const mode = payload?.mode === "broadcast" ? "broadcast" : "single";
@@ -41,69 +148,65 @@ Deno.serve(async (req: Request) => {
     const postId = typeof payload?.postId === "string" ? payload.postId : "";
     const notificationId = typeof payload?.notificationId === "string" ? payload.notificationId : "";
     const type = typeof payload?.type === "string" ? payload.type : "community";
+
     if (!title) return jsonResponse({ error: "title is required" }, 400);
-    if (mode === "single" && !userId) return jsonResponse({ error: "userId is required" }, 400);
+    if (mode === "single" && !userId) {
+      return jsonResponse({ error: "userId is required for single-recipient mode" }, 400);
+    }
 
     const url = Deno.env.get("SUPABASE_URL");
-    const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!url || !serviceRole) throw new Error("Supabase server credentials are not configured");
-    const supabase = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
+    if (!url) throw new Error("SUPABASE_URL is not configured");
+    const supabase = createClient(url, serviceRole, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const { accessToken, projectId } = await getFirebaseAccessToken();
 
-    let query = supabase.from("device_tokens").select("user_id,fcm_token");
-    if (mode === "broadcast") {
-      if (excludeUserId) query = query.neq("user_id", excludeUserId);
-    } else {
-      query = query.eq("user_id", userId);
-    }
-    const { data: tokens, error: tokenError } = await query;
-    if (tokenError) throw tokenError;
-    if (!tokens || tokens.length === 0) return jsonResponse({ sent: 0, failed: 0, message: "No recipient tokens found" });
+    let sent = 0;
+    let failed = 0;
+    let scanned = 0;
+    let eligible = 0;
+    let lastUserId: string | null = null;
+    const pageSize = 400;
 
-    const userIds = [...new Set(tokens.map((item: { user_id: string }) => item.user_id))];
-    const { data: preferenceRows, error: preferenceError } = await supabase
-      .from("user_preferences")
-      .select("user_id,notif_push,notif_replies,notif_mentions,notif_messages,notif_upvotes,notif_digest,notif_trending,notif_community,notif_alerts_summary")
-      .in("user_id", userIds);
-    if (preferenceError) throw preferenceError;
-    const preferences = new Map((preferenceRows || []).map((row: Record<string, unknown>) => [row.user_id, row]));
-    const preferenceField = preferenceForType(type);
-    const eligible = tokens.filter((item: { user_id: string }) => {
-      const prefs = preferences.get(item.user_id) as Record<string, unknown> | undefined;
-      if (prefs?.notif_push === false) return false;
-      if (preferenceField && prefs?.[preferenceField] === false) return false;
-      return true;
-    });
+    // Keyset pagination avoids PostgREST's default 1,000-row cap and avoids
+    // skipping rows if an invalid token is removed while a broadcast is running.
+    for (;;) {
+      let query = supabase
+        .from("device_tokens")
+        .select("user_id,fcm_token")
+        .order("user_id", { ascending: true })
+        .limit(pageSize);
 
-    const sends = await Promise.all(eligible.map(async (item: { user_id: string; fcm_token: string }) => {
-      try {
-        const response = await fetch("https://fcm.googleapis.com/v1/projects/" + projectId + "/messages:send", {
-          method: "POST",
-          headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: {
-              token: item.fcm_token,
-              notification: { title, body },
-              data: { notification_id: notificationId, post_id: postId, type },
-              android: { priority: "HIGH" },
-            },
-          }),
-        });
-        const responseBody = await response.json().catch(() => ({}));
-        if (response.ok) return { sent: 1, failed: 0 };
-        const unregistered = responseBody?.error?.details?.some((detail: { errorCode?: string }) => detail.errorCode === "UNREGISTERED");
-        if (unregistered) {
-          await supabase.from("device_tokens").delete().eq("user_id", item.user_id).eq("fcm_token", item.fcm_token);
-        }
-        return { sent: 0, failed: 1 };
-      } catch {
-        return { sent: 0, failed: 1 };
+      if (mode === "single") {
+        query = query.eq("user_id", userId);
+      } else {
+        if (excludeUserId) query = query.neq("user_id", excludeUserId);
+        if (lastUserId) query = query.gt("user_id", lastUserId);
       }
-    }));
-    const totals = sends.reduce((sum, result) => ({ sent: sum.sent + result.sent, failed: sum.failed + result.failed }), { sent: 0, failed: 0 });
-    return jsonResponse({ ...totals, scanned: tokens.length, eligible: eligible.length, mode });
+
+      const { data, error } = await query;
+      if (error) throw error;
+      const recipients = (data || []) as DeviceToken[];
+      if (recipients.length === 0) break;
+
+      scanned += recipients.length;
+      lastUserId = recipients[recipients.length - 1].user_id;
+      const result = await deliverBatch(
+        supabase, recipients, title, body, postId, notificationId, type, accessToken, projectId,
+      );
+      sent += result.sent;
+      failed += result.failed;
+      eligible += result.eligible;
+
+      if (mode === "single" || recipients.length < pageSize) break;
+    }
+
+    return jsonResponse({ sent, failed, scanned, eligible, mode });
   } catch (error) {
     console.error("send-push failed", error);
-    return jsonResponse({ error: error instanceof Error ? error.message : "Unexpected push error" }, 500);
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : "Unexpected push error" },
+      500,
+    );
   }
 });
