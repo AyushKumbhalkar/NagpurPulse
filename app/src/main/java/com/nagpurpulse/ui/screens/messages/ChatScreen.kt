@@ -28,6 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -135,23 +137,47 @@ class ChatViewModel @Inject constructor(
                 createdAt      = java.time.Instant.now().toString()
             )
             _uiState.value = _uiState.value.copy(
-                messages  = _uiState.value.messages + optimistic,
-                isSending = false
+                messages = _uiState.value.messages + optimistic
             )
             // Real send
             messageRepository.sendMessage(conversationId, content).fold(
                 onSuccess = { real ->
-                    val updated = _uiState.value.messages.toMutableList()
-                    val idx = updated.indexOfFirst { it.id == optimistic.id }
-                    if (idx >= 0) updated[idx] = real
-                    _uiState.value = _uiState.value.copy(messages = updated)
+                    // Realtime may deliver the server message before this request
+                    // returns. Remove the optimistic row and deduplicate by server ID.
+                    val updated = _uiState.value.messages
+                        .filterNot { it.id == optimistic.id }
+                        .toMutableList()
+                    if (updated.none { it.id == real.id }) updated.add(real)
+                    _uiState.value = _uiState.value.copy(
+                        messages = updated,
+                        isSending = false
+                    )
                 },
                 onFailure = { e ->
                     // Remove optimistic on failure
                     _uiState.value = _uiState.value.copy(
                         messages = _uiState.value.messages.filter { it.id != optimistic.id },
-                        error    = e.message
+                        isSending = false,
+                        error = e.message
                     )
+                }
+            )
+        }
+    }
+
+    fun refreshMessages() {
+        viewModelScope.launch {
+            messageRepository.getMessages(conversationId).fold(
+                onSuccess = { messages ->
+                    _uiState.value = _uiState.value.copy(
+                        messages = messages,
+                        error = null,
+                        isLoading = false
+                    )
+                    messageRepository.markConversationRead(conversationId)
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(error = e.message)
                 }
             )
         }
@@ -159,9 +185,15 @@ class ChatViewModel @Inject constructor(
 
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
-            messageRepository.deleteMessage(messageId)
-            _uiState.value = _uiState.value.copy(
-                messages = _uiState.value.messages.filter { it.id != messageId }
+            messageRepository.deleteMessage(messageId).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        messages = _uiState.value.messages.filter { it.id != messageId }
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(error = e.message)
+                }
             )
         }
     }
@@ -178,6 +210,9 @@ fun ChatScreen(
     val uiState      = viewModel.uiState.collectAsState().value
     var messageText  by remember { mutableStateOf("") }
     val listState    = rememberLazyListState()
+    val clipboardManager = LocalClipboardManager.current
+    var showChatMenu by remember { mutableStateOf(false) }
+    val reversedMessages = remember(uiState.messages) { uiState.messages.asReversed() }
     LaunchedEffect(uiState.messages.size) {
 
         if (uiState.messages.isNotEmpty()) {
@@ -240,7 +275,24 @@ fun ChatScreen(
                     }
                 }
 
-                IconButton(onClick = {}) { Icon(Icons.Filled.MoreVert, null, tint = SecondaryText) }
+                Box {
+                    IconButton(onClick = { showChatMenu = true }) {
+                        Icon(Icons.Filled.MoreVert, "Chat options", tint = SecondaryText)
+                    }
+                    DropdownMenu(
+                        expanded = showChatMenu,
+                        onDismissRequest = { showChatMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Refresh messages") },
+                            leadingIcon = { Icon(Icons.Filled.Refresh, null) },
+                            onClick = {
+                                showChatMenu = false
+                                viewModel.refreshMessages()
+                            }
+                        )
+                    }
+                }
             }
         },
         bottomBar = {
@@ -335,12 +387,11 @@ fun ChatScreen(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            itemsIndexed(
-                uiState.messages.reversed()
-            ) { idx, msg ->
+            itemsIndexed(reversedMessages) { idx, msg ->
                 val isMe = msg.senderId == myId
                 // Show date separator when day changes
-                val showDate = idx == 0 || !sameDay(uiState.messages[idx - 1].createdAt, msg.createdAt)
+                val showDate = idx == 0 ||
+                    !sameDay(reversedMessages[idx - 1].createdAt, msg.createdAt)
                 if (showDate) {
                     Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), Alignment.Center) {
                         Text(formatMsgDate(msg.createdAt), color = TertiaryText, fontSize = 11.sp,
@@ -350,7 +401,8 @@ fun ChatScreen(
                 MessageBubble(
                     msg      = msg,
                     isMe     = isMe,
-                    onDelete = { if (isMe) viewModel.deleteMessage(msg.id) }
+                    onDelete = { if (isMe) viewModel.deleteMessage(msg.id) },
+                    onCopy = { text -> clipboardManager.setText(AnnotatedString(text)) }
                 )
             }
         }
@@ -359,7 +411,12 @@ fun ChatScreen(
 
 // ── Message bubble ────────────────────────────────────────────────────────────
 @Composable
-private fun MessageBubble(msg: Message, isMe: Boolean, onDelete: () -> Unit) {
+private fun MessageBubble(
+    msg: Message,
+    isMe: Boolean,
+    onDelete: () -> Unit,
+    onCopy: (String) -> Unit
+) {
     var showOptions by remember { mutableStateOf(false) }
 
     val bubbleBg = if (isMe)
@@ -427,7 +484,7 @@ private fun MessageBubble(msg: Message, isMe: Boolean, onDelete: () -> Unit) {
                 }
                 DropdownMenuItem(
                     text    = { Text("Copy", color = PrimaryText) },
-                    onClick = { showOptions = false }
+                    onClick = { showOptions = false; onCopy(msg.content) }
                 )
             }
         }
