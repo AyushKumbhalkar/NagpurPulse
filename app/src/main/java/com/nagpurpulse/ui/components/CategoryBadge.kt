@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.ui.theme.*
@@ -74,6 +75,7 @@ fun CategoryBadge(category: String, modifier: Modifier = Modifier) {
 
     Row(
         modifier = modifier
+            .widthIn(max = 144.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(color.copy(alpha = 0.18f))
             .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -91,7 +93,10 @@ fun CategoryBadge(category: String, modifier: Modifier = Modifier) {
             color      = color,
             fontSize   = 12.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.2.sp
+            letterSpacing = 0.2.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
         )
     }
 }
