@@ -103,9 +103,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Older app builds wrote a second notification row when receiving an FCM push.
-    // Suppress the push for that echo while those clients update; this is also a
-    // short idempotency guard against webhook retries.
-    const cutoff = new Date(new Date(notification.created_at).getTime() - 120_000).toISOString();
+    // Those legacy echo rows lack sender profile fields. Only apply the short
+    // duplicate guard to such rows; do not suppress two legitimate, identical
+    // notifications created by current clients.
+    if (!notification.sender_username && !notification.sender_avatar_url) {
+      const cutoff = new Date(new Date(notification.created_at).getTime() - 120_000).toISOString();
     let duplicateQuery = supabase
       .from("notifications")
       .select("id")
@@ -130,10 +132,12 @@ Deno.serve(async (req: Request) => {
     } else {
       duplicateQuery = duplicateQuery.is("related_conversation_id", null);
     }
+    duplicateQuery = duplicateQuery.or("sender_username.not.is.null,sender_avatar_url.not.is.null");
     const { data: priorNotifications, error: duplicateError } = await duplicateQuery;
     if (duplicateError) throw duplicateError;
     if (priorNotifications && priorNotifications.length > 0) {
       return jsonResponse({ sent: false, skipped: true, reason: "duplicate_notification_echo" });
+    }
     }
 
     const { data: preferences, error: preferencesError } = await supabase
