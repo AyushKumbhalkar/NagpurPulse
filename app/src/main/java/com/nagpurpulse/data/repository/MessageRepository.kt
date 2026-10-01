@@ -22,8 +22,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
+
+@Serializable
+private data class HiddenMessageRow(val message_id: String = "")
+
+@Serializable
+private data class HiddenConversationRow(val conversation_id: String = "")
 
 @Singleton
 class MessageRepository @Inject constructor(
@@ -189,18 +196,38 @@ class MessageRepository @Inject constructor(
         } catch (_: Exception) {}
     }
 
-    // ── Delete a message (soft delete: blank content) ─────────────────────────
-    suspend fun deleteMessage(messageId: String): Result<Unit> {
+    suspend fun deleteConversationForMe(conversationId: String): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
         return try {
-            client.postgrest["messages"].update(
-                buildJsonObject { put("content", "") }
-            ) { filter { eq("id", messageId) } }
+            client.postgrest["conversation_hidden_for_users"].upsert(buildJsonObject { put("conversation_id", conversationId); put("user_id", myId) })
             Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        } catch (e: Exception) { Result.failure(e) }
     }
 
+    suspend fun deleteConversationForBoth(conversationId: String): Result<Unit> = try {
+        client.postgrest["messages"].delete { filter { eq("conversation_id", conversationId) } }
+        client.postgrest["conversation_hidden_for_users"].delete { filter { eq("conversation_id", conversationId) } }
+        client.postgrest["conversations"].delete { filter { eq("id", conversationId) } }
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun deleteMessageForMe(messageId: String): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            client.postgrest["message_hidden_for_users"].upsert(buildJsonObject { put("message_id", messageId); put("user_id", myId) })
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun deleteMessageForBoth(messageId: String): Result<Unit> = try {
+        client.postgrest["messages"].update(buildJsonObject { put("content", "This message was deleted") }) { filter { eq("id", messageId) } }
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun editMessage(messageId: String, content: String): Result<Unit> = try {
+        client.postgrest["messages"].update(buildJsonObject { put("content", content) }) { filter { eq("id", messageId) } }
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
     // ── Realtime: subscribe to new messages in a conversation ─────────────────
     fun subscribeToMessages(conversationId: String): Flow<Message> = kotlinx.coroutines.flow.flow {
 
