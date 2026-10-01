@@ -153,9 +153,7 @@ dependencies {
     // Debug
     debugImplementation(libs.androidx.ui.tooling)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("androidx.compose.material:material-icons-extended")
 
 
     implementation("androidx.credentials:credentials:1.3.0")
@@ -169,8 +167,6 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("com.google.android.gms:play-services-location:21.3.0")
-
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
 
