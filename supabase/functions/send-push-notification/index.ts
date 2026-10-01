@@ -59,6 +59,27 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRole) throw new Error("Supabase server credentials are not configured");
+
+    const supabase = createClient(supabaseUrl, serviceRole, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // The database trigger supplies a random secret stored in Supabase Vault.
+    // Do not trust the public anon key or webhook body as authentication.
+    const webhookSecret = req.headers.get("x-notification-webhook-secret");
+    if (!webhookSecret) return jsonResponse({ error: "Unauthorized" }, 401);
+    const { data: webhookAuthorized, error: authError } = await supabase.rpc(
+      "validate_notification_webhook_secret",
+      { p_candidate: webhookSecret },
+    );
+    if (authError || webhookAuthorized !== true) {
+      console.error("Notification webhook authentication failed", authError?.message || "invalid secret");
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
     const payload = await req.json();
     if (
       payload?.type !== "INSERT" ||
@@ -68,14 +89,6 @@ Deno.serve(async (req: Request) => {
     ) {
       return jsonResponse({ error: "Expected a notifications INSERT webhook" }, 400);
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRole) throw new Error("Supabase server credentials are not configured");
-
-    const supabase = createClient(supabaseUrl, serviceRole, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
 
     // Resolve all notification fields from the database, not from webhook input.
     const { data: notification, error: notificationError } = await supabase
