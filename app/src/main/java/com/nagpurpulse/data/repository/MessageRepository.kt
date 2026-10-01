@@ -95,7 +95,10 @@ class MessageRepository @Inject constructor(
                 }
                 order("last_message_at", Order.DESCENDING)
             }.decodeList<Conversation>()
-            Result.success(rows.map { enrichConversation(it, myId) })
+            val hiddenIds = client.postgrest["conversation_hidden_for_users"].select {
+                filter { eq("user_id", myId) }
+            }.decodeList<HiddenConversationRow>().map { it.conversation_id }.toSet()
+            Result.success(rows.filterNot { it.id in hiddenIds }.map { enrichConversation(it, myId) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -118,10 +121,14 @@ class MessageRepository @Inject constructor(
     // ── Fetch messages in a conversation ──────────────────────────────────────
     suspend fun getMessages(conversationId: String): Result<List<Message>> {
         return try {
+            val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+            val hiddenIds = client.postgrest["message_hidden_for_users"].select {
+                filter { eq("user_id", myId) }
+            }.decodeList<HiddenMessageRow>().map { it.message_id }.toSet()
             val msgs = client.postgrest["messages"].select {
                 filter { eq("conversation_id", conversationId) }
                 order("created_at", Order.ASCENDING)
-            }.decodeList<Message>()
+            }.decodeList<Message>().filterNot { it.id in hiddenIds }
             Result.success(msgs)
         } catch (e: Exception) {
             Result.failure(e)
