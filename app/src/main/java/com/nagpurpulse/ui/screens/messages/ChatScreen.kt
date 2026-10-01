@@ -407,7 +407,7 @@ fun ChatScreen(
             reverseLayout = true,
             modifier       = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             itemsIndexed(reversedMessages, key = { _, msg -> msg.id }) { idx, msg ->
                 val isMe = msg.senderId == myId
@@ -492,7 +492,7 @@ private fun MessageBubble(
                 formatMsgTime(msg.createdAt),
                 color    = TertiaryText,
                 fontSize = 10.sp,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
             )
 
             // Options dropdown (long-press)
