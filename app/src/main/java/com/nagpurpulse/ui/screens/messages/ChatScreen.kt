@@ -4,7 +4,6 @@
 
 package com.nagpurpulse.ui.screens.messages
 
-import kotlinx.coroutines.delay
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -125,9 +124,9 @@ class ChatViewModel @Inject constructor(
     }
 
     fun sendMessage(content: String) {
-        if (content.isBlank()) return
+        if (content.isBlank() || _uiState.value.isSending) return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSending = true)
+            _uiState.value = _uiState.value.copy(isSending = true, error = null)
             // Optimistic insert
             val optimistic = Message(
                 id             = java.util.UUID.randomUUID().toString(),
@@ -212,6 +211,7 @@ fun ChatScreen(
     val listState    = rememberLazyListState()
     val clipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val screenScope = rememberCoroutineScope()
     LaunchedEffect(uiState.error) {
         uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
     }
@@ -276,7 +276,7 @@ fun ChatScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(6.dp).clip(CircleShape).background(GreenSuccess))
                         Spacer(Modifier.width(4.dp))
-                        Text("Online", color = GreenSuccess, fontSize = 11.sp)
+                        Text("Private conversation", color = SecondaryText, fontSize = 11.sp)
                     }
                 }
 
@@ -340,7 +340,7 @@ fun ChatScreen(
                         .clip(CircleShape)
                         .background(sendBg)
                         .pressScale {
-                            if (sendEnabled) {
+                            if (sendEnabled && !uiState.isSending) {
 
                                 viewModel.sendMessage(messageText)
                                 messageText = ""
@@ -407,7 +407,10 @@ fun ChatScreen(
                     msg      = msg,
                     isMe     = isMe,
                     onDelete = { if (isMe) viewModel.deleteMessage(msg.id) },
-                    onCopy = { text -> clipboardManager.setText(AnnotatedString(text)) }
+                    onCopy = { text ->
+                        clipboardManager.setText(AnnotatedString(text))
+                        screenScope.launch { snackbarHostState.showSnackbar("Message copied") }
+                    }
                 )
             }
         }
