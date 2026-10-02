@@ -53,7 +53,7 @@ Source: `supabase/migrations/20261002150000_server_authoritative_notifications.s
 
 ## Known limitations and rollout risks
 
-- **Comment likes are not implemented.** The schema has `comments.upvotes` as a counter, but the authoritative per-user comment-like write path was not established. Do not claim comment-like notifications work until that path is found and a separate migration is reviewed.
+- Comment likes are now implemented in a separate migration and app feature branch; see the next section. The production deployment is schema-verified, but app compilation and end-to-end FCM delivery still require testing.
 - Creating a post does not generate a notification in this migration.
 - The upvote-milestone existence check can race if concurrent votes reach the same threshold. A dedicated unique event key/constraint would be a future hardening step.
 - Anonymous comment notifications are intentionally suppressed to protect author privacy.
@@ -65,3 +65,34 @@ Source: `supabase/migrations/20261002150000_server_authoritative_notifications.s
 
 - Rollback performed: **No**.
 - Next: inspect the comment-like write path, review the milestone race, then perform a controlled end-to-end test with two test accounts. Do not re-enable broad client INSERT policies as a workaround.
+
+
+## Migration: per-user comment likes and notifications
+
+Source: `supabase/migrations/20261002170000_comment_likes_and_notifications.sql` on `feature/comment-like-notifications`.
+
+### Actions applied to the live database
+
+1. **Created** `public.comment_likes` with foreign keys to comments/auth users and a unique constraint on `(comment_id, user_id)` to prevent duplicate likes by the same user.
+2. **Enabled RLS** and added authenticated-user-scoped SELECT, INSERT, and DELETE policies. Granted only the table operations required by the app.
+3. **Added** `maintain_comment_like_count()` and insert/delete triggers to increment/decrement `comments.upvotes` in the database instead of relying on a client-side read-modify-write counter.
+4. **Added** `notify_comment_like_insert()` and `notifications_from_comment_like_insert` to notify a comment author when another user likes the comment. It skips self-notifications and honors the recipient's existing `notif_upvotes` preference.
+5. **Restricted** execution of both trigger functions from `PUBLIC`, `anon`, and `authenticated`. Triggers run as their owner and call the previously deployed restricted `create_notification_event(...)` helper.
+
+### Deployment record — 2026-10-02
+
+- Status: **APPLIED TO PRODUCTION; schema/RLS/trigger verification passed.**
+- Supabase migration name: `comment_likes_and_notifications`
+- Apply operation returned: success.
+- Verification found the three expected policies: own likes SELECT, INSERT, DELETE.
+- Verification found the three expected triggers on `public.comment_likes`: count maintenance on INSERT, count maintenance on DELETE, and notification on INSERT.
+- No test likes or notifications were inserted during verification.
+- No app code was merged into `master`. App changes are isolated on `feature/comment-like-notifications`.
+
+### Remaining validation / limitations
+
+- The Android app has not yet been built locally or tested on devices in this session.
+- End-to-end FCM delivery has not yet been verified.
+- The client toggle is protected from duplicate rows by the unique constraint, but simultaneous requests can still race; if a duplicate insert is rejected, the UI should refresh/reconcile state.
+- Existing historical `comments.upvotes` values are preserved; they are not backfilled into `comment_likes`, since the original per-user identities are unavailable.
+- Rollback performed: **No**.
