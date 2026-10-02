@@ -169,13 +169,27 @@ fun AdminDashboardContent(
             if (state.isLoading) {
                 ShimmerStatRow()
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    DashStatCard("Posts Today",     state.stats.postsToday.toString(),     Icons.Filled.Article,     OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(false) }
-                    DashStatCard("Comments Today",  state.stats.commentsToday.toString(),  Icons.Filled.ChatBubble,  OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(true) }
-                    DashStatCard("New Users",       state.stats.newUsersToday.toString(),  Icons.Filled.PersonAdd,   OrangePrimary, Modifier.weight(1f)) { onNavigateToUsers() }
+                val dashboardCompact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
+                if (dashboardCompact) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            DashStatCard("Posts Today", state.stats.postsToday.toString(), Icons.Filled.Article, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(false) }
+                            DashStatCard("Comments Today", state.stats.commentsToday.toString(), Icons.Filled.ChatBubble, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(true) }
+                        }
+                        DashStatCard("New Users", state.stats.newUsersToday.toString(), Icons.Filled.PersonAdd, OrangePrimary, Modifier.fillMaxWidth()) { onNavigateToUsers() }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        DashStatCard("Posts Today", state.stats.postsToday.toString(), Icons.Filled.Article, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(false) }
+                        DashStatCard("Comments Today", state.stats.commentsToday.toString(), Icons.Filled.ChatBubble, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(true) }
+                        DashStatCard("New Users", state.stats.newUsersToday.toString(), Icons.Filled.PersonAdd, OrangePrimary, Modifier.weight(1f)) { onNavigateToUsers() }
+                    }
                 }
             }
         }
