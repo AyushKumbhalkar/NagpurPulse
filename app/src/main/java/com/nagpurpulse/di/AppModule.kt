@@ -49,12 +49,10 @@ object AppModule {
     @Singleton
     fun providePostRepository(
         client: SupabaseClient,
-        notificationRepository: NotificationRepository,
         authRepository: AuthRepository
     ): PostRepository =
         PostRepository(
             client,
-            notificationRepository,
             authRepository
         )
 
@@ -113,13 +111,11 @@ object AppModule {
     fun provideMessageRepository(
         client: SupabaseClient,
         authRepository: AuthRepository,
-        profileRepository: ProfileRepository,
-        notificationRepository: NotificationRepository
+        profileRepository: ProfileRepository
     ): MessageRepository = MessageRepository(
         client,
         authRepository,
-        profileRepository,
-        notificationRepository
+        profileRepository
     )
 
 }
