@@ -510,6 +510,7 @@ fun NotificationsScreen(
             }
         }
     }
+    }
 }
 
 // ── NotifRow — real sender avatar + full type coverage ────────────────────────
@@ -561,7 +562,7 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
             ) { Text(notif.emoji(), fontSize = 10.sp) }
         }
 
-        Spacer(Modifier.width(if (compact) 8.dp else 12.dp))
+        Spacer(Modifier.width(if (compact) 6.dp else 12.dp))
 
         Column(Modifier.weight(1f)) {
             Text(
@@ -628,6 +629,8 @@ private fun PushEnableBanner(
     onDismiss:      () -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val compact = maxWidth < 360.dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -635,12 +638,12 @@ private fun PushEnableBanner(
             .clip(RoundedCornerShape(16.dp))
             .background(Surface)
             .border(1.dp, OrangePrimary.copy(0.25f), RoundedCornerShape(16.dp))
-            .padding(14.dp),
+            .padding(if (compact) 10.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             Modifier
-                .size(44.dp)
+                .size(if (compact) 36.dp else 44.dp)
                 .clip(CircleShape)
                 .background(OrangeSubtle)
                 .border(1.dp, OrangePrimary.copy(0.3f), CircleShape),
@@ -659,11 +662,13 @@ private fun PushEnableBanner(
         Column(Modifier.weight(1f)) {
             Text(
                 "Stay updated, Nagpur!",
-                color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp
+                color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+                maxLines = 2, overflow = TextOverflow.Ellipsis
             )
             Text(
                 "Enable push notifications to never miss replies, alerts & trending posts.",
-                color = SecondaryText, fontSize = 12.sp, lineHeight = 16.sp
+                color = SecondaryText, fontSize = 12.sp, lineHeight = 16.sp,
+                maxLines = if (compact) 3 else 4, overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(6.dp))
             // "Open in Settings" for users who previously denied
@@ -684,7 +689,7 @@ private fun PushEnableBanner(
                     .clip(RoundedCornerShape(18.dp))
                     .background(OrangePrimary)
                     .pressScale(onClick = onEnable)
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .padding(horizontal = if (compact) 10.dp else 14.dp, vertical = 8.dp)
             ) {
                 Text("Enable", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
