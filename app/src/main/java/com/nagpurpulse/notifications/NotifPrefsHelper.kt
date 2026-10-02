@@ -44,7 +44,7 @@ object NotifPrefsHelper {
             "comment", "reply"          -> isRepliesEnabled(ctx)
             "mention"                   -> isMentionsEnabled(ctx)
             "message"                   -> isMessagesEnabled(ctx)
-            "upvote", "like"            -> isUpvotesEnabled(ctx)
+            "upvote", "like", "comment_like" -> isUpvotesEnabled(ctx)
             "alert", "emergency"        -> true  // alerts always shown
             "trending"                  -> isTrendingEnabled(ctx)
             "community"                 -> isCommunityEnabled(ctx)
