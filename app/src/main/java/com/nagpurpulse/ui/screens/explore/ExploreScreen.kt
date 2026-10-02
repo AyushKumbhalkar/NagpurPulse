@@ -577,7 +577,10 @@ fun ExploreScreen(
                                                     area,
                                                     color = PrimaryText,
                                                     style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Medium
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.weight(1f)
                                                 )
                                             }
                                         }
