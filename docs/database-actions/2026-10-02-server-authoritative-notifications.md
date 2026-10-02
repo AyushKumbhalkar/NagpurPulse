@@ -97,3 +97,24 @@ Source: `supabase/migrations/20261002170000_comment_likes_and_notifications.sql`
 - The client toggle is protected from duplicate rows by the unique constraint, but simultaneous requests can still race; if a duplicate insert is rejected, the UI should refresh/reconcile state.
 - Existing historical `comments.upvotes` values are preserved; they are not backfilled into `comment_likes`, since the original per-user identities are unavailable.
 - Rollback performed: **No**.
+
+
+## Migration: enable Realtime for comments
+
+Source: `supabase/migrations/20261002180000_enable_comment_realtime.sql` on `feature/comment-like-notifications`.
+
+### Actions applied to the live database
+
+1. Added `public.comments` to the `supabase_realtime` publication, using an idempotent migration guard.
+2. This publication membership is required for the app's new thread subscription to receive comment INSERT/UPDATE/DELETE events. The thread then reloads the canonical comments and post count.
+3. Added pull-to-refresh to Thread Detail as a manual fallback.
+
+### Deployment record — 2026-10-02
+
+- Status: **APPLIED TO PRODUCTION; publication membership verified.**
+- Supabase migration name: `enable_comment_realtime`
+- Supabase migration version: `20261002112333`
+- Apply operation returned: success.
+- Verification query confirmed `public.comments` is now in `supabase_realtime`.
+- No app changes merged into `master`; all app work remains on `feature/comment-like-notifications`.
+- Android local build and device testing are still pending.
