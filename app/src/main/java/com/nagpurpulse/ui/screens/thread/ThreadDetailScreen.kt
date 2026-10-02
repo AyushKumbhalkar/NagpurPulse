@@ -54,16 +54,20 @@ import com.nagpurpulse.ui.components.*
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.nagpurpulse.ui.preferences.DensityManager
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 data class ThreadDetailUiState(
     val post: Post? = null,
     val comments: List<Comment> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSubmittingComment: Boolean = false,
     val error: String? = null,
     val userVote: String? = null,
@@ -143,14 +147,59 @@ class ThreadDetailViewModel @Inject constructor(
         loadPost()
         loadComments()
         loadUserVoteAndSaved()
+
+        // Keep this thread synchronized with comments/replies created by other users.
+        viewModelScope.launch {
+            runCatching {
+                postRepository.subscribeToComments(postId).collect {
+                    delay(250)
+                    loadPost()
+                    loadComments()
+                }
+            }.onFailure { error ->
+                android.util.Log.e("THREAD_COMMENTS_RT", "Comment realtime subscription stopped", error)
+            }
+        }
+    }
+
+    fun refreshThread() {
+        if (_uiState.value.isRefreshing) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            try {
+                val postResult = postRepository.getPostById(postId)
+                val commentsResult = postRepository.getComments(postId)
+                postResult.onSuccess { post ->
+                    _uiState.value = _uiState.value.copy(post = post)
+                }
+                commentsResult.onSuccess { comments ->
+                    _uiState.value = _uiState.value.copy(comments = comments)
+                }
+                if (postResult.isFailure && commentsResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(error = postResult.exceptionOrNull()?.message)
+                }
+            } finally {
+                _uiState.value = _uiState.value.copy(isRefreshing = false)
+            }
+        }
     }
 
     private fun loadPost() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            val shouldShowInitialLoading = _uiState.value.post == null
+            if (shouldShowInitialLoading) {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+            }
             postRepository.getPostById(postId).fold(
-                onSuccess = { post -> _uiState.value = _uiState.value.copy(post = post, isLoading = false) },
-                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message, isLoading = false) }
+                onSuccess = { post ->
+                    _uiState.value = _uiState.value.copy(post = post, isLoading = false)
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        error = e.message,
+                        isLoading = false
+                    )
+                }
             )
         }
     }
@@ -231,14 +280,19 @@ class ThreadDetailViewModel @Inject constructor(
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             postRepository.upvoteComment(commentId, userId).fold(
-                onSuccess = {
+                onSuccess = { isLiked ->
                     _uiState.value = _uiState.value.copy(
                         comments = _uiState.value.comments.map { c ->
-                            if (c.id == commentId) c.copy(upvotes = c.upvotes + 1) else c
+                            if (c.id == commentId) c.copy(
+                                upvotes = (c.upvotes + if (isLiked) 1 else -1).coerceAtLeast(0),
+                                likedByCurrentUser = isLiked
+                            ) else c
                         }
                     )
                 },
-                onFailure = {}
+                onFailure = { error ->
+                    android.util.Log.e("COMMENT_LIKE", "Failed to toggle comment like", error)
+                }
             )
         }
     }
@@ -819,9 +873,14 @@ fun ThreadDetailScreen(
             ) { items(4) { ShimmerPostCard() } }
             return@Scaffold
         }
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(isRefreshing = uiState.isRefreshing),
+            onRefresh = { viewModel.refreshThread() },
+            modifier = Modifier.padding(paddingValues)
+        ) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.padding(paddingValues),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             // ── Post content ──────────────────────────────────────────────
@@ -1147,7 +1206,7 @@ fun ThreadDetailScreen(
 
 
                                 isHighlighted = parentComment.id == commentId,
-                                onUpvote      = { viewModel.upvoteComment(parentComment.id) },
+                                onUpvote      = { commentId -> viewModel.upvoteComment(commentId) },
                                 onReplySubmit = { pid, body, anonymous ->
                                     viewModel.submitReply(
                                         pid,
@@ -1219,7 +1278,7 @@ fun ThreadDetailScreen(
                                         onEdit        = { editedCommentId, newBody ->
                                             viewModel.updateComment(editedCommentId, newBody)
                                         },
-                                        onUpvote      = { viewModel.upvoteComment(reply.id) },
+                                        onUpvote      = { commentId -> viewModel.upvoteComment(commentId) },
                                         onReport = { commentId, reason ->
                                             viewModel.reportComment(commentId, reason)
                                         },
@@ -1248,7 +1307,7 @@ fun ThreadDetailScreen(
                                             onReport = { commentId, reason ->
                                                 viewModel.reportComment(commentId, reason)
                                             },
-                                            onUpvote      = { viewModel.upvoteComment(nested.id) },
+                                            onUpvote      = { commentId -> viewModel.upvoteComment(commentId) },
                                             onReplySubmit = { pid, body, anonymous ->
                                                 viewModel.submitReply(
                                                     pid,
@@ -1272,6 +1331,7 @@ fun ThreadDetailScreen(
             }
 
             item { Spacer(Modifier.height(16.dp)) }
+        }
         }
     }
 }

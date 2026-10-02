@@ -27,7 +27,8 @@ data class Comment(
     @SerialName("edited_by_admin")
     val editedByAdmin: Boolean = false,
     val username: String? = null,
-    @SerialName("avatar_url") val avatarUrl: String? = null
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @kotlinx.serialization.Transient val likedByCurrentUser: Boolean = false
 )
 
 fun Comment.timeAgo(): String {

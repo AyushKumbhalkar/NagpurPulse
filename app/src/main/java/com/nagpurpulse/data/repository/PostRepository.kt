@@ -20,6 +20,15 @@ import com.nagpurpulse.data.model.Post
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -421,13 +430,37 @@ class PostRepository @Inject constructor(
 
     // ── Comments ──────────────────────────────────────────────────────────────
 
+    /**
+     * Emits whenever a comment row for this post is inserted, updated or deleted.
+     * The screen reloads the canonical comment list after each event so replies,
+     * edits and moderation changes appear without requiring a manual refresh.
+     */
+    fun subscribeToComments(postId: String): Flow<Unit> = flow {
+        val channel = client.realtime.channel("thread_comments_$postId")
+        val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
+            table = "comments"
+            filter("post_id", FilterOperator.EQ, postId)
+        }.map { Unit }
+        val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
+            table = "comments"
+            filter("post_id", FilterOperator.EQ, postId)
+        }.map { Unit }
+        val deletes = channel.postgresChangeFlow<PostgresAction.Delete>(schema = "public") {
+            table = "comments"
+            filter("post_id", FilterOperator.EQ, postId)
+        }.map { Unit }
+
+        channel.subscribe(blockUntilSubscribed = true)
+        merge(inserts, updates, deletes).collect { emit(Unit) }
+    }
+
     suspend fun getComments(postId: String): Result<List<Comment>> {
         return try {
             val comments = client.postgrest["comments"].select {
                 filter { eq("post_id", postId) }
                 order("upvotes", Order.DESCENDING)
             }.decodeList<Comment>()
-            Result.success(enrichCommentsWithUsernames(comments))
+            Result.success(enrichCommentsWithUsernames(withCurrentUserLikeState(comments)))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -439,7 +472,7 @@ class PostRepository @Inject constructor(
                 filter { eq("user_id", userId) }
                 order("created_at", Order.DESCENDING)
             }.decodeList<Comment>()
-            Result.success(enrichCommentsWithUsernames(comments))
+            Result.success(enrichCommentsWithUsernames(withCurrentUserLikeState(comments)))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -575,17 +608,65 @@ class PostRepository @Inject constructor(
          // Re-enrich the original author details so admin edits never change the visible identity.
          enrichCommentWithUsername(updatedComment)
      }
-    suspend fun upvoteComment(commentId: String, userId: String): Result<Unit> {
+    /**
+     * Toggle the current user's like on a comment. The comment_likes table is the
+     * source of truth; database triggers maintain comments.upvotes and emit
+     * notifications only for a newly inserted like.
+     *
+     * Returns true when the comment is liked after this operation, false when unliked.
+     */
+    suspend fun upvoteComment(commentId: String, userId: String): Result<Boolean> {
         return try {
-            val comment = client.postgrest["comments"]
-                .select { filter { eq("id", commentId) } }
-                .decodeSingle<Comment>()
-            client.postgrest["comments"].update(
-                mapOf("upvotes" to comment.upvotes + 1)
-            ) { filter { eq("id", commentId) } }
-            Result.success(Unit)
+            val authenticatedUserId = authRepository.currentUserId
+                ?: return Result.failure(Exception("You must be logged in"))
+            if (authenticatedUserId != userId) {
+                return Result.failure(Exception("Authenticated user mismatch"))
+            }
+
+            val existing = client.postgrest["comment_likes"].select {
+                filter {
+                    eq("comment_id", commentId)
+                    eq("user_id", authenticatedUserId)
+                }
+            }.decodeList<kotlinx.serialization.json.JsonObject>()
+
+            if (existing.isNotEmpty()) {
+                client.postgrest["comment_likes"].delete {
+                    filter {
+                        eq("comment_id", commentId)
+                        eq("user_id", authenticatedUserId)
+                    }
+                }
+                Result.success(false)
+            } else {
+                client.postgrest["comment_likes"].insert(
+                    buildJsonObject {
+                        put("comment_id", commentId)
+                        put("user_id", authenticatedUserId)
+                    }
+                )
+                Result.success(true)
+            }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun withCurrentUserLikeState(comments: List<Comment>): List<Comment> {
+        val userId = authRepository.currentUserId
+        if (comments.isEmpty() || userId == null) return comments
+        return try {
+            val commentIds = comments.map { it.id }.distinct()
+            val likes = client.postgrest["comment_likes"].select {
+                filter {
+                    eq("user_id", userId)
+                    isIn("comment_id", commentIds)
+                }
+            }.decodeList<kotlinx.serialization.json.JsonObject>()
+            val likedIds = likes.mapNotNull { it["comment_id"]?.jsonPrimitive?.content }.toSet()
+            comments.map { it.copy(likedByCurrentUser = it.id in likedIds) }
+        } catch (_: Exception) {
+            comments
         }
     }
 

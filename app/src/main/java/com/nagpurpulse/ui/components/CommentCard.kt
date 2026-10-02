@@ -58,7 +58,7 @@ fun CommentCard(
     currentUserId: String? = null,
     isAdmin: Boolean = false,
     isHighlighted: Boolean = false,
-    onUpvote: () -> Unit = {},
+    onUpvote: (String) -> Unit = {},
     onReplySubmit: (String, String, Boolean) -> Unit = { _, _, _ -> },
     onReport: (String, String) -> Unit = { _, _ -> },
     onEdit: (String, String) -> Unit = { _, _ -> },
@@ -82,8 +82,8 @@ fun CommentCard(
 
     var menuExpanded   by remember { mutableStateOf(false) }
     var upvoteBurst  by remember { mutableStateOf(false) }
-    var hasUpvoted   by remember { mutableStateOf(false) }
-    var localUpvotes by remember { mutableIntStateOf(comment.upvotes) }
+    var hasUpvoted by remember(comment.id, comment.likedByCurrentUser) { mutableStateOf(comment.likedByCurrentUser) }
+    var localUpvotes by remember(comment.id, comment.upvotes) { mutableIntStateOf(comment.upvotes) }
     var showReply    by remember { mutableStateOf(false) }
     var replyText    by remember { mutableStateOf("") }
     var isReplyAnonymous by remember { mutableStateOf(false) }
@@ -397,12 +397,10 @@ fun CommentCard(
                                     .background(if (hasUpvoted) OrangeSubtle else MaterialTheme.colorScheme.surfaceVariant)
                                     .let {
                                         if (isLoggedIn) it.pressScale {
-                                            if (!hasUpvoted) {
-                                                hasUpvoted = true
-                                                upvoteBurst = true
-                                                localUpvotes++
-                                                onUpvote()
-                                            }
+                                            hasUpvoted = !hasUpvoted
+                                            upvoteBurst = hasUpvoted
+                                            localUpvotes = (localUpvotes + if (hasUpvoted) 1 else -1).coerceAtLeast(0)
+                                            onUpvote(comment.id)
                                         } else it
                                     }
                                     .padding(horizontal = 10.dp, vertical = 5.dp),
