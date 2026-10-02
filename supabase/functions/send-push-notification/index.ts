@@ -221,6 +221,15 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ sent: false, error: fcmError }, 502);
     }
 
+    // Best-effort aggregate counter only. Never store recipient or notification IDs.
+    const { error: analyticsError } = await supabase.rpc("record_notification_analytics", {
+      p_event_type: "push_delivered",
+      p_notification_type: String(notification.type || "general").toLowerCase(),
+    });
+    if (analyticsError) {
+      console.error("Notification analytics counter failed", analyticsError.message);
+    }
+
     return jsonResponse({ sent: true, notificationId: notification.id, message: fcmResult });
   } catch (error) {
     console.error("send-push-notification failed", error);
