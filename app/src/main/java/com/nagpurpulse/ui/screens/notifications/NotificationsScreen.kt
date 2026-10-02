@@ -233,21 +233,22 @@ class NotificationsViewModel @Inject constructor(
         val uid = authRepository.currentUserId ?: return
         if (ids.isEmpty()) return
         viewModelScope.launch {
-            var failed = false
+            val successfulIds = mutableSetOf<String>()
             ids.forEach { id ->
-                if (notificationRepository.markOneRead(uid, id).isFailure) failed = true
+                if (notificationRepository.markOneRead(uid, id).isSuccess) {
+                    successfulIds += id
+                }
             }
-            if (failed) {
-                _s.value = _s.value.copy(error = "Some notifications couldn't be marked as read. Please try again.")
-            } else {
-                val idSet = ids.toSet()
-                _s.value = _s.value.copy(
-                    notifications = _s.value.notifications.map { n ->
-                        if (n.id in idSet) n.copy(isRead = true) else n
-                    },
-                    error = null
-                )
-            }
+            // Reflect confirmed server updates even if another member of the
+            // grouped notification failed, avoiding stale unread state locally.
+            _s.value = _s.value.copy(
+                notifications = _s.value.notifications.map { n ->
+                    if (n.id in successfulIds) n.copy(isRead = true) else n
+                },
+                error = if (successfulIds.size < ids.distinct().size) {
+                    "Some notifications couldn't be marked as read. Please try again."
+                } else null
+            )
         }
     }
 
