@@ -31,6 +31,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -555,7 +556,9 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
                     ) { append(notif.title) }
                 },
                 fontSize   = 14.sp,
-                lineHeight = 20.sp
+                lineHeight = 20.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             if (!notif.body.isNullOrBlank()) {
                 Spacer(Modifier.height(3.dp))
@@ -563,7 +566,8 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
                     "\"${notif.body}\"",
                     color    = TertiaryText,
                     fontSize = 13.sp,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Spacer(Modifier.height(4.dp))
