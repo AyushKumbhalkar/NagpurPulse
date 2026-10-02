@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -145,9 +146,9 @@ fun AreaSelectionScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                Text("Where are you in Nagpur?", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("Where are you in Nagpur?", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(4.dp))
-                Text("We'll show you the most relevant posts", color = TextSecondary, fontSize = 14.sp)
+                Text("We'll show you the most relevant posts", color = TextSecondary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
 
@@ -251,6 +252,8 @@ fun AreaSelectionScreen(
                                 color = textColor,
                                 fontSize = 14.sp,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
                             // Animated checkmark

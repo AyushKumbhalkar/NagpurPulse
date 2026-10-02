@@ -631,7 +631,9 @@ private fun CategoryEmptyState(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(Modifier.height(6.dp))
@@ -639,7 +641,9 @@ private fun CategoryEmptyState(
                 "Be the first to share something in ${categoryDisplayName(category)}!",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(Modifier.height(20.dp))

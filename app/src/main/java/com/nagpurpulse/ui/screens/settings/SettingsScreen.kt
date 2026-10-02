@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -568,8 +569,15 @@ fun SettingsRow(label: String, sub: String, icon: ImageVector, iconTint: Color, 
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Text(sub, color = TertiaryText, fontSize = 12.sp)
+            Text(
+                label,
+                color = PrimaryText,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, tint = TertiaryText, modifier = Modifier.size(14.dp))
     }
@@ -586,8 +594,8 @@ fun SettingsRowBadge(label: String, sub: String, icon: ImageVector, iconTint: Co
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Text(sub, color = TertiaryText, fontSize = 12.sp)
+            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Text(badge, color = OrangePrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.width(8.dp))
@@ -606,8 +614,8 @@ fun SettingsRowToggle(label: String, sub: String, icon: ImageVector, iconTint: C
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Text(sub, color = TertiaryText, fontSize = 12.sp)
+            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Switch(
             checked         = checked,

@@ -597,10 +597,10 @@ private fun AdminPostCard(
                         .border(1.dp, categoryColor.copy(0.3f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    Text(post.category.replaceFirstChar { it.uppercase() }, color = categoryColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(post.category.replaceFirstChar { it.uppercase() }, color = categoryColor, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(Modifier.weight(1f))
-                Text(post.timeAgo(), color = TertiaryText, fontSize = 11.sp)
+                Text(post.timeAgo(), color = TertiaryText, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.width(6.dp))
                 Icon(Icons.Filled.MoreVert, null, tint = TertiaryText, modifier = Modifier.size(16.dp))
             }

@@ -107,7 +107,7 @@ fun IdentityScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-
+                .verticalScroll(rememberScrollState())
         ) {
             // ── Top bar ──────────────────────────────────────────────
             Row(

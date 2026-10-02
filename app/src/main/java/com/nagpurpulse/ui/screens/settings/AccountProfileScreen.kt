@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -617,11 +618,25 @@ fun AccountProfileScreen(
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(s.displayName.ifBlank { "Your Name" }, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(
+                                s.displayName.ifBlank { "Your Name" },
+                                color = PrimaryText,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             Text("Incognito User", color = SecondaryText, fontSize = 12.sp)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.LocationOn, null, tint = OrangePrimary, modifier = Modifier.size(12.dp))
-                                Text(" ${s.location}", color = OrangePrimary, fontSize = 12.sp)
+                                Text(
+                                    " ${s.location}",
+                                    color = OrangePrimary,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
                             Spacer(Modifier.height(6.dp))
                             Box(Modifier.clip(RoundedCornerShape(12.dp)).background(OrangePrimary.copy(0.15f)).padding(horizontal = 9.dp, vertical = 3.dp)) {

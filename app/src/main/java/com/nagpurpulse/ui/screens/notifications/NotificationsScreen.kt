@@ -31,6 +31,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -300,7 +301,21 @@ fun NotificationsScreen(
                             )
                         }
                     }
-                    if (unread > 0) {
+                    IconButton(onClick = { viewModel.clearAll() }) {
+                        Icon(Icons.Filled.Delete, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { navController.navigate(Screen.NotifSettings.route) }) {
+                        Icon(Icons.Filled.Settings, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                if (unread > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(14.dp))
@@ -311,15 +326,13 @@ fun NotificationsScreen(
                         ) {
                             Text(
                                 "Mark all read",
-                                color = OrangePrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
+                                color = OrangePrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    IconButton(onClick = { viewModel.clearAll() }) {
-                        Icon(Icons.Filled.Delete, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = { navController.navigate(Screen.NotifSettings.route) }) {
-                        Icon(Icons.Filled.Settings, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
                     }
                 }
 
@@ -555,7 +568,9 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
                     ) { append(notif.title) }
                 },
                 fontSize   = 14.sp,
-                lineHeight = 20.sp
+                lineHeight = 20.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             if (!notif.body.isNullOrBlank()) {
                 Spacer(Modifier.height(3.dp))
@@ -563,7 +578,8 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
                     "\"${notif.body}\"",
                     color    = TertiaryText,
                     fontSize = 13.sp,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Spacer(Modifier.height(4.dp))

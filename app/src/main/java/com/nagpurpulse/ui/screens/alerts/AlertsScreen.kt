@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -180,7 +181,9 @@ fun AlertsScreen(
                             "Live Alerts",
                             color = PrimaryText,
                             fontWeight = FontWeight.Black,
-                            fontSize = 22.sp
+                            fontSize = 22.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     // Heartbeat icon suffix
@@ -356,9 +359,9 @@ fun AlertsScreen(
                             modifier = Modifier.size(54.dp)
                         )
                         Spacer(Modifier.height(16.dp))
-                        Text("All clear in Nagpur!", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("All clear in Nagpur!", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         Spacer(Modifier.height(6.dp))
-                        Text("No active alerts right now.", color = SecondaryText, fontSize = 14.sp)
+                        Text("No active alerts right now.", color = SecondaryText, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
 

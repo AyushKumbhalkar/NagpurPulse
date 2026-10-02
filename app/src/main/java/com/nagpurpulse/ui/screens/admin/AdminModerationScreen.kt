@@ -113,8 +113,8 @@ fun AdminQueueContent(
                         modifier = Modifier.size(40.dp)
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text("No pending reports", color = SecondaryText, fontSize = 15.sp)
-                    Text("The moderation queue is clear", color = TertiaryText, fontSize = 12.sp)
+                    Text("No pending reports", color = SecondaryText, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("The moderation queue is clear", color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         } else {
@@ -194,9 +194,17 @@ fun QueueItemCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .background(RedAlert.copy(0.12f))
+                        .widthIn(max = 132.dp)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    Text("Reason: ${item.topReason}", color = RedAlert, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Reason: ${item.topReason}",
+                        color = RedAlert,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -212,7 +220,11 @@ fun QueueItemCard(
                 Icon(Icons.Filled.Group, null, tint = TertiaryText, modifier = Modifier.size(12.dp))
                 Text(
                     " Reported by ${item.reportCount} ${if (item.reportCount == 1) "user" else "users"}  •  Posted by @${item.authorUsername}  •  ${item.timeAgo}",
-                    color = TertiaryText, fontSize = 11.sp
+                    color = TertiaryText,
+                    fontSize = 11.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
             Spacer(Modifier.height(10.dp))

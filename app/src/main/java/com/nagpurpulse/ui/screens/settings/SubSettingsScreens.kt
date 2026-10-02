@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -108,7 +109,10 @@ fun IncognitoSettingsScreen(navController: NavController) {
                         "Incognito Settings",
                         color = PrimaryText,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        fontSize = 18.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
@@ -147,9 +151,12 @@ fun IncognitoSettingsScreen(navController: NavController) {
                     Spacer(Modifier.height(6.dp))
 
                     Text(
-                        "Stay private. Stay incognito.",
+                        text = "Stay private. Stay incognito.",
                         color = SecondaryText,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
@@ -305,9 +312,10 @@ fun IncognitoSettingsScreen(navController: NavController) {
                             )
 
                             Text(
-                                tip,
+                                text = tip,
                                 color = SecondaryText,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -363,7 +371,10 @@ fun SecuritySettingsScreen(
                         text = "Security",
                         color = PrimaryText,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        fontSize = 18.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 

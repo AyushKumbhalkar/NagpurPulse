@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -112,8 +113,8 @@ fun AdminDashboardContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Admin Dashboard", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                    Text("NagpurPulse Moderation", color = SecondaryText, fontSize = 13.sp)
+                    Text("Admin Dashboard", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 24.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("NagpurPulse Moderation", color = SecondaryText, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(
                     modifier = Modifier
@@ -131,6 +132,8 @@ fun AdminDashboardContent(
                             else "Admin",
                             color = OrangePrimary,
                             fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -169,13 +172,27 @@ fun AdminDashboardContent(
             if (state.isLoading) {
                 ShimmerStatRow()
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    DashStatCard("Posts Today",     state.stats.postsToday.toString(),     Icons.Filled.Article,     OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(false) }
-                    DashStatCard("Comments Today",  state.stats.commentsToday.toString(),  Icons.Filled.ChatBubble,  OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(true) }
-                    DashStatCard("New Users",       state.stats.newUsersToday.toString(),  Icons.Filled.PersonAdd,   OrangePrimary, Modifier.weight(1f)) { onNavigateToUsers() }
+                val dashboardCompact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
+                if (dashboardCompact) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            DashStatCard("Posts Today", state.stats.postsToday.toString(), Icons.Filled.Article, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(false) }
+                            DashStatCard("Comments Today", state.stats.commentsToday.toString(), Icons.Filled.ChatBubble, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(true) }
+                        }
+                        DashStatCard("New Users", state.stats.newUsersToday.toString(), Icons.Filled.PersonAdd, OrangePrimary, Modifier.fillMaxWidth()) { onNavigateToUsers() }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        DashStatCard("Posts Today", state.stats.postsToday.toString(), Icons.Filled.Article, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(false) }
+                        DashStatCard("Comments Today", state.stats.commentsToday.toString(), Icons.Filled.ChatBubble, OrangePrimary, Modifier.weight(1f)) { onNavigateToPosts(true) }
+                        DashStatCard("New Users", state.stats.newUsersToday.toString(), Icons.Filled.PersonAdd, OrangePrimary, Modifier.weight(1f)) { onNavigateToUsers() }
+                    }
                 }
             }
         }

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.nagpurpulse.ui.preferences.DensityManager
@@ -52,7 +53,7 @@ fun DisplayDensityScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Display Density")
+                    Text("Display Density", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = {
                     IconButton(
@@ -82,9 +83,11 @@ fun DisplayDensityScreen(
                 ListItem(
                     headlineContent = {
                         Text(
-                            density.replaceFirstChar {
+                            text = density.replaceFirstChar {
                                 it.uppercase()
-                            }
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     },
                     trailingContent = {
@@ -111,7 +114,7 @@ fun DisplayDensityScreen(
 
                 ListItem(
                     headlineContent = {
-                        Text("Feed Style")
+                        Text("Feed Style", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 )
             }
@@ -122,9 +125,11 @@ fun DisplayDensityScreen(
                 ListItem(
                     headlineContent = {
                         Text(
-                            style.replaceFirstChar {
+                            text = style.replaceFirstChar {
                                 it.uppercase()
-                            }
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     },
                     trailingContent = {

@@ -30,6 +30,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -317,8 +318,21 @@ fun ChatScreen(
                 Column(Modifier.weight(1f).pressScale(onClick = {
                     uiState.otherUserId.takeIf { it.isNotBlank() }?.let(onOtherProfileClick)
                 })) {
-                    Text(uiState.otherUsername, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(if (uiState.isOtherOnline) "Online" else "View profile", color = if (uiState.isOtherOnline) Color(0xFF22C55E) else SecondaryText, fontSize = 11.sp)
+                    Text(
+                        text = uiState.otherUsername,
+                        color = PrimaryText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (uiState.isOtherOnline) "Online" else "View profile",
+                        color = if (uiState.isOtherOnline) Color(0xFF22C55E) else SecondaryText,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 Box {
@@ -449,10 +463,10 @@ fun ChatScreen(
                     }
                     Spacer(Modifier.height(16.dp))
                     Text("Your conversation starts here", color = PrimaryText,
-                        fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(Modifier.height(6.dp))
                     Text("Send a message to start a private conversation.",
-                        color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp)
+                        color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         } else LazyColumn(

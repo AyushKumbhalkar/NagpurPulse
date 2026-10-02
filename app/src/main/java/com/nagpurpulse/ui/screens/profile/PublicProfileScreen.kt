@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -164,9 +165,9 @@ fun PublicProfileScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("u/$displayName", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("u/$displayName", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (isProfileOnline) {
-                        Text("Online", color = Color(0xFF22C55E), fontSize = 11.sp)
+                        Text("Online", color = Color(0xFF22C55E), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(Modifier.weight(1f))
@@ -497,11 +498,16 @@ fun PublicProfileScreen(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                        val profileScreenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
                         Text(
                             displayName,
                             color = PrimaryText,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp
+                            fontSize = if (profileScreenWidth < 360) 23.sp else if (profileScreenWidth < 400) 26.sp else 28.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                         )
 
                         Text(
@@ -511,7 +517,7 @@ fun PublicProfileScreen(
                         )
                         if (!uiState.profile?.tagline.isNullOrBlank()) {
                             Spacer(Modifier.height(4.dp))
-                            Text(uiState.profile!!.tagline!!, color = SecondaryText, fontSize = 13.sp, textAlign = TextAlign.Center)
+                            Text(uiState.profile!!.tagline!!, color = SecondaryText, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.height(6.dp))
                         Row(
@@ -665,9 +671,9 @@ private fun PublicStatBox(value: String, label: String, accentColor: Color, modi
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, color = accentColor, fontWeight = FontWeight.Bold, fontSize = 26.sp)
+            Text(value, color = accentColor, fontWeight = FontWeight.Bold, fontSize = 26.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))
-            Text(label, color = SecondaryText, fontSize = 11.sp)
+            Text(label, color = SecondaryText, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

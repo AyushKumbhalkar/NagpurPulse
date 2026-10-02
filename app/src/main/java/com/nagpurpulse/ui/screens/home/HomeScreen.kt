@@ -763,7 +763,15 @@ fun HomeScreen(
                             }
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(
+                            modifier = Modifier.width(
+                                if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) {
+                                    24.dp
+                                } else {
+                                    8.dp
+                                }
+                            )
+                        )
 
                         SortChipGroup(
                             selected = uiState.sortBy,
@@ -964,6 +972,10 @@ private fun SortChipGroup(
     selected: String,
     onSelected: (String) -> Unit
 ) {
+    // Keep the three sort labels on one line on narrow phones (e.g. Oppo A5).
+    // The existing spacing and typography remain unchanged on wider phones.
+    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
+
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(18.dp))
@@ -975,40 +987,31 @@ private fun SortChipGroup(
             )
             .padding(3.dp)
     ) {
-
         listOf("top", "new", "hot").forEach { item ->
-
             val isSelected = item == selected
 
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (isSelected)
-                            OrangePrimary.copy(alpha = 0.12f)
-                        else
-                            Color.Transparent
+                        if (isSelected) OrangePrimary.copy(alpha = 0.12f)
+                        else Color.Transparent
                     )
-                    .clickable {
-                        onSelected(item)
-                    }
+                    .clickable { onSelected(item) }
                     .padding(
-                        horizontal = 10.dp,
+                        horizontal = if (compact) 5.dp else 10.dp,
                         vertical = 6.dp
                     )
             ) {
                 Text(
                     text = item.replaceFirstChar { it.uppercase() },
-                    color =
-                        if (isSelected)
-                            OrangePrimary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight =
-                        if (isSelected)
-                            FontWeight.Bold
-                        else
-                            FontWeight.Medium
+                    maxLines = 1,
+                    softWrap = false,
+                    fontSize = if (compact) 14.sp else MaterialTheme.typography.bodyLarge.fontSize,
+                    color = if (isSelected) OrangePrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (isSelected) FontWeight.Bold
+                    else FontWeight.Medium
                 )
             }
         }

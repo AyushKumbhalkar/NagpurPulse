@@ -174,7 +174,7 @@ fun MessagesScreen(
                 )).statusBarsPadding()) {
                     // Title row
                     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Messages", color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                        Text("Messages", color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.Filled.TheaterComedy,
@@ -191,8 +191,7 @@ fun MessagesScreen(
                             navController.navigate(Screen.UserSearch.route)
                         }
                     }
-                    Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 14.dp))
+                    Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 14.dp))
 
                     // Action cards row
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
