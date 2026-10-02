@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -60,6 +61,7 @@ import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.MessageRepository
+import com.nagpurpulse.data.repository.NotificationRepository
 import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.data.repository.SavedPostsRepository
 import com.nagpurpulse.ui.components.*
@@ -102,6 +104,7 @@ class HomeViewModel @Inject constructor(
     private val locationHelper: LocationHelper,
     private val adminRepository: AdminRepository,
     private val messageRepository: MessageRepository,
+    private val notificationRepository: NotificationRepository,
     private val presenceRepository: PresenceRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -117,6 +120,8 @@ class HomeViewModel @Inject constructor(
         checkAdminStatus()
         loadUnreadMessages()
         subscribeToUnreadMessages()
+        loadUnreadNotifications()
+        subscribeToUnreadNotifications()
         startPresenceWhenAuthenticated()
     }
 
@@ -142,6 +147,37 @@ class HomeViewModel @Inject constructor(
             while (true) {
                 delay(15_000)
                 loadUnreadMessages()
+            }
+        }
+    }
+
+    private fun loadUnreadNotifications() {
+        viewModelScope.launch {
+            val userId = authRepository.currentUserId ?: return@launch
+            notificationRepository.getUnreadCount(userId).onSuccess { count ->
+                _uiState.value = _uiState.value.copy(unreadNotifCount = count)
+            }
+        }
+    }
+
+    private fun subscribeToUnreadNotifications() {
+        viewModelScope.launch {
+            var userId = authRepository.currentUserId
+            repeat(30) {
+                if (userId == null) {
+                    delay(1_000)
+                    userId = authRepository.currentUserId
+                }
+            }
+            val resolvedUserId = userId ?: return@launch
+            notificationRepository.subscribeToNotifications(resolvedUserId).collect {
+                loadUnreadNotifications()
+            }
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(15_000)
+                loadUnreadNotifications()
             }
         }
     }
@@ -507,12 +543,45 @@ fun HomeScreen(
     }
 
     // Bell pulse
-    val t = rememberInfiniteTransition(label = "home_t")
-    val bellPulse by t.animateFloat(
-        1f, 1.15f,
-        infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "bell"
-    )
+    var previousUnreadNotifCount by remember { mutableIntStateOf(uiState.unreadNotifCount) }
+    var previousUnreadMsgCount by remember { mutableIntStateOf(uiState.unreadMsgCount) }
+    val bellRotation = remember { androidx.compose.animation.core.Animatable(0f) }
+    val messageRotation = remember { androidx.compose.animation.core.Animatable(0f) }
+
+    LaunchedEffect(uiState.unreadNotifCount) {
+        val current = uiState.unreadNotifCount
+        if (current > previousUnreadNotifCount) {
+            bellRotation.snapTo(0f)
+            bellRotation.animateTo(0f, animationSpec = keyframes {
+                durationMillis = 900
+                16f at 100
+                -16f at 200
+                12f at 300
+                -12f at 400
+                7f at 500
+                -5f at 600
+                0f at 700
+            })
+        }
+        previousUnreadNotifCount = current
+    }
+
+    LaunchedEffect(uiState.unreadMsgCount) {
+        val current = uiState.unreadMsgCount
+        if (current > previousUnreadMsgCount) {
+            messageRotation.snapTo(0f)
+            messageRotation.animateTo(0f, animationSpec = keyframes {
+                durationMillis = 800
+                10f at 100
+                -10f at 200
+                7f at 300
+                -5f at 400
+                0f at 550
+            })
+        }
+        previousUnreadMsgCount = current
+    }
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -623,7 +692,6 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .scale(bellPulse)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .pressScale(onClick = onNotifications),
@@ -632,7 +700,7 @@ fun HomeScreen(
                             Icon(
                                 Icons.Filled.Notifications, null,
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp).rotate(bellRotation.value)
                             )
                             if (uiState.unreadNotifCount > 0) {
                                 Box(
@@ -672,10 +740,10 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Filled.Email,
+                                Icons.Filled.ChatBubbleOutline,
                                 contentDescription = "Messages",
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp).rotate(messageRotation.value)
                             )
 
                             if (uiState.unreadMsgCount > 0) {
