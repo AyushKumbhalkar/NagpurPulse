@@ -228,6 +228,28 @@ class NotificationsViewModel @Inject constructor(
         }
     }
 
+    fun markGroupRead(ids: List<String>) {
+        val uid = authRepository.currentUserId ?: return
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            var failed = false
+            ids.forEach { id ->
+                if (notificationRepository.markOneRead(uid, id).isFailure) failed = true
+            }
+            if (failed) {
+                _s.value = _s.value.copy(error = "Some notifications couldn't be marked as read. Please try again.")
+            } else {
+                val idSet = ids.toSet()
+                _s.value = _s.value.copy(
+                    notifications = _s.value.notifications.map { n ->
+                        if (n.id in idSet) n.copy(isRead = true) else n
+                    },
+                    error = null
+                )
+            }
+        }
+    }
+
     fun clearAll() {
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
@@ -280,6 +302,59 @@ private fun parseNotificationDate(value: String, zoneId: ZoneId): LocalDate? {
             null
         }
     }
+}
+
+
+// Reaction notifications are grouped only when they refer to the same post/comment
+// and arrived within 15 minutes. Replies, mentions, messages and safety/admin alerts
+// are always shown individually.
+private data class NotificationDisplayItem(
+    val notification: Notification,
+    val notificationIds: List<String>
+)
+
+private fun groupNotificationsForDisplay(notifications: List<Notification>): List<NotificationDisplayItem> {
+    val result = mutableListOf<NotificationDisplayItem>()
+    val groupedIndices = mutableSetOf<Int>()
+    val reactionTypes = setOf("upvote", "like", "comment_like")
+
+    notifications.forEachIndexed { index, notification ->
+        if (index in groupedIndices) return@forEachIndexed
+        val isReaction = notification.type.lowercase() in reactionTypes
+        val target = if (notification.type == "comment_like") notification.relatedCommentId else notification.relatedPostId
+        val matching = if (isReaction && !target.isNullOrBlank()) {
+            val baseTime = runCatching { Instant.parse(notification.createdAt) }.getOrNull()
+            if (baseTime == null) listOf(index) else notifications.indices.filter { candidateIndex ->
+                if (candidateIndex in groupedIndices) return@filter false
+                val candidate = notifications[candidateIndex]
+                val candidateTarget = if (candidate.type == "comment_like") candidate.relatedCommentId else candidate.relatedPostId
+                candidate.type == notification.type &&
+                    candidate.relatedPostId == notification.relatedPostId &&
+                    candidateTarget == target &&
+                    runCatching { Instant.parse(candidate.createdAt) }.getOrNull()?.let { time ->
+                        kotlin.math.abs(java.time.Duration.between(baseTime, time).toMinutes()) <= 15
+                    } == true
+            }
+        } else listOf(index)
+
+        val members = matching.map(notifications::get).sortedByDescending { it.createdAt }
+        matching.forEach(groupedIndices::add)
+        val newest = members.first()
+        val display = if (members.size < 2) newest else {
+            val count = members.size
+            val title = when (newest.type) {
+                "comment_like" -> "$count people liked your comment"
+                else -> "$count people reacted to your post"
+            }
+            newest.copy(
+                title = title,
+                body = null,
+                isRead = members.all { it.isRead }
+            )
+        }
+        result += NotificationDisplayItem(display, members.map { it.id })
+    }
+    return result.sortedByDescending { it.notification.createdAt }
 }
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
@@ -355,8 +430,9 @@ fun NotificationsScreen(
     // Group by the user's local calendar date, not a rolling 24-hour window.
     val localZone = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(localZone) }
-    val (todayNotifs, earlierNotifs) = filtered.partition { n ->
-        parseNotificationDate(n.createdAt, localZone) == today
+    val displayItems = remember(filtered) { groupNotificationsForDisplay(filtered) }
+    val (todayNotifs, earlierNotifs) = displayItems.partition { item ->
+        parseNotificationDate(item.notification.createdAt, localZone) == today
     }
 
     Scaffold(
@@ -551,12 +627,14 @@ fun NotificationsScreen(
                                     .clip(RoundedCornerShape(18.dp))
                                     .background(Surface)
                             ) {
-                                todayNotifs.forEachIndexed { i, notif ->
+                                todayNotifs.forEachIndexed { i, item ->
+                                    val notif = item.notification
                                     NotifRow(
                                         notif  = notif,
                                         postPreview = notif.relatedPostId?.let { s.postPreviews[it] },
+                                        groupedCount = item.notificationIds.size.takeIf { it > 1 },
                                         onTap  = {
-                                            viewModel.markOneRead(notif.id)
+                                            viewModel.markGroupRead(item.notificationIds)
                                             notif.relatedConversationId?.let {
                                                 navController.navigate(Screen.Chat.createRoute(it))
                                             } ?: notif.relatedPostId?.let { postId ->
@@ -602,12 +680,14 @@ fun NotificationsScreen(
                                     .clip(RoundedCornerShape(18.dp))
                                     .background(Surface)
                             ) {
-                                earlierNotifs.forEachIndexed { i, notif ->
+                                earlierNotifs.forEachIndexed { i, item ->
+                                    val notif = item.notification
                                     NotifRow(
                                         notif = notif,
                                         postPreview = notif.relatedPostId?.let { s.postPreviews[it] },
+                                        groupedCount = item.notificationIds.size.takeIf { it > 1 },
                                         onTap = {
-                                            viewModel.markOneRead(notif.id)
+                                            viewModel.markGroupRead(item.notificationIds)
                                             notif.relatedConversationId?.let {
                                                 navController.navigate(Screen.Chat.createRoute(it))
                                             } ?: notif.relatedPostId?.let { postId ->
@@ -641,7 +721,7 @@ fun NotificationsScreen(
 // ── NotifRow — real sender avatar + full type coverage ────────────────────────
 
 @Composable
-private fun NotifRow(notif: Notification, postPreview: Post?, onTap: () -> Unit) {
+private fun NotifRow(notif: Notification, postPreview: Post?, groupedCount: Int? = null, onTap: () -> Unit) {
     val isUnread = !notif.isRead
     val accent   = typeColor(notif.type)
 
@@ -727,7 +807,13 @@ private fun NotifRow(notif: Notification, postPreview: Post?, onTap: () -> Unit)
                 )
             }
             Spacer(Modifier.height(4.dp))
-            Text(notif.timeAgo(), color = TertiaryText, fontSize = 11.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(notif.timeAgo(), color = TertiaryText, fontSize = 11.sp)
+                groupedCount?.let { count ->
+                    Text("$count", color = OrangePrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(OrangeSubtle).padding(horizontal = 6.dp, vertical = 2.dp))
+                }
+            }
         }
 
         Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
