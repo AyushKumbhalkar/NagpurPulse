@@ -20,6 +20,14 @@ import com.nagpurpulse.data.model.Post
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -420,6 +428,30 @@ class PostRepository @Inject constructor(
      }
 
     // ── Comments ──────────────────────────────────────────────────────────────
+
+    /**
+     * Emits whenever a comment row for this post is inserted, updated or deleted.
+     * The screen reloads the canonical comment list after each event so replies,
+     * edits and moderation changes appear without requiring a manual refresh.
+     */
+    fun subscribeToComments(postId: String): Flow<Unit> = flow {
+        val channel = client.realtime.channel("thread_comments_$postId")
+        val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
+            table = "comments"
+            filter("post_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, postId)
+        }.map { Unit }
+        val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
+            table = "comments"
+            filter("post_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, postId)
+        }.map { Unit }
+        val deletes = channel.postgresChangeFlow<PostgresAction.Delete>(schema = "public") {
+            table = "comments"
+            filter("post_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, postId)
+        }.map { Unit }
+
+        channel.subscribe(blockUntilSubscribed = true)
+        merge(inserts, updates, deletes).collect { emit(Unit) }
+    }
 
     suspend fun getComments(postId: String): Result<List<Comment>> {
         return try {
