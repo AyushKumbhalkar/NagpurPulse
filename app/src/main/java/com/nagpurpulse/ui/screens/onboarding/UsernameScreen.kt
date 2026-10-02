@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -149,6 +150,7 @@ fun UsernameScreen(
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(80); visible = true }
 
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 360
     val isDark = LocalIsDarkTheme.current
     val bgColor = if (isDark) BackgroundDark else BackgroundLight
 
@@ -412,10 +414,11 @@ fun UsernameScreen(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                "Generate New",
+                                if (isCompactWidth) "Generate" else "Generate New",
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium,
-                                fontSize = 13.sp
+                                fontSize = if (isCompactWidth) 11.sp else 13.sp,
+                                maxLines = 1
                             )
                         }
                     }
