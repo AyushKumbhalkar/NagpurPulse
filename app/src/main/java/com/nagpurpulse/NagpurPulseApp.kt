@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.nagpurpulse.notifications.ScheduledPushManager
+import com.nagpurpulse.notifications.createNotificationChannels
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -14,6 +15,7 @@ class NagpurPulseApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannels(this)
         // Schedule 4× daily push notifications
         ScheduledPushManager.schedule(this)
     }
