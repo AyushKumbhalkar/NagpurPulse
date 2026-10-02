@@ -163,6 +163,13 @@ class NotifSettingsViewModel @Inject constructor(
                     "notif_alerts_summary" -> _state.value.copy(notifAlerts = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
                     else -> _state.value.copy(errorMessage = "Couldn't save notification settings. Please try again.")
                 }
+                // A scheduled toggle may have cancelled or recreated workers before the
+                // remote save failed. Reconcile WorkManager against the restored
+                // SharedPreferences value so the UI and actual schedule agree.
+                if (field in listOf("notif_push", "notif_digest", "notif_trending",
+                        "notif_community", "notif_alerts_summary")) {
+                    ScheduledPushManager.reschedule(appContext)
+                }
                 return@launch
             }
             if (!value) {
