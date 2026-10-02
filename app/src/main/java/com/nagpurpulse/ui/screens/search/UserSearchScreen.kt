@@ -298,7 +298,14 @@ private fun UserResultCard(
         Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
-            Text("u/${profile.username ?: "unknown"}", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(
+                "u/${profile.username ?: "unknown"}",
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             if (!profile.tagline.isNullOrBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(profile.tagline, color = TextSecondary, fontSize = 13.sp, maxLines = 1)
