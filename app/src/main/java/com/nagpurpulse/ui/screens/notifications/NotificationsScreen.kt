@@ -126,8 +126,10 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun loadPostPreviews(notifications: List<Notification>) {
-        // Any notification linked to a post can benefit from context in the inbox.
+        // Keep preview requests bounded to reaction notifications until a batch
+        // post-preview query is available; avoid one request per every inbox item.
         val postIds = notifications
+            .filter { it.type in listOf("upvote", "like", "comment_like") }
             .mapNotNull { it.relatedPostId }
             .distinct()
         if (postIds.isEmpty()) return
