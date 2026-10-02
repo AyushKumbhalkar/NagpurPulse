@@ -185,10 +185,20 @@ class ThreadDetailViewModel @Inject constructor(
 
     private fun loadPost() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            val shouldShowInitialLoading = _uiState.value.post == null
+            if (shouldShowInitialLoading) {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+            }
             postRepository.getPostById(postId).fold(
-                onSuccess = { post -> _uiState.value = _uiState.value.copy(post = post, isLoading = false) },
-                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message, isLoading = false) }
+                onSuccess = { post ->
+                    _uiState.value = _uiState.value.copy(post = post, isLoading = false)
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        error = e.message,
+                        isLoading = false
+                    )
+                }
             )
         }
     }
