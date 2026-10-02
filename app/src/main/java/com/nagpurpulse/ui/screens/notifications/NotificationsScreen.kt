@@ -10,6 +10,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -362,12 +364,13 @@ fun NotificationsScreen(
                 }
 
                 // Filter tabs
-                ScrollableTabRow(
-                    selectedTabIndex = FILTER_TABS.indexOf(s.activeFilter).coerceAtLeast(0),
-                    containerColor   = Color.Transparent,
-                    contentColor     = OrangePrimary,
-                    edgePadding      = 16.dp,
-                    indicator = {}, divider = {}
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     FILTER_TABS.forEach { f ->
                         val sel = s.activeFilter == f
@@ -380,7 +383,7 @@ fun NotificationsScreen(
                                     indication = null,
                                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                                 ) { viewModel.setFilter(f) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
                         ) {
                             Text(
                                 when (f) {
