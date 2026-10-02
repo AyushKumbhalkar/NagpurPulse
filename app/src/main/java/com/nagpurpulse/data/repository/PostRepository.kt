@@ -766,14 +766,13 @@ class PostRepository @Inject constructor(
     suspend fun votePost(userId: String, postId: String, voteType: String): Result<Unit> {
         return try {
             // Check existing vote
-            val existing = try {
-                client.postgrest["votes"].select {
-                    filter {
-                        eq("user_id", userId)
-                        eq("post_id", postId)
-                    }
-                }.decodeList<kotlinx.serialization.json.JsonObject>()
-            } catch (_: Exception) { emptyList() }
+            // Do not interpret a failed read as no vote: that can cause duplicate inserts.
+            val existing = client.postgrest["votes"].select {
+                filter {
+                    eq("user_id", userId)
+                    eq("post_id", postId)
+                }
+            }.decodeList<kotlinx.serialization.json.JsonObject>()
 
             val post = client.postgrest["posts"]
                 .select { filter { eq("id", postId) } }
@@ -840,7 +839,7 @@ class PostRepository @Inject constructor(
             val voteType = votes.firstOrNull()?.get("vote_type")?.jsonPrimitive?.content
             Result.success(voteType)
         } catch (e: Exception) {
-            Result.success(null)
+            Result.failure(e)
         }
     }
 
