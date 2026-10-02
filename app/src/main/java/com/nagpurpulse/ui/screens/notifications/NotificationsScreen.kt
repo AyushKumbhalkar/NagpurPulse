@@ -480,9 +480,9 @@ fun NotificationsScreen(
                                     )
                                     if (i < todayNotifs.lastIndex) {
                                         HorizontalDivider(
-                                            color     = Divider.copy(0.5f),
-                                            thickness = 0.5.dp,
-                                            modifier  = Modifier.padding(start = 72.dp)
+                                            color = Divider.copy(alpha = 0.85f),
+                                            thickness = 0.75.dp,
+                                            modifier = Modifier.padding(start = 66.dp, end = 12.dp)
                                         )
                                     }
                                 }
@@ -523,9 +523,9 @@ fun NotificationsScreen(
                                     )
                                     if (i < earlierNotifs.lastIndex) {
                                         HorizontalDivider(
-                                            color     = Divider.copy(0.5f),
-                                            thickness = 0.5.dp,
-                                            modifier  = Modifier.padding(start = 72.dp)
+                                            color = Divider.copy(alpha = 0.85f),
+                                            thickness = 0.75.dp,
+                                            modifier = Modifier.padding(start = 66.dp, end = 12.dp)
                                         )
                                     }
                                 }
