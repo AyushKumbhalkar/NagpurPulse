@@ -543,8 +543,8 @@ fun HomeScreen(
     }
 
     // Bell pulse
-    var previousUnreadNotifCount by remember { mutableIntStateOf(uiState.unreadNotifCount) }
-    var previousUnreadMsgCount by remember { mutableIntStateOf(uiState.unreadMsgCount) }
+    var previousUnreadNotifCount by remember { mutableStateOf(uiState.unreadNotifCount) }
+    var previousUnreadMsgCount by remember { mutableStateOf(uiState.unreadMsgCount) }
     var notificationCountInitialized by remember { mutableStateOf(false) }
     var messageCountInitialized by remember { mutableStateOf(false) }
     val bellRotation = remember { androidx.compose.animation.core.Animatable(0f) }
