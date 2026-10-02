@@ -38,6 +38,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.nagpurpulse.data.model.UserPreferences
 import com.nagpurpulse.data.repository.UserPreferencesRepository
+import com.nagpurpulse.data.repository.NotificationRepository
 import com.nagpurpulse.notifications.NotifPrefsHelper
 import com.nagpurpulse.notifications.ScheduledPushManager
 import com.nagpurpulse.ui.theme.*
@@ -68,6 +69,7 @@ data class NotifSettingsState(
 @HiltViewModel
 class NotifSettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val notificationRepository: NotificationRepository,
     @ApplicationContext private val appContext: Context   // ← injected, not from composable
 ) : ViewModel() {
 
@@ -133,6 +135,20 @@ class NotifSettingsViewModel @Inject constructor(
         // Persist to Supabase + SharedPreferences
         viewModelScope.launch {
             userPreferencesRepository.saveNotifPref(appContext, field, value)
+            if (!value) {
+                val notificationType = when (field) {
+                    "notif_replies" -> "reply"
+                    "notif_mentions" -> "mention"
+                    "notif_messages" -> "message"
+                    "notif_upvotes" -> "upvote"
+                    "notif_digest" -> "digest"
+                    "notif_trending" -> "trending"
+                    "notif_community" -> "community"
+                    "notif_alerts_summary" -> "alert"
+                    else -> "all"
+                }
+                notificationRepository.trackAnalytics("push_opt_out", notificationType)
+            }
         }
     }
 }
