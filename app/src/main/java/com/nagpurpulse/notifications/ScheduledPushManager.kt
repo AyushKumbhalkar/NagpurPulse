@@ -24,6 +24,7 @@ const val CHANNEL_ALERTS    = "nagpur_alerts"
 const val CHANNEL_COMMUNITY = "nagpur_community"
 const val CHANNEL_DIGEST    = "nagpur_digest"
 const val CHANNEL_MESSAGES  = "nagpur_messages"
+const val CHANNEL_SOCIAL = "nagpur_social_v2"
 
 fun createNotificationChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
