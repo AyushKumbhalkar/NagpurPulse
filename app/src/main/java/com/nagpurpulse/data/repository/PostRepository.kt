@@ -92,6 +92,20 @@ class PostRepository @Inject constructor(
         }
     }
 
+    /**
+     * Loads a post for a notification preview without incrementing its view count.
+     */
+    suspend fun getPostPreviewById(id: String): Result<Post> {
+        return try {
+            val post = client.postgrest["posts"]
+                .select { filter { eq("id", id) } }
+                .decodeSingle<Post>()
+            Result.success(enrichPostWithUsername(post))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun searchPosts(query: String): Result<List<Post>> {
         return try {
             val posts = client.postgrest["posts"].select {
