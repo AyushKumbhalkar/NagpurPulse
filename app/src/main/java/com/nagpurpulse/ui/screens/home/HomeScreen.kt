@@ -545,12 +545,14 @@ fun HomeScreen(
     // Bell pulse
     var previousUnreadNotifCount by remember { mutableIntStateOf(uiState.unreadNotifCount) }
     var previousUnreadMsgCount by remember { mutableIntStateOf(uiState.unreadMsgCount) }
+    var notificationCountInitialized by remember { mutableStateOf(false) }
+    var messageCountInitialized by remember { mutableStateOf(false) }
     val bellRotation = remember { androidx.compose.animation.core.Animatable(0f) }
     val messageRotation = remember { androidx.compose.animation.core.Animatable(0f) }
 
     LaunchedEffect(uiState.unreadNotifCount) {
         val current = uiState.unreadNotifCount
-        if (current > previousUnreadNotifCount) {
+        if (notificationCountInitialized && current > previousUnreadNotifCount) {
             bellRotation.snapTo(0f)
             bellRotation.animateTo(0f, animationSpec = keyframes {
                 durationMillis = 900
@@ -564,11 +566,12 @@ fun HomeScreen(
             })
         }
         previousUnreadNotifCount = current
+        notificationCountInitialized = true
     }
 
     LaunchedEffect(uiState.unreadMsgCount) {
         val current = uiState.unreadMsgCount
-        if (current > previousUnreadMsgCount) {
+        if (messageCountInitialized && current > previousUnreadMsgCount) {
             messageRotation.snapTo(0f)
             messageRotation.animateTo(0f, animationSpec = keyframes {
                 durationMillis = 800
@@ -580,6 +583,7 @@ fun HomeScreen(
             })
         }
         previousUnreadMsgCount = current
+        messageCountInitialized = true
     }
 
 
