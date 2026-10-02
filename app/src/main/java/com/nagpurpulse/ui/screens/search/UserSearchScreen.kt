@@ -172,7 +172,7 @@ fun UserSearchScreen(
                     }
 
                     Spacer(Modifier.width(8.dp))
-                    Text("Cancel", color = OrangePrimary, fontSize = 14.sp,
+                    Text("Cancel", color = OrangePrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.pressScale { navController.popBackStack() })
                 }
                 HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
@@ -194,9 +194,9 @@ fun UserSearchScreen(
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(Modifier.height(16.dp))
-                        Text("Find people on NagpurPulse", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                        Text("Find people on NagpurPulse", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.height(6.dp))
-                        Text("Type at least 2 characters to search by username", color = TextSecondary, fontSize = 13.sp)
+                        Text("Type at least 2 characters to search by username", color = TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -223,7 +223,7 @@ fun UserSearchScreen(
                     ) {
                         item {
                             Text("${uiState.results.size} result${if (uiState.results.size > 1) "s" else ""} for \"$query\"",
-                                color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
+                                color = TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(bottom = 4.dp))
                         }
                         itemsIndexed(uiState.results) { i, profile ->
                             StaggeredItem(i) {
