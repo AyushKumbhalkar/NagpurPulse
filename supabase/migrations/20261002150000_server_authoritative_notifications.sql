@@ -215,8 +215,17 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS notifications_from_post_upvote ON public.votes;
-CREATE TRIGGER notifications_from_post_upvote
-AFTER INSERT OR UPDATE OF vote_type ON public.votes
+DROP TRIGGER IF EXISTS notifications_from_post_upvote_insert ON public.votes;
+DROP TRIGGER IF EXISTS notifications_from_post_upvote_update ON public.votes;
+
+-- Separate event triggers avoid PostgreSQL's UPDATE OF / multi-event syntax
+-- restrictions and keep vote-type changes covered.
+CREATE TRIGGER notifications_from_post_upvote_insert
+AFTER INSERT ON public.votes
+FOR EACH ROW EXECUTE FUNCTION public.notify_post_upvote();
+
+CREATE TRIGGER notifications_from_post_upvote_update
+AFTER UPDATE OF vote_type ON public.votes
 FOR EACH ROW EXECUTE FUNCTION public.notify_post_upvote();
 
 CREATE OR REPLACE FUNCTION public.notify_message_insert()
