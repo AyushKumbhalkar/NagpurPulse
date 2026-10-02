@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -112,8 +113,8 @@ fun AdminDashboardContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Admin Dashboard", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                    Text("NagpurPulse Moderation", color = SecondaryText, fontSize = 13.sp)
+                    Text("Admin Dashboard", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 24.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("NagpurPulse Moderation", color = SecondaryText, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(
                     modifier = Modifier
@@ -131,6 +132,8 @@ fun AdminDashboardContent(
                             else "Admin",
                             color = OrangePrimary,
                             fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
