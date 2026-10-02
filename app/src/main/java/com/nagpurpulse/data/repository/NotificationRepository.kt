@@ -3,7 +3,6 @@ package com.nagpurpulse.data.repository
 
 import com.google.firebase.messaging.FirebaseMessaging
 import com.nagpurpulse.data.model.Notification
-import com.nagpurpulse.data.model.Profile
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
@@ -75,47 +74,6 @@ class NotificationRepository @Inject constructor(
         }
     }
 
-    // ── Create notification with sender info ──────────────────────────────────
-
-    /**
-     * Creates a notification for [targetUserId].
-     * [senderUserId] is used to look up the sender's username + avatar so the
-     * notification row can show a real avatar instead of the generic placeholder.
-     */
-    suspend fun createNotification(
-        targetUserId:   String,
-        type:           String,
-        title:          String,
-        body:           String?,
-        relatedPostId:  String?  = null,
-        senderUserId:   String?  = null,
-        relatedConversationId: String? = null
-    ): Result<Unit> = runCatching {
-        // Fetch sender profile for avatar display
-        val sender: Profile? = senderUserId?.takeIf { it.isNotBlank() }?.let { uid ->
-            try {
-                client.postgrest["profiles"]
-                    .select { filter { eq("id", uid) } }
-                    .decodeSingle()
-            } catch (_: Exception) { null }
-        }
-
-        client.postgrest["notifications"].insert(
-            mapOf(
-                "user_id"           to targetUserId,
-                "type"              to type,
-                "title"             to title,
-                "body"              to body,
-                "is_read"           to false,
-                "related_post_id"   to relatedPostId,
-                "related_conversation_id" to relatedConversationId,
-                "sender_username"   to sender?.username,
-                "sender_avatar_url" to sender?.avatarUrl
-            )
-        )
-    }
-
-
     /**
      * Emits when a notification for this user is inserted in Supabase.
      * The ViewModel reloads the inbox to keep new items and unread counts fresh.
@@ -130,21 +88,4 @@ class NotificationRepository @Inject constructor(
         inserts.collect { emit(Unit) }
     }
 
-    // ── Preference check (used by PostRepository before creating notif) ───────
-
-    suspend fun targetUserWantsNotif(targetUserId: String, field: String): Boolean {
-        return try {
-            val prefs = client.postgrest["user_preferences"]
-                .select { filter { eq("user_id", targetUserId) } }
-                .decodeList<com.nagpurpulse.data.model.UserPreferences>()
-                .firstOrNull() ?: return true   // default true if no prefs row
-            when (field) {
-                "notif_replies"  -> prefs.notifReplies
-                "notif_upvotes"  -> prefs.notifUpvotes
-                "notif_mentions" -> prefs.notifMentions
-                "notif_messages" -> prefs.notifMessages
-                else             -> true
-            }
-        } catch (_: Exception) { true }
-    }
 }
