@@ -594,8 +594,8 @@ fun SettingsRowBadge(label: String, sub: String, icon: ImageVector, iconTint: Co
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Text(sub, color = TertiaryText, fontSize = 12.sp)
+            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Text(badge, color = OrangePrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.width(8.dp))
@@ -614,8 +614,8 @@ fun SettingsRowToggle(label: String, sub: String, icon: ImageVector, iconTint: C
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Text(sub, color = TertiaryText, fontSize = 12.sp)
+            Text(label, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Switch(
             checked         = checked,
