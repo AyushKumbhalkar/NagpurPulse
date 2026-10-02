@@ -7,6 +7,8 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
@@ -42,6 +44,26 @@ class NotificationRepository @Inject constructor(
         val userId = authRepository.currentUserId ?: return@runCatching
         client.postgrest["device_tokens"].delete { filter { eq("user_id", userId) } }
         FirebaseMessaging.getInstance().deleteToken().await()
+    }
+
+    /**
+     * Increment privacy-preserving daily aggregate analytics. The database stores
+     * event/type counters only; no account, notification, post, or device ID is sent.
+     * Analytics are best-effort and must never block core notification behavior.
+     */
+    suspend fun trackAnalytics(eventType: String, notificationType: String = "all") {
+        runCatching {
+            if (authRepository.currentUserId == null) return@runCatching
+            client.postgrest.rpc(
+                "record_notification_analytics",
+                parameters = buildJsonObject {
+                    put("p_event_type", eventType)
+                    put("p_notification_type", notificationType.lowercase())
+                }
+            )
+        }.onFailure { error ->
+            android.util.Log.d("NotificationAnalytics", "Aggregate event skipped: ${error.message}")
+        }
     }
 
     // ── Read notifications ────────────────────────────────────────────────────
