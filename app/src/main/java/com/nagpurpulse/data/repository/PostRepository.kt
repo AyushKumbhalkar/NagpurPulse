@@ -443,11 +443,11 @@ class PostRepository @Inject constructor(
         }.map { Unit }
         val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
             table = "comments"
-            filter("post_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, postId)
+            filter("post_id", FilterOperator.EQ, postId)
         }.map { Unit }
         val deletes = channel.postgresChangeFlow<PostgresAction.Delete>(schema = "public") {
             table = "comments"
-            filter("post_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, postId)
+            filter("post_id", FilterOperator.EQ, postId)
         }.map { Unit }
 
         channel.subscribe(blockUntilSubscribed = true)
