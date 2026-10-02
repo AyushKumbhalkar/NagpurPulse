@@ -159,6 +159,8 @@ DECLARE
   owner_id uuid;
   post_title text;
   voter_name text;
+  upvote_count integer;
+  milestone_title text;
 BEGIN
   IF NEW.vote_type IS DISTINCT FROM 'up' OR (TG_OP = 'UPDATE' AND OLD.vote_type = 'up') THEN
     RETURN NEW;
@@ -184,6 +186,29 @@ BEGIN
     COALESCE(voter_name, 'Someone') || ' upvoted your post',
     left(COALESCE(post_title, ''), 120), NEW.post_id, NULL, NEW.user_id
   );
+
+  -- Use the actual vote rows rather than the client-maintained posts.upvotes
+  -- counter, which must not be trusted for security-sensitive side effects.
+  SELECT count(*)::integer INTO upvote_count
+    FROM public.votes v
+   WHERE v.post_id = NEW.post_id
+     AND v.vote_type = 'up';
+
+  IF upvote_count IN (10, 50, 100, 500, 1000) THEN
+    milestone_title := 'Your post reached ' || upvote_count || ' upvotes! 🎉';
+    IF NOT EXISTS (
+      SELECT 1 FROM public.notifications n
+       WHERE n.user_id = owner_id
+         AND n.related_post_id = NEW.post_id
+         AND n.type = 'upvote'
+         AND n.title = milestone_title
+    ) THEN
+      PERFORM public.create_notification_event(
+        owner_id, 'upvote', milestone_title,
+        left(COALESCE(post_title, ''), 120), NEW.post_id, NULL, NULL
+      );
+    END IF;
+  END IF;
 
   RETURN NEW;
 END;
@@ -250,48 +275,6 @@ DROP TRIGGER IF EXISTS notifications_from_message_insert ON public.messages;
 CREATE TRIGGER notifications_from_message_insert
 AFTER INSERT ON public.messages
 FOR EACH ROW EXECUTE FUNCTION public.notify_message_insert();
-
--- Preserve post-upvote milestone notifications, but generate them from the
--- authoritative post count and respect the recipient's upvote preference.
-CREATE OR REPLACE FUNCTION public.notify_post_upvote_milestone()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $
-DECLARE
-  milestone integer;
-BEGIN
-  IF NEW.upvotes IS NULL OR OLD.upvotes IS NULL OR NEW.upvotes <= OLD.upvotes THEN
-    RETURN NEW;
-  END IF;
-
-  IF NOT COALESCE((
-    SELECT up.notif_upvotes FROM public.user_preferences up
-     WHERE up.user_id = NEW.user_id
-  ), true) THEN
-    RETURN NEW;
-  END IF;
-
-  FOREACH milestone IN ARRAY ARRAY[10, 50, 100, 500, 1000]
-  LOOP
-    IF OLD.upvotes < milestone AND NEW.upvotes >= milestone THEN
-      PERFORM public.create_notification_event(
-        NEW.user_id, 'upvote',
-        'Your post reached ' || milestone || ' upvotes!',
-        left(COALESCE(NEW.title, ''), 120), NEW.id, NULL, NULL
-      );
-    END IF;
-  END LOOP;
-
-  RETURN NEW;
-END;
-$;
-
-DROP TRIGGER IF EXISTS notifications_from_post_upvote_milestone ON public.posts;
-CREATE TRIGGER notifications_from_post_upvote_milestone
-AFTER UPDATE OF upvotes ON public.posts
-FOR EACH ROW EXECUTE FUNCTION public.notify_post_upvote_milestone();
 
 REVOKE ALL ON FUNCTION public.notify_comment_insert() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.notify_post_upvote() FROM PUBLIC, anon, authenticated;
