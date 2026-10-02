@@ -63,6 +63,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -187,19 +191,36 @@ class NotificationsViewModel @Inject constructor(
     fun markAllRead() {
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
-            notificationRepository.markAllRead(uid)
-            _s.value = _s.value.copy(
-                notifications = _s.value.notifications.map { it.copy(isRead = true) }
+            notificationRepository.markAllRead(uid).fold(
+                onSuccess = {
+                    _s.value = _s.value.copy(
+                        notifications = _s.value.notifications.map { it.copy(isRead = true) },
+                        error = null
+                    )
+                },
+                onFailure = { error ->
+                    _s.value = _s.value.copy(error = "Couldn't mark notifications as read. Please try again.")
+                    android.util.Log.w("NotificationsVM", "markAllRead failed", error)
+                }
             )
         }
     }
 
     fun markOneRead(id: String) {
+        val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
-            notificationRepository.markOneRead(id)
-            _s.value = _s.value.copy(
-                notifications = _s.value.notifications.map { n ->
-                    if (n.id == id) n.copy(isRead = true) else n
+            notificationRepository.markOneRead(uid, id).fold(
+                onSuccess = {
+                    _s.value = _s.value.copy(
+                        notifications = _s.value.notifications.map { n ->
+                            if (n.id == id) n.copy(isRead = true) else n
+                        },
+                        error = null
+                    )
+                },
+                onFailure = { error ->
+                    _s.value = _s.value.copy(error = "Couldn't update this notification. Please try again.")
+                    android.util.Log.w("NotificationsVM", "markOneRead failed", error)
                 }
             )
         }
@@ -208,8 +229,13 @@ class NotificationsViewModel @Inject constructor(
     fun clearAll() {
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
-            notificationRepository.markAllRead(uid)
-            _s.value = _s.value.copy(notifications = emptyList())
+            notificationRepository.deleteAll(uid).fold(
+                onSuccess = { _s.value = _s.value.copy(notifications = emptyList(), postPreviews = emptyMap(), error = null) },
+                onFailure = { error ->
+                    _s.value = _s.value.copy(error = "Couldn't clear notifications. Please try again.")
+                    android.util.Log.w("NotificationsVM", "deleteAll failed", error)
+                }
+            )
         }
     }
 
@@ -236,6 +262,21 @@ class NotificationsViewModel @Inject constructor(
             it.type == "message"
         }
         else       -> _s.value.notifications
+    }
+}
+
+
+// Parses timestamps into the device-local calendar date, accepting both UTC instants
+// and offset-aware timestamps returned by Postgres/PostgREST.
+private fun parseNotificationDate(value: String, zoneId: ZoneId): LocalDate? {
+    return try {
+        Instant.parse(value).atZone(zoneId).toLocalDate()
+    } catch (_: Exception) {
+        try {
+            OffsetDateTime.parse(value).toInstant().atZone(zoneId).toLocalDate()
+        } catch (_: Exception) {
+            null
+        }
     }
 }
 
@@ -304,14 +345,11 @@ fun NotificationsScreen(
         }
     }
 
-    // Group into Today vs Earlier
+    // Group by the user's local calendar date, not a rolling 24-hour window.
+    val localZone = remember { ZoneId.systemDefault() }
+    val today = remember { LocalDate.now(localZone) }
     val (todayNotifs, earlierNotifs) = filtered.partition { n ->
-        try {
-            java.time.Duration.between(
-                java.time.Instant.parse(n.createdAt),
-                java.time.Instant.now()
-            ).toHours() < 24
-        } catch (_: Exception) { false }
+        parseNotificationDate(n.createdAt, localZone) == today
     }
 
     Scaffold(
@@ -431,12 +469,33 @@ fun NotificationsScreen(
             }
 
             filtered.isEmpty() -> {
-                Box(Modifier.fillMaxSize().padding(pad), Alignment.Center) {
-                    EmptyState(
-                        icon = Icons.Filled.NotificationsNone,
-                        title = "No notifications yet",
-                        subtitle = "When people interact with your posts, you'll see it here."
-                    )
+                Column(
+                    Modifier.fillMaxSize().padding(pad),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (s.showPushBanner) {
+                        PushEnableBanner(
+                            onEnable = { viewModel.onEnablePushClicked() },
+                            onDismiss = { viewModel.dismissPushBanner() },
+                            onOpenSettings = {
+                                ctx.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                        putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                                    }
+                                )
+                            }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
+                        EmptyState(
+                            icon = Icons.Filled.NotificationsNone,
+                            title = if (s.activeFilter == "all") "You're all caught up" else "Nothing in this filter",
+                            subtitle = if (s.activeFilter == "all")
+                                "When people interact with your posts, you'll see it here."
+                            else "Try another filter to see more activity."
+                        )
+                    }
                 }
             }
 
@@ -492,7 +551,15 @@ fun NotificationsScreen(
                                             viewModel.markOneRead(notif.id)
                                             notif.relatedConversationId?.let {
                                                 navController.navigate(Screen.Chat.createRoute(it))
-                                            } ?: notif.relatedPostId?.let { onPostClick(it) }
+                                            } ?: notif.relatedPostId?.let { postId ->
+                                                if (!notif.relatedCommentId.isNullOrBlank()) {
+                                                    navController.navigate(Screen.Thread.createRoute(postId, notif.relatedCommentId))
+                                                } else {
+                                                    onPostClick(postId)
+                                                }
+                                            } ?: if (notif.type in listOf("alert", "emergency", "admin_warning")) {
+                                                navController.navigate(Screen.Alerts.route)
+                                            } else Unit
                                         }
                                     )
                                     if (i < todayNotifs.lastIndex) {
@@ -535,7 +602,15 @@ fun NotificationsScreen(
                                             viewModel.markOneRead(notif.id)
                                             notif.relatedConversationId?.let {
                                                 navController.navigate(Screen.Chat.createRoute(it))
-                                            } ?: notif.relatedPostId?.let { onPostClick(it) }
+                                            } ?: notif.relatedPostId?.let { postId ->
+                                                if (!notif.relatedCommentId.isNullOrBlank()) {
+                                                    navController.navigate(Screen.Thread.createRoute(postId, notif.relatedCommentId))
+                                                } else {
+                                                    onPostClick(postId)
+                                                }
+                                            } ?: if (notif.type in listOf("alert", "emergency", "admin_warning")) {
+                                                navController.navigate(Screen.Alerts.route)
+                                            } else Unit
                                         }
                                     )
                                     if (i < earlierNotifs.lastIndex) {
