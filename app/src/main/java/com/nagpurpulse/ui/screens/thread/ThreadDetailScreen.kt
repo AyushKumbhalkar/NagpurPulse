@@ -59,11 +59,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.nagpurpulse.ui.preferences.DensityManager
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 data class ThreadDetailUiState(
     val post: Post? = null,
     val comments: List<Comment> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSubmittingComment: Boolean = false,
     val error: String? = null,
     val userVote: String? = null,
@@ -143,6 +146,41 @@ class ThreadDetailViewModel @Inject constructor(
         loadPost()
         loadComments()
         loadUserVoteAndSaved()
+
+        // Keep this thread synchronized with comments/replies created by other users.
+        viewModelScope.launch {
+            runCatching {
+                postRepository.subscribeToComments(postId).collect {
+                    delay(250)
+                    loadPost()
+                    loadComments()
+                }
+            }.onFailure { error ->
+                android.util.Log.e("THREAD_COMMENTS_RT", "Comment realtime subscription stopped", error)
+            }
+        }
+    }
+
+    fun refreshThread() {
+        if (_uiState.value.isRefreshing) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            try {
+                val postResult = postRepository.getPostById(postId)
+                val commentsResult = postRepository.getComments(postId)
+                postResult.onSuccess { post ->
+                    _uiState.value = _uiState.value.copy(post = post)
+                }
+                commentsResult.onSuccess { comments ->
+                    _uiState.value = _uiState.value.copy(comments = comments)
+                }
+                if (postResult.isFailure && commentsResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(error = postResult.exceptionOrNull()?.message)
+                }
+            } finally {
+                _uiState.value = _uiState.value.copy(isRefreshing = false)
+            }
+        }
     }
 
     private fun loadPost() {
@@ -824,9 +862,14 @@ fun ThreadDetailScreen(
             ) { items(4) { ShimmerPostCard() } }
             return@Scaffold
         }
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(isRefreshing = uiState.isRefreshing),
+            onRefresh = { viewModel.refreshThread() },
+            modifier = Modifier.padding(paddingValues)
+        ) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.padding(paddingValues),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             // ── Post content ──────────────────────────────────────────────
@@ -1277,6 +1320,7 @@ fun ThreadDetailScreen(
             }
 
             item { Spacer(Modifier.height(16.dp)) }
+        }
         }
     }
 }
