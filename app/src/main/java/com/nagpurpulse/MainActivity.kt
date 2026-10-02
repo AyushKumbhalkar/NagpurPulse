@@ -68,6 +68,9 @@ class MainActivity : FragmentActivity() {
         intent?.getStringExtra("post_id")?.let {
             NotifDeepLink.pendingPostId.value = it
         }
+        intent?.getStringExtra("comment_id")?.let {
+            NotifDeepLink.pendingCommentId.value = it
+        }
         intent?.getStringExtra("conversation_id")?.let {
             NotifDeepLink.pendingConversationId.value = it
         }
@@ -106,12 +109,16 @@ class MainActivity : FragmentActivity() {
                             // Handles both cold-start (set in onCreate above)
                             // and warm-start (set in onNewIntent below)
                             LaunchedEffect(navController) {
-                                NotifDeepLink.pendingPostId.collect { postId ->
+                                combine(
+                                    NotifDeepLink.pendingPostId,
+                                    NotifDeepLink.pendingCommentId
+                                ) { postId, commentId -> postId to commentId }.collect { (postId, commentId) ->
                                     if (postId != null) {
-                                        navController.navigate(Screen.Thread.createRoute(postId)) {
+                                        navController.navigate(Screen.Thread.createRoute(postId, commentId)) {
                                             launchSingleTop = true
                                         }
                                         NotifDeepLink.pendingPostId.value = null
+                                        NotifDeepLink.pendingCommentId.value = null
                                     }
                                 }
                             }
@@ -155,6 +162,9 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         intent.getStringExtra("post_id")?.let {
             NotifDeepLink.pendingPostId.value = it
+        }
+        intent.getStringExtra("comment_id")?.let {
+            NotifDeepLink.pendingCommentId.value = it
         }
         intent.getStringExtra("conversation_id")?.let {
             NotifDeepLink.pendingConversationId.value = it
