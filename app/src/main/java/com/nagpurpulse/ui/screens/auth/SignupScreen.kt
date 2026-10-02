@@ -99,7 +99,7 @@ fun SignupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                // .verticalScroll(scroll)
+                .verticalScroll(scroll)
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
