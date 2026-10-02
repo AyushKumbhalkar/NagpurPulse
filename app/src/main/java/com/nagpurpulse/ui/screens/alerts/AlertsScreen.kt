@@ -359,9 +359,9 @@ fun AlertsScreen(
                             modifier = Modifier.size(54.dp)
                         )
                         Spacer(Modifier.height(16.dp))
-                        Text("All clear in Nagpur!", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("All clear in Nagpur!", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         Spacer(Modifier.height(6.dp))
-                        Text("No active alerts right now.", color = SecondaryText, fontSize = 14.sp)
+                        Text("No active alerts right now.", color = SecondaryText, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
 
