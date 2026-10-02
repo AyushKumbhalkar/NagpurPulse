@@ -87,6 +87,7 @@ data class HomeUiState(
     val unreadNotifCount: Int = 0,
     val hasLoadedUnreadNotifications: Boolean = false,
     val unreadMsgCount: Int = 0,
+    val hasLoadedUnreadMessages: Boolean = false,
     val temperature: Int? = null,
     val aqi: Int? = null,
     val currentArea: String = "Near You",
@@ -130,7 +131,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             messageRepository.getConversations().onSuccess { conversations ->
                 _uiState.value = _uiState.value.copy(
-                    unreadMsgCount = conversations.sumOf { it.myUnreadCount }
+                    unreadMsgCount = conversations.sumOf { it.myUnreadCount },
+                    hasLoadedUnreadMessages = true
                 )
             }
         }
@@ -572,9 +574,9 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(uiState.unreadMsgCount) {
+    LaunchedEffect(uiState.unreadMsgCount, uiState.hasLoadedUnreadMessages) {
         val current = uiState.unreadMsgCount
-        if (messageCountInitialized && current > previousUnreadMsgCount) {
+        if (uiState.hasLoadedUnreadMessages && messageCountInitialized && current > previousUnreadMsgCount) {
             messageRotation.snapTo(0f)
             messageRotation.animateTo(0f, animationSpec = keyframes {
                 durationMillis = 800
@@ -585,8 +587,10 @@ fun HomeScreen(
                 0f at 550
             })
         }
-        previousUnreadMsgCount = current
-        messageCountInitialized = true
+        if (uiState.hasLoadedUnreadMessages) {
+            previousUnreadMsgCount = current
+            messageCountInitialized = true
+        }
     }
 
 
