@@ -20,7 +20,7 @@
 3. Add `public.record_notification_analytics(text,text)` with a strict event/type allow-list. It accepts authenticated app calls and trusted service-role calls, increments a daily aggregate, and stores no actor identity.
 4. Android inbox opening and notification tapping increment best-effort counters. Analytics failures are logged at debug level and must not block the inbox or navigation.
 5. After FCM accepts a push, the Edge Function increments `push_delivered`. A failed analytics counter does not turn a successful push into a failed delivery.
-6. The schema includes `push_opt_out` as an allowed event, but preference-change instrumentation is not yet connected; do not treat opt-out counts as complete until that is wired and verified.
+6. The Android notification settings view model records a best-effort `push_opt_out` counter when the master push switch or an individual notification category is turned off. This measures toggle-off actions, not current preference state or unique users.
 
 ## Rollout order
 
@@ -61,7 +61,7 @@ This removes all aggregate counters collected since rollout. It does not modify 
 - [ ] Inbox open and notification tap counters increment.
 - [ ] Successful push sends increment `push_delivered`; failed sends do not.
 - [x] Table schema stores only aggregate date/event/type/count fields; no identifiers or notification content.
-- [ ] Preference-change opt-out instrumentation remains a follow-up item.
+- [x] Preference-toggle opt-out instrumentation is wired; its live counter behavior still needs end-to-end verification.
 - [ ] Android build and end-to-end tests completed locally.
 - [ ] Preference-change opt-out instrumentation remains a follow-up item.
 - [ ] Android build and end-to-end tests completed locally.
