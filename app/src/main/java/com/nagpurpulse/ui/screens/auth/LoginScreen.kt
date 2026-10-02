@@ -97,6 +97,7 @@ fun LoginScreen(
     var pwVisible     by remember { mutableStateOf(false) }
     var rememberMe    by remember { mutableStateOf(false) }
 
+    val scroll = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -113,7 +114,8 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                .imePadding(),
+                .imePadding()
+                .verticalScroll(scroll),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
