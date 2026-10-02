@@ -61,7 +61,8 @@ data class NotifSettingsState(
     val notifTrending:  Boolean = true,
     val notifCommunity: Boolean = true,
     val notifAlerts:    Boolean = true,
-    val isLoading:      Boolean = true
+    val isLoading:      Boolean = true,
+    val errorMessage:   String? = null
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -132,10 +133,39 @@ class NotifSettingsViewModel @Inject constructor(
                 "notif_community", "notif_alerts_summary")) {
             ScheduledPushManager.reschedule(appContext)
         }
-        // Persist to Supabase + SharedPreferences
+        // Persist to Supabase + SharedPreferences. Restore the prior value if
+        // the remote write fails, so the UI does not claim a setting was saved.
+        val previousValue = when (field) {
+            "notif_push" -> !_state.value.pushEnabled
+            "notif_replies" -> !_state.value.notifReplies
+            "notif_mentions" -> !_state.value.notifMentions
+            "notif_messages" -> !_state.value.notifMessages
+            "notif_upvotes" -> !_state.value.notifUpvotes
+            "notif_digest" -> !_state.value.notifDigest
+            "notif_trending" -> !_state.value.notifTrending
+            "notif_community" -> !_state.value.notifCommunity
+            "notif_alerts_summary" -> !_state.value.notifAlerts
+            else -> value
+        }
         viewModelScope.launch {
             val saveResult = userPreferencesRepository.saveNotifPref(appContext, field, value)
-            if (saveResult.isSuccess && !value) {
+            if (saveResult.isFailure) {
+                // Revert only this field; keep the rest of the settings state intact.
+                _state.value = when (field) {
+                    "notif_push" -> _state.value.copy(pushEnabled = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_replies" -> _state.value.copy(notifReplies = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_mentions" -> _state.value.copy(notifMentions = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_messages" -> _state.value.copy(notifMessages = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_upvotes" -> _state.value.copy(notifUpvotes = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_digest" -> _state.value.copy(notifDigest = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_trending" -> _state.value.copy(notifTrending = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_community" -> _state.value.copy(notifCommunity = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    "notif_alerts_summary" -> _state.value.copy(notifAlerts = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
+                    else -> _state.value.copy(errorMessage = "Couldn't save notification settings. Please try again.")
+                }
+                return@launch
+            }
+            if (!value) {
                 val notificationType = when (field) {
                     "notif_replies" -> "reply"
                     "notif_mentions" -> "mention"
@@ -162,6 +192,10 @@ fun NotifSettingsScreen(
 ) {
     val ctx   = LocalContext.current
     val state by vm.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     val hasPermission = remember {
         mutableStateOf(
@@ -181,6 +215,7 @@ fun NotifSettingsScreen(
 
     Scaffold(
         containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column(
                 Modifier
