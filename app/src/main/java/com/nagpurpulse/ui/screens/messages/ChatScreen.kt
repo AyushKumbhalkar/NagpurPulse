@@ -463,10 +463,10 @@ fun ChatScreen(
                     }
                     Spacer(Modifier.height(16.dp))
                     Text("Your conversation starts here", color = PrimaryText,
-                        fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(Modifier.height(6.dp))
                     Text("Send a message to start a private conversation.",
-                        color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp)
+                        color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         } else LazyColumn(
