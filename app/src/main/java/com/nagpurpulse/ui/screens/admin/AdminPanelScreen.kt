@@ -1,6 +1,8 @@
 // ui/screens/admin/AdminPanelScreen.kt
 package com.nagpurpulse.ui.screens.admin
 
+import androidx.compose.ui.text.style.TextOverflow
+
 
 import com.nagpurpulse.data.model.QueueItem
 import androidx.compose.foundation.background
@@ -207,7 +209,7 @@ private fun AdminBottomNav(
                     Column(
                         modifier = Modifier
                             .pressScale(onClick = { onTabChange(tab) })
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
@@ -223,6 +225,8 @@ private fun AdminBottomNav(
                             tab.label,
                             color = if (active) OrangePrimary else Color.White.copy(0.4f),
                             fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal
                         )
 
