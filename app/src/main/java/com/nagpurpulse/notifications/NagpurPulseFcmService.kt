@@ -33,6 +33,7 @@ class NagpurPulseFcmService : FirebaseMessagingService() {
         val title = message.notification?.title ?: message.data["title"] ?: "Nagpur Pulse"
         val body = message.notification?.body ?: message.data["body"] ?: ""
         val postId = message.data["post_id"]?.takeIf { it.isNotBlank() }
+        val commentId = message.data["comment_id"]?.takeIf { it.isNotBlank() }
         val conversationId = message.data["conversation_id"]?.takeIf { it.isNotBlank() }
         val notificationId = message.data["notification_id"]?.takeIf { it.isNotBlank() }
         val type = message.data["type"] ?: "general"
@@ -52,6 +53,7 @@ class NagpurPulseFcmService : FirebaseMessagingService() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             postId?.let { putExtra("post_id", it) }
+            commentId?.let { putExtra("comment_id", it) }
             conversationId?.let { putExtra("conversation_id", it) }
             putExtra("notification_type", type)
             notificationId?.let { putExtra("notification_id", it) }
