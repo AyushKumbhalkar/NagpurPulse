@@ -132,7 +132,7 @@ class MainActivity : FragmentActivity() {
 
                             LaunchedEffect(navController, "conversation-notification-deeplink") {
                                 NotifDeepLink.pendingConversationId.collect { conversationId ->
-                                    if (conversationId != null) {
+                                    if (!conversationId.isNullOrBlank()) {
                                         // Wait for the NavHost to finish Splash -> Home before handling a cold-start tap.
                                         navController.currentBackStackEntryFlow.first {
                                             it.destination.route != null && it.destination.route != Screen.Splash.route
@@ -140,6 +140,9 @@ class MainActivity : FragmentActivity() {
                                         navController.navigate(Screen.Chat.createRoute(conversationId)) {
                                             launchSingleTop = true
                                         }
+                                        NotifDeepLink.pendingConversationId.value = null
+                                    } else if (conversationId != null) {
+                                        // Ignore malformed notification intents; "chat/" is not a valid route.
                                         NotifDeepLink.pendingConversationId.value = null
                                     }
                                 }
@@ -177,7 +180,7 @@ class MainActivity : FragmentActivity() {
         intent.getStringExtra("post_id")?.let {
             NotifDeepLink.pendingPostId.value = it
         }
-        intent.getStringExtra("conversation_id")?.let {
+        intent.getStringExtra("conversation_id")?.takeIf { it.isNotBlank() }?.let {
             NotifDeepLink.pendingConversationId.value = it
         }
     }
