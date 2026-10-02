@@ -29,6 +29,7 @@ import com.nagpurpulse.ui.theme.ThemeManager
 import com.nagpurpulse.ui.theme.ThemeTransitionOverlay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -116,6 +117,10 @@ class MainActivity : FragmentActivity() {
                                     NotifDeepLink.pendingCommentId
                                 ) { postId, commentId -> postId to commentId }.collect { (postId, commentId) ->
                                     if (postId != null) {
+                                        // Wait for the NavHost to finish Splash -> Home before handling a cold-start tap.
+                                        navController.currentBackStackEntryFlow.first {
+                                            it.destination.route != null && it.destination.route != Screen.Splash.route
+                                        }
                                         navController.navigate(Screen.Thread.createRoute(postId, commentId)) {
                                             launchSingleTop = true
                                         }
@@ -128,6 +133,10 @@ class MainActivity : FragmentActivity() {
                             LaunchedEffect(navController, "conversation-notification-deeplink") {
                                 NotifDeepLink.pendingConversationId.collect { conversationId ->
                                     if (conversationId != null) {
+                                        // Wait for the NavHost to finish Splash -> Home before handling a cold-start tap.
+                                        navController.currentBackStackEntryFlow.first {
+                                            it.destination.route != null && it.destination.route != Screen.Splash.route
+                                        }
                                         navController.navigate(Screen.Chat.createRoute(conversationId)) {
                                             launchSingleTop = true
                                         }
