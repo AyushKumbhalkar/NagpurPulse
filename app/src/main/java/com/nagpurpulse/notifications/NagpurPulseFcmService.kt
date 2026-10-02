@@ -42,12 +42,14 @@ class NagpurPulseFcmService : FirebaseMessagingService() {
         // row from FCM receipt: the database webhook would send it again.
         if (!NotifPrefsHelper.shouldShowType(applicationContext, type)) return
 
+        createNotificationChannels(applicationContext)
+
         val channelId = when (type) {
             "alert", "emergency", "alerts_summary" -> CHANNEL_ALERTS
             "trending" -> CHANNEL_TRENDING
             "message" -> CHANNEL_MESSAGES
             "community" -> CHANNEL_COMMUNITY
-            else -> CHANNEL_DIGEST
+            else -> CHANNEL_SOCIAL
         }
 
         val intent = Intent(this, MainActivity::class.java).apply {
@@ -75,7 +77,7 @@ class NagpurPulseFcmService : FirebaseMessagingService() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setPriority(
-                if (type in listOf("alert", "emergency", "alerts_summary")) {
+                if (type in listOf("alert", "emergency", "alerts_summary", "message") || channelId == CHANNEL_SOCIAL) {
                     NotificationCompat.PRIORITY_HIGH
                 } else {
                     NotificationCompat.PRIORITY_DEFAULT
