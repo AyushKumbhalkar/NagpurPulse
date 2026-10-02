@@ -279,7 +279,6 @@ FOR EACH ROW EXECUTE FUNCTION public.notify_message_insert();
 REVOKE ALL ON FUNCTION public.notify_comment_insert() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.notify_post_upvote() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.notify_message_insert() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.notify_post_upvote_milestone() FROM PUBLIC, anon, authenticated;
 
 -- Remove every permissive INSERT policy on notifications. Trigger functions
 -- execute as their owner; clients must not write arbitrary notification rows.
