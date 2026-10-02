@@ -42,10 +42,12 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nagpurpulse.data.model.Notification
+import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.model.emoji
 import com.nagpurpulse.data.model.timeAgo
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.NotificationRepository
+import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.UserPreferencesRepository
 import com.nagpurpulse.notifications.NotifPrefsHelper
 import com.nagpurpulse.ui.components.EmptyState
@@ -55,6 +57,9 @@ import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -63,6 +68,7 @@ import javax.inject.Inject
 
 data class NotifUiState(
     val notifications: List<Notification> = emptyList(),
+    val postPreviews: Map<String, Post> = emptyMap(),
     val isLoading:     Boolean = true,
     val activeFilter:  String  = "all",
     val showPushBanner: Boolean = false,   // determined by real permission check in VM
@@ -76,6 +82,7 @@ class NotificationsViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
     private val authRepository: AuthRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val postRepository: PostRepository,
     @ApplicationContext private val appContext: Context        // ← injected, not passed from UI
 ) : ViewModel() {
 
@@ -104,11 +111,28 @@ class NotificationsViewModel @Inject constructor(
             notificationRepository.getNotifications(uid).fold(
                 onSuccess = { list ->
                     _s.value = _s.value.copy(notifications = list, isLoading = false, error = null)
+                    loadPostPreviews(list)
                 },
                 onFailure = { e ->
                     _s.value = _s.value.copy(isLoading = false, error = e.message)
                 }
             )
+        }
+    }
+
+    private fun loadPostPreviews(notifications: List<Notification>) {
+        val postIds = notifications
+            .filter { it.type in listOf("upvote", "like") }
+            .mapNotNull { it.relatedPostId }
+            .distinct()
+        if (postIds.isEmpty()) return
+        viewModelScope.launch {
+            val previews = coroutineScope {
+                postIds.map { postId ->
+                    async { postId to postRepository.getPostPreviewById(postId).getOrNull() }
+                }.awaitAll()
+            }.mapNotNull { (id, post) -> post?.let { id to it } }.toMap()
+            _s.value = _s.value.copy(postPreviews = _s.value.postPreviews + previews)
         }
     }
 
@@ -305,9 +329,6 @@ fun NotificationsScreen(
                             )
                         }
                     }
-                    IconButton(onClick = { viewModel.clearAll() }) {
-                        Icon(Icons.Filled.Delete, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
-                    }
                     IconButton(onClick = { navController.navigate(Screen.NotifSettings.route) }) {
                         Icon(Icons.Filled.Settings, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
                     }
@@ -350,29 +371,32 @@ fun NotificationsScreen(
                 ) {
                     FILTER_TABS.forEach { f ->
                         val sel = s.activeFilter == f
-                        Tab(selected = sel, onClick = { viewModel.setFilter(f) }, text = {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(if (sel) OrangePrimary else SurfaceAlt)
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    when (f) {
-                                        "all"      -> "All"
-                                        "replies"  -> "Replies"
-                                        "mentions" -> "Mentions"
-                                        "upvotes"  -> "Upvotes"
-                                        "messages" -> "Messages"
-                                        "alerts"   -> "Alerts"
-                                        else       -> f.replaceFirstChar { it.uppercase() }
-                                    },
-                                    color      = if (sel) Color.White else SecondaryText,
-                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize   = 13.sp
-                                )
-                            }
-                        })
+                        Box(
+                            modifier = Modifier
+                                .padding(vertical = 2.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(if (sel) OrangePrimary else SurfaceAlt)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                ) { viewModel.setFilter(f) }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                when (f) {
+                                    "all" -> "All"
+                                    "replies" -> "Replies"
+                                    "mentions" -> "Mentions"
+                                    "upvotes" -> "Upvotes"
+                                    "messages" -> "Messages"
+                                    "alerts" -> "Alerts"
+                                    else -> f.replaceFirstChar { it.uppercase() }
+                                },
+                                color = if (sel) Color.White else SecondaryText,
+                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -446,6 +470,7 @@ fun NotificationsScreen(
                                 todayNotifs.forEachIndexed { i, notif ->
                                     NotifRow(
                                         notif  = notif,
+                                        postPreview = notif.relatedPostId?.let { s.postPreviews[it] },
                                         onTap  = {
                                             viewModel.markOneRead(notif.id)
                                             notif.relatedConversationId?.let {
@@ -488,6 +513,7 @@ fun NotificationsScreen(
                                 earlierNotifs.forEachIndexed { i, notif ->
                                     NotifRow(
                                         notif = notif,
+                                        postPreview = notif.relatedPostId?.let { s.postPreviews[it] },
                                         onTap = {
                                             viewModel.markOneRead(notif.id)
                                             notif.relatedConversationId?.let {
@@ -515,7 +541,7 @@ fun NotificationsScreen(
 // ── NotifRow — real sender avatar + full type coverage ────────────────────────
 
 @Composable
-private fun NotifRow(notif: Notification, onTap: () -> Unit) {
+private fun NotifRow(notif: Notification, postPreview: Post?, onTap: () -> Unit) {
     val isUnread = !notif.isRead
     val accent   = typeColor(notif.type)
 
@@ -598,21 +624,51 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
             if (isUnread) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(OrangePrimary))
             }
-            if (notif.relatedPostId != null && !compact) {
+            if (notif.relatedPostId != null) {
                 Spacer(Modifier.height(4.dp))
                 Box(
                     Modifier
-                        .size(if (compact) 36.dp else 48.dp)
+                        .size(if (compact) 36.dp else 52.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(SurfaceAlt),
                     Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Filled.Description,
-                        null,
-                        tint = TertiaryText,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (!postPreview?.imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(postPreview?.imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Post image preview",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Description,
+                                null,
+                                tint = OrangePrimary,
+                                modifier = Modifier.size(if (compact) 14.dp else 17.dp)
+                            )
+                            if (!postPreview?.title.isNullOrBlank()) {
+                                Text(
+                                    postPreview?.title.orEmpty(),
+                                    color = SecondaryText,
+                                    fontSize = 7.sp,
+                                    lineHeight = 8.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Text("Post", color = TertiaryText, fontSize = 8.sp, maxLines = 1)
+                            }
+                        }
+                    }
                 }
             }
         }
