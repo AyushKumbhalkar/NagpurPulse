@@ -290,10 +290,10 @@ private fun NotifPermissionBanner(onAllow: () -> Unit, onSettings: () -> Unit) {
             .clip(RoundedCornerShape(16.dp))
             .background(OrangePrimary.copy(0.1f))
             .border(1.dp, OrangePrimary.copy(0.3f), RoundedCornerShape(16.dp))
-            .padding(12.dp),
+            .padding(if (compact) 10.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(40.dp).clip(CircleShape).background(OrangePrimary.copy(0.2f)), Alignment.Center) {
+        Box(Modifier.size(if (compact) 36.dp else 40.dp).clip(CircleShape).background(OrangePrimary.copy(0.2f)), Alignment.Center) {
             Icon(
                 imageVector = Icons.Filled.Notifications,
                 contentDescription = null,
@@ -301,17 +301,17 @@ private fun NotifPermissionBanner(onAllow: () -> Unit, onSettings: () -> Unit) {
                 modifier = Modifier.size(20.dp)
             )
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(if (compact) 6.dp else 8.dp))
         Column(Modifier.weight(1f)) {
             Text("Notifications blocked", color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            Text("Allow NagpurPulse to send you push notifications", color = SecondaryText, fontSize = 12.sp)
+            Text("Allow NagpurPulse to send you push notifications", color = SecondaryText, fontSize = 12.sp, maxLines = if (compact) 3 else 2, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(if (compact) 4.dp else 6.dp))
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp)).background(OrangePrimary)
-                    .clickable { onAllow() }.padding(horizontal = 10.dp, vertical = 6.dp)
+                   .clickable { onAllow() }.padding(horizontal = if (compact) 8.dp else 10.dp, vertical = 6.dp)
             ) { Text("Allow", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
             Text("Settings", color = OrangePrimary, fontSize = 11.sp, modifier = Modifier.clickable { onSettings() })
         }
