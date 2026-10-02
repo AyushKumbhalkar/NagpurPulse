@@ -33,6 +33,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     val compactHeight = configuration.screenHeightDp < 700
     val compactWidth = configuration.screenWidthDp < 360
     val logoSize = if (compactHeight) 112.dp else 140.dp
+    val brandFontSize = if (compactWidth) 30.sp else 38.sp
     var logoVisible by remember { mutableStateOf(false) }
     var textVisible by remember { mutableStateOf(false) }
     var tagVisible  by remember { mutableStateOf(false) }
