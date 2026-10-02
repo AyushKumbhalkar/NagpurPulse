@@ -301,7 +301,21 @@ fun NotificationsScreen(
                             )
                         }
                     }
-                    if (unread > 0) {
+                    IconButton(onClick = { viewModel.clearAll() }) {
+                        Icon(Icons.Filled.Delete, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { navController.navigate(Screen.NotifSettings.route) }) {
+                        Icon(Icons.Filled.Settings, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                if (unread > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(14.dp))
@@ -312,15 +326,13 @@ fun NotificationsScreen(
                         ) {
                             Text(
                                 "Mark all read",
-                                color = OrangePrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
+                                color = OrangePrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    IconButton(onClick = { viewModel.clearAll() }) {
-                        Icon(Icons.Filled.Delete, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = { navController.navigate(Screen.NotifSettings.route) }) {
-                        Icon(Icons.Filled.Settings, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
                     }
                 }
 
