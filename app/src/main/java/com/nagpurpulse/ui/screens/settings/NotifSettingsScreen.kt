@@ -134,8 +134,8 @@ class NotifSettingsViewModel @Inject constructor(
         }
         // Persist to Supabase + SharedPreferences
         viewModelScope.launch {
-            userPreferencesRepository.saveNotifPref(appContext, field, value)
-            if (!value) {
+            val saveResult = userPreferencesRepository.saveNotifPref(appContext, field, value)
+            if (saveResult.isSuccess && !value) {
                 val notificationType = when (field) {
                     "notif_replies" -> "reply"
                     "notif_mentions" -> "mention"
