@@ -59,7 +59,7 @@ class NagpurPulseFcmService : FirebaseMessagingService() {
             notificationId?.let { putExtra("notification_id", it) }
         }
 
-        val stableKey = notificationId ?: listOf(type, postId.orEmpty(), title, body).joinToString("|")
+        val stableKey = notificationId ?: listOf(type, postId.orEmpty(), commentId.orEmpty(), title, body).joinToString("|")
         val notificationCode = stableKey.hashCode() and 0x7fffffff
         val pendingIntent = PendingIntent.getActivity(
             this,
