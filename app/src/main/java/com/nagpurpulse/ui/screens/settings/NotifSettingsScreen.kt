@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -331,8 +332,8 @@ private fun NotifToggleRow(
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = if (enabled) PrimaryText else TertiaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Text(sub, color = TertiaryText, fontSize = 12.sp)
+            Text(label, color = if (enabled) PrimaryText else TertiaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Switch(
             checked = checked, onCheckedChange = onCheckedChange, enabled = enabled,
