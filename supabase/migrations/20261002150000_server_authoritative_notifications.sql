@@ -94,7 +94,7 @@ BEGIN
        ), true) THEN
       PERFORM public.create_notification_event(
         recipient_id, 'reply',
-        (SELECT username FROM public.profiles WHERE id = NEW.user_id) || ' replied to your comment',
+        COALESCE((SELECT username FROM public.profiles WHERE id = NEW.user_id), 'Someone') || ' replied to your comment',
         left(NEW.body, 120), NEW.post_id, NULL, NEW.user_id
       );
     END IF;
