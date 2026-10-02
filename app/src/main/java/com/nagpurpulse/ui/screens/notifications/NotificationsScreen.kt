@@ -126,8 +126,8 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun loadPostPreviews(notifications: List<Notification>) {
+        // Any notification linked to a post can benefit from context in the inbox.
         val postIds = notifications
-            .filter { it.type in listOf("upvote", "like") }
             .mapNotNull { it.relatedPostId }
             .distinct()
         if (postIds.isEmpty()) return
@@ -328,6 +328,11 @@ fun NotificationsScreen(
     val s        = viewModel.state.collectAsState().value
     val filtered = viewModel.filteredNotifs()
     val unread   = s.notifications.count { !it.isRead }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(s.error) {
+        s.error?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     // Permission launcher wired to the VM's event
     val permLauncher = rememberLauncherForActivityResult(
@@ -354,6 +359,7 @@ fun NotificationsScreen(
 
     Scaffold(
         containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column(
                 Modifier
