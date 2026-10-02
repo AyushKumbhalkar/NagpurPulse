@@ -510,7 +510,6 @@ fun NotificationsScreen(
             }
         }
     }
-    }
 }
 
 // ── NotifRow — real sender avatar + full type coverage ────────────────────────
