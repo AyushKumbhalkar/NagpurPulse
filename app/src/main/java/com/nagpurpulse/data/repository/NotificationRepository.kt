@@ -68,9 +68,23 @@ class NotificationRepository @Inject constructor(
         }
     }
 
-    suspend fun markOneRead(notificationId: String): Result<Unit> = runCatching {
+    suspend fun markOneRead(userId: String, notificationId: String): Result<Unit> = runCatching {
         client.postgrest["notifications"].update(mapOf("is_read" to true)) {
-            filter { eq("id", notificationId) }
+            filter {
+                eq("user_id", userId)
+                eq("id", notificationId)
+            }
+        }
+    }
+
+    /**
+     * Permanently removes the signed-in user's notifications.
+     * This is intentionally separate from markAllRead so the UI cannot
+     * accidentally describe a read operation as a clear operation.
+     */
+    suspend fun deleteAll(userId: String): Result<Unit> = runCatching {
+        client.postgrest["notifications"].delete {
+            filter { eq("user_id", userId) }
         }
     }
 
