@@ -172,7 +172,7 @@ fun NotifSettingsScreen(
                     .statusBarsPadding()
             ) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -181,6 +181,7 @@ fun NotifSettingsScreen(
                     Text(
                         "Notifications",
                         color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -286,10 +287,10 @@ private fun NotifPermissionBanner(onAllow: () -> Unit, onSettings: () -> Unit) {
             .clip(RoundedCornerShape(16.dp))
             .background(OrangePrimary.copy(0.1f))
             .border(1.dp, OrangePrimary.copy(0.3f), RoundedCornerShape(16.dp))
-            .padding(14.dp),
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(44.dp).clip(CircleShape).background(OrangePrimary.copy(0.2f)), Alignment.Center) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(OrangePrimary.copy(0.2f)), Alignment.Center) {
             Icon(
                 imageVector = Icons.Filled.Notifications,
                 contentDescription = null,
@@ -297,12 +298,12 @@ private fun NotifPermissionBanner(onAllow: () -> Unit, onSettings: () -> Unit) {
                 modifier = Modifier.size(20.dp)
             )
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text("Notifications blocked", color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             Text("Allow NagpurPulse to send you push notifications", color = SecondaryText, fontSize = 12.sp)
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Box(
                 modifier = Modifier
@@ -320,7 +321,7 @@ private fun NotifToggleRow(
     checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -330,10 +331,10 @@ private fun NotifToggleRow(
         ) {
             Icon(icon, null, tint = color.copy(if (enabled) 1f else 0.35f), modifier = Modifier.size(18.dp))
         }
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = if (enabled) PrimaryText else TertiaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(label, color = if (enabled) PrimaryText else TertiaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         Switch(
             checked = checked, onCheckedChange = onCheckedChange, enabled = enabled,
