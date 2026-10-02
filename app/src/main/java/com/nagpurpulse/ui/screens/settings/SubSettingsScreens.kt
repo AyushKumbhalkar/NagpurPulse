@@ -151,9 +151,12 @@ fun IncognitoSettingsScreen(navController: NavController) {
                     Spacer(Modifier.height(6.dp))
 
                     Text(
-                        "Stay private. Stay incognito.",
+                        text = "Stay private. Stay incognito.",
                         color = SecondaryText,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
@@ -309,9 +312,10 @@ fun IncognitoSettingsScreen(navController: NavController) {
                             )
 
                             Text(
-                                tip,
+                                text = tip,
                                 color = SecondaryText,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
