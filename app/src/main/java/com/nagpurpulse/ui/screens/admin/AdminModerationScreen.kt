@@ -113,8 +113,8 @@ fun AdminQueueContent(
                         modifier = Modifier.size(40.dp)
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text("No pending reports", color = SecondaryText, fontSize = 15.sp)
-                    Text("The moderation queue is clear", color = TertiaryText, fontSize = 12.sp)
+                    Text("No pending reports", color = SecondaryText, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("The moderation queue is clear", color = TertiaryText, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         } else {
