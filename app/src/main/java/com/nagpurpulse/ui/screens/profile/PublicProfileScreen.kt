@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -497,11 +498,16 @@ fun PublicProfileScreen(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                        val profileScreenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
                         Text(
                             displayName,
                             color = PrimaryText,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp
+                            fontSize = if (profileScreenWidth < 360) 23.sp else if (profileScreenWidth < 400) 26.sp else 28.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                         )
 
                         Text(
