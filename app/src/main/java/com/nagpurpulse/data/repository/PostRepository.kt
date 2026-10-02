@@ -485,7 +485,8 @@ class PostRepository @Inject constructor(
                 }
 
 // Increase commenter karma
-                updateKarma(userId, 1)            } catch (_: Exception) {}
+                updateKarma(userId, 1)
+            } catch (_: Exception) {}
 
             Result.success(enrichCommentWithUsername(comment))
         } catch (e: Exception) {
