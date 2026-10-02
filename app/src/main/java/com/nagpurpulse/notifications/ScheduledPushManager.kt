@@ -25,6 +25,7 @@ const val CHANNEL_COMMUNITY = "nagpur_community"
 const val CHANNEL_DIGEST    = "nagpur_digest"
 const val CHANNEL_MESSAGES  = "nagpur_messages"
 const val CHANNEL_SOCIAL = "nagpur_social_v2"
+const val CHANNEL_MAIN = "nagpur_pulse_main"
 
 fun createNotificationChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -36,7 +37,8 @@ fun createNotificationChannels(context: Context) {
         Triple(CHANNEL_DIGEST,    "Daily Digest",        NotificationManager.IMPORTANCE_LOW),
         Triple(CHANNEL_MESSAGES,  "Direct Messages",     NotificationManager.IMPORTANCE_HIGH),
         // Use a new ID because Android preserves the importance of existing channels.
-        Triple(CHANNEL_SOCIAL, "Comments and Votes", NotificationManager.IMPORTANCE_HIGH)
+        Triple(CHANNEL_SOCIAL, "Comments and Votes", NotificationManager.IMPORTANCE_HIGH),
+        Triple(CHANNEL_MAIN, "NagpurPulse Notifications", NotificationManager.IMPORTANCE_HIGH)
     ).forEach { (id, name, importance) ->
         nm.createNotificationChannel(
             NotificationChannel(id, name, importance).apply {
