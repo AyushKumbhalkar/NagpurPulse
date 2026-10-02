@@ -66,12 +66,12 @@ class MainActivity : FragmentActivity() {
             "Saved AMOLED = $savedTheme | isLightTheme = ${ThemeManager.isLightTheme}"
         )
 
-        // Capture post_id if launched by notification tap
-        intent?.getStringExtra("post_id")?.let {
-            NotifDeepLink.pendingPostId.value = it
-        }
+        // Set comment first so the combined deep-link collector sees the full destination.
         intent?.getStringExtra("comment_id")?.let {
             NotifDeepLink.pendingCommentId.value = it
+        }
+        intent?.getStringExtra("post_id")?.let {
+            NotifDeepLink.pendingPostId.value = it
         }
         intent?.getStringExtra("conversation_id")?.let {
             NotifDeepLink.pendingConversationId.value = it
@@ -162,11 +162,11 @@ class MainActivity : FragmentActivity() {
     // ── Deep link from warm-start tap (app already running) ───────────────────
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.getStringExtra("post_id")?.let {
-            NotifDeepLink.pendingPostId.value = it
-        }
         intent.getStringExtra("comment_id")?.let {
             NotifDeepLink.pendingCommentId.value = it
+        }
+        intent.getStringExtra("post_id")?.let {
+            NotifDeepLink.pendingPostId.value = it
         }
         intent.getStringExtra("conversation_id")?.let {
             NotifDeepLink.pendingConversationId.value = it
