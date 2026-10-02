@@ -24,14 +24,16 @@ class UserPreferencesRepository @Inject constructor(
         return try {
             val userId = authRepository.currentUserId
                 ?: return Result.failure(Exception("Not logged in"))
-            val prefs = client.postgrest["user_preferences"]
+            val rows = client.postgrest["user_preferences"]
                 .select { filter { eq("user_id", userId) } }
-                .decodeSingle<UserPreferences>()
-            Result.success(prefs)
-        } catch (_: Exception) {
-            val userId = authRepository.currentUserId
-                ?: return Result.failure(Exception("Not logged in"))
-            Result.success(UserPreferences(userId = userId))
+                .decodeList<UserPreferences>()
+
+            // A missing row is a legitimate first-run state. Real query/network/
+            // decoding errors must remain failures so callers can use local cache
+            // rather than silently overwriting it with defaults.
+            Result.success(rows.firstOrNull() ?: UserPreferences(userId = userId))
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
