@@ -45,11 +45,23 @@ This removes all aggregate counters collected since rollout. It does not modify 
 
 ## Verification checklist
 
-- [ ] Migration appears in Supabase migration history.
-- [ ] Table exists with RLS enabled and no anon/authenticated table grants.
+## Deployment record
+
+- SQL migration applied successfully on 2026-10-02. Supabase recorded migration version `20261002175350`, name `notification_aggregate_analytics`.
+- Verification query confirmed the table exists, RLS is enabled, `anon` and `authenticated` cannot SELECT from the table, and the RPC exists.
+- Deployed `send-push-notification` Edge Function version 13 (previously version 12), with JWT verification still disabled because the function uses the existing secret-header validation RPC. Deployment SHA: `eb150d13ea8130056cc091265d1efdf1a8a389d7723c0ec41a246ae981171b9a`.
+- No end-to-end Android/FCM analytics test has been performed yet.
+
+## Verification checklist
+
+- [x] Migration appears in Supabase migration history.
+- [x] Table exists with RLS enabled and no anon/authenticated table grants.
+- [x] RPC exists.
 - [ ] RPC accepts authenticated and service-role calls and rejects anonymous calls.
 - [ ] Inbox open and notification tap counters increment.
 - [ ] Successful push sends increment `push_delivered`; failed sends do not.
-- [ ] No identifiers or notification content are stored in the analytics table.
+- [x] Table schema stores only aggregate date/event/type/count fields; no identifiers or notification content.
+- [ ] Preference-change opt-out instrumentation remains a follow-up item.
+- [ ] Android build and end-to-end tests completed locally.
 - [ ] Preference-change opt-out instrumentation remains a follow-up item.
 - [ ] Android build and end-to-end tests completed locally.
