@@ -45,7 +45,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nagpurpulse.data.model.Notification
 import com.nagpurpulse.data.model.Post
-import com.nagpurpulse.data.model.emoji
 import com.nagpurpulse.data.model.timeAgo
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.NotificationRepository
@@ -241,6 +240,21 @@ class NotificationsViewModel @Inject constructor(
 }
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
+
+private fun notificationTypeIcon(type: String) = when (type.lowercase()) {
+    "comment", "reply" -> Icons.AutoMirrored.Filled.Chat
+    "mention" -> Icons.Filled.AlternateEmail
+    "upvote", "like" -> Icons.Filled.ThumbUp
+    "message" -> Icons.AutoMirrored.Filled.Message
+    "alert", "emergency", "admin_warning" -> Icons.Filled.Warning
+    "badge" -> Icons.Filled.Star
+    "trending" -> Icons.Filled.TrendingUp
+    "community" -> Icons.Filled.Groups
+    "digest" -> Icons.Filled.Campaign
+    "admin_suspension" -> Icons.Filled.GppBad
+    "admin_ban" -> Icons.Filled.Block
+    else -> Icons.Filled.Notifications
+}
 
 @Composable
 private fun typeColor(type: String): Color = when (type) {
@@ -576,18 +590,30 @@ private fun NotifRow(notif: Notification, postPreview: Post?, onTap: () -> Unit)
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    Text(notif.emoji(), fontSize = 10.sp)
+                    Icon(
+                        imageVector = Icons.Filled.PersonOutline,
+                        contentDescription = "Sender",
+                        tint = SecondaryText,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
             // Type badge overlaid at bottom-right
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(22.dp)
                     .clip(CircleShape)
-                    .background(accent.copy(0.2f))
-                    .border(1.dp, accent.copy(0.4f), CircleShape),
+                    .background(accent.copy(alpha = 0.18f))
+                    .border(1.dp, accent.copy(alpha = 0.42f), CircleShape),
                 contentAlignment = Alignment.Center
-            ) { Text(notif.emoji(), fontSize = 10.sp) }
+            ) {
+                Icon(
+                    imageVector = notificationTypeIcon(notif.type),
+                    contentDescription = notif.type,
+                    tint = accent,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
         }
 
         Spacer(Modifier.width(if (compact) 6.dp else 12.dp))
