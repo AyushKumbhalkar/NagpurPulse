@@ -20,6 +20,7 @@ import com.nagpurpulse.data.model.Post
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
@@ -438,7 +439,7 @@ class PostRepository @Inject constructor(
         val channel = client.realtime.channel("thread_comments_$postId")
         val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
             table = "comments"
-            filter("post_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, postId)
+            filter("post_id", FilterOperator.EQ, postId)
         }.map { Unit }
         val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
             table = "comments"
