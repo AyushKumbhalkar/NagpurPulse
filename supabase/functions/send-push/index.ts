@@ -51,6 +51,7 @@ async function deliverBatch(
   body: string,
   postId: string,
   commentId: string,
+  conversationId: string,
   notificationId: string,
   type: string,
   accessToken: string,
@@ -96,6 +97,7 @@ async function deliverBatch(
                 notification_id: notificationId,
                 post_id: postId,
                 comment_id: commentId,
+                conversation_id: conversationId,
                 type,
               },
               android: { priority: "HIGH" },
@@ -149,6 +151,7 @@ Deno.serve(async (req: Request) => {
     const body = typeof payload?.body === "string" ? payload.body : "";
     const postId = typeof payload?.postId === "string" ? payload.postId : "";
     const commentId = typeof payload?.commentId === "string" ? payload.commentId : "";
+    const conversationId = typeof payload?.conversationId === "string" ? payload.conversationId : "";
     const notificationId = typeof payload?.notificationId === "string" ? payload.notificationId : "";
     const type = typeof payload?.type === "string" ? payload.type : "community";
 
@@ -195,7 +198,7 @@ Deno.serve(async (req: Request) => {
       scanned += recipients.length;
       lastUserId = recipients[recipients.length - 1].user_id;
       const result = await deliverBatch(
-        supabase, recipients, title, body, postId, commentId, notificationId, type, accessToken, projectId,
+        supabase, recipients, title, body, postId, commentId, conversationId, notificationId, type, accessToken, projectId,
       );
       sent += result.sent;
       failed += result.failed;
