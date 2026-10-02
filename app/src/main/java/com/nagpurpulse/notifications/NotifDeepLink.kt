@@ -10,5 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 object NotifDeepLink {
     val pendingPostId = MutableStateFlow<String?>(null)
+    val pendingCommentId = MutableStateFlow<String?>(null)
     val pendingConversationId = MutableStateFlow<String?>(null)
 }
