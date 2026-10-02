@@ -3,7 +3,7 @@
 - Project: `eazkmfzegxmdkbowohiy`
 - Repository branch: `more-updates-on-nagpur-pulse`
 - Migrations: `supabase/migrations/20261002190000_notification_aggregate_analytics.sql`, `supabase/migrations/20261002200000_restrict_notification_analytics_push_events.sql`
-- Purpose: measure notification inbox opens, notification taps, successful push sends, and (once wired to preference changes) push opt-outs without storing user-level analytics.
+- Purpose: measure notification inbox opens, notification taps, successful push sends, and preference-toggle opt-outs without storing user-level analytics.
 - Data minimization: counters are keyed only by UTC day, event type, and notification type. No user ID, notification ID, post/comment ID, conversation ID, device ID, FCM token, message body, or IP address is stored.
 
 ## Before state
