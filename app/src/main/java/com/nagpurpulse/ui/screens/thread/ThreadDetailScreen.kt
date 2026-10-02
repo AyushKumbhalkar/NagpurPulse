@@ -231,14 +231,19 @@ class ThreadDetailViewModel @Inject constructor(
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             postRepository.upvoteComment(commentId, userId).fold(
-                onSuccess = {
+                onSuccess = { isLiked ->
                     _uiState.value = _uiState.value.copy(
                         comments = _uiState.value.comments.map { c ->
-                            if (c.id == commentId) c.copy(upvotes = c.upvotes + 1) else c
+                            if (c.id == commentId) c.copy(
+                                upvotes = (c.upvotes + if (isLiked) 1 else -1).coerceAtLeast(0),
+                                likedByCurrentUser = isLiked
+                            ) else c
                         }
                     )
                 },
-                onFailure = {}
+                onFailure = { error ->
+                    android.util.Log.e("COMMENT_LIKE", "Failed to toggle comment like", error)
+                }
             )
         }
     }
@@ -1147,7 +1152,7 @@ fun ThreadDetailScreen(
 
 
                                 isHighlighted = parentComment.id == commentId,
-                                onUpvote      = { viewModel.upvoteComment(parentComment.id) },
+                                onUpvote      = { commentId -> viewModel.upvoteComment(commentId) },
                                 onReplySubmit = { pid, body, anonymous ->
                                     viewModel.submitReply(
                                         pid,
@@ -1219,7 +1224,7 @@ fun ThreadDetailScreen(
                                         onEdit        = { editedCommentId, newBody ->
                                             viewModel.updateComment(editedCommentId, newBody)
                                         },
-                                        onUpvote      = { viewModel.upvoteComment(reply.id) },
+                                        onUpvote      = { commentId -> viewModel.upvoteComment(commentId) },
                                         onReport = { commentId, reason ->
                                             viewModel.reportComment(commentId, reason)
                                         },
@@ -1248,7 +1253,7 @@ fun ThreadDetailScreen(
                                             onReport = { commentId, reason ->
                                                 viewModel.reportComment(commentId, reason)
                                             },
-                                            onUpvote      = { viewModel.upvoteComment(nested.id) },
+                                            onUpvote      = { commentId -> viewModel.upvoteComment(commentId) },
                                             onReplySubmit = { pid, body, anonymous ->
                                                 viewModel.submitReply(
                                                     pid,
