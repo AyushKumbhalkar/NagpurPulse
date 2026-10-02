@@ -765,68 +765,23 @@ class PostRepository @Inject constructor(
 
     suspend fun votePost(userId: String, postId: String, voteType: String): Result<Unit> {
         return try {
-            // Check existing vote
-            // Do not interpret a failed read as no vote: that can cause duplicate inserts.
-            val existing = client.postgrest["votes"].select {
-                filter {
-                    eq("user_id", userId)
-                    eq("post_id", postId)
-                }
-            }.decodeList<kotlinx.serialization.json.JsonObject>()
-
-            val post = client.postgrest["posts"]
-                .select { filter { eq("id", postId) } }
-                .decodeSingle<Post>()
-
-            if (existing.isEmpty()) {
-                // New vote
-                client.postgrest["votes"].insert(
-                    mapOf("user_id" to userId, "post_id" to postId, "vote_type" to voteType)
-                )
-                val newUpvotes   = if (voteType == "up")   post.upvotes   + 1 else post.upvotes
-                val newDownvotes = if (voteType == "down") post.downvotes + 1 else post.downvotes
-                // Increment karma for post owner
-                val karmaChange = if (voteType == "up") 1 else -1
-                updateKarma(post.userId, karmaChange)
-                client.postgrest["posts"].update(
-                    mapOf("upvotes" to newUpvotes, "downvotes" to newDownvotes)
-                ) { filter { eq("id", postId) } }
-            } else {
-                val oldVote = existing[0]["vote_type"]?.jsonPrimitive?.content
-                if (oldVote == voteType) {
-                    // Toggle off
-                    client.postgrest["votes"].delete {
-                        filter { eq("user_id", userId); eq("post_id", postId) }
-                    }
-                    val newUpvotes   = if (voteType == "up")   (post.upvotes   - 1).coerceAtLeast(0) else post.upvotes
-                    val newDownvotes = if (voteType == "down") (post.downvotes - 1).coerceAtLeast(0) else post.downvotes
-                    val karmaChange  = if (voteType == "up") -1 else 1
-                    updateKarma(post.userId, karmaChange)
-                    client.postgrest["posts"].update(
-                        mapOf("upvotes" to newUpvotes, "downvotes" to newDownvotes)
-                    ) { filter { eq("id", postId) } }
-                } else {
-                    // Change vote
-                    client.postgrest["votes"].update(mapOf("vote_type" to voteType)) {
-                        filter { eq("user_id", userId); eq("post_id", postId) }
-                    }
-                    val newUpvotes   = if (voteType == "up") post.upvotes + 1 else (post.upvotes   - 1).coerceAtLeast(0)
-                    val newDownvotes = if (voteType == "down") post.downvotes + 1 else (post.downvotes - 1).coerceAtLeast(0)
-                    val karmaDelta = when {
-                        oldVote == "up" && voteType == "down" -> -2
-                        oldVote == "down" && voteType == "up" -> 2
-                        else -> 0
-                    }
-                    if (karmaDelta != 0) {
-                        updateKarma(post.userId, karmaDelta)
-                    }
-                    client.postgrest["posts"].update(
-                        mapOf("upvotes" to newUpvotes, "downvotes" to newDownvotes)
-                    ) { filter { eq("id", postId) } }
-                }
+            require(voteType == "up" || voteType == "down") { "Invalid vote type" }
+            val currentUserId = authRepository.currentUserId
+            require(!currentUserId.isNullOrBlank() && currentUserId == userId) {
+                "You must be signed in as the voting user."
             }
+
+            // Vote row, post counters, and owner karma are changed in one DB transaction.
+            client.postgrest.rpc(
+                "vote_post_atomic",
+                parameters = buildJsonObject {
+                    put("p_post_id", postId)
+                    put("p_vote_type", voteType)
+                }
+            )
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e("PostRepository", "Atomic vote failed for post $postId", e)
             Result.failure(e)
         }
     }
