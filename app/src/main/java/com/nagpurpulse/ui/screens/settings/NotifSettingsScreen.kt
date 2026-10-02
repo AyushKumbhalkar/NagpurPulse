@@ -281,9 +281,12 @@ fun NotifSettingsScreen(
 
 @Composable
 private fun NotifPermissionBanner(onAllow: () -> Unit, onSettings: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        val compact = maxWidth < 380.dp
+        Row(
+            modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(OrangePrimary.copy(0.1f))
             .border(1.dp, OrangePrimary.copy(0.3f), RoundedCornerShape(16.dp))
@@ -312,6 +315,7 @@ private fun NotifPermissionBanner(onAllow: () -> Unit, onSettings: () -> Unit) {
             ) { Text("Allow", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
             Text("Settings", color = OrangePrimary, fontSize = 11.sp, modifier = Modifier.clickable { onSettings() })
         }
+        }
     }
 }
 
@@ -337,6 +341,7 @@ private fun NotifToggleRow(
             Text(sub, color = TertiaryText, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         Switch(
+            modifier = Modifier.padding(start = 4.dp),
             checked = checked, onCheckedChange = onCheckedChange, enabled = enabled,
             colors  = SwitchDefaults.colors(
                 checkedThumbColor            = Color.White,
