@@ -2,6 +2,8 @@
 
 package com.nagpurpulse.ui.screens.onboarding
 
+import androidx.compose.ui.text.style.TextOverflow
+
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -521,7 +523,10 @@ private fun AnimatedFeatureRow(
                 text = text,
                 color = PrimaryText,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
     }
