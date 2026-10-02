@@ -283,7 +283,7 @@ fun NotificationsScreen(
                     .statusBarsPadding()
             ) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -292,7 +292,11 @@ fun NotificationsScreen(
                     Column(Modifier.weight(1f)) {
                         Text(
                             "Notifications",
-                            color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 20.sp
+                            color = PrimaryText,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         if (unread > 0) {
                             Text(
@@ -515,19 +519,21 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
     val isUnread = !notif.isRead
     val accent   = typeColor(notif.type)
 
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val compact = maxWidth < 360.dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (isUnread) accent.copy(0.05f) else Color.Transparent)
             .pressScale(onClick = onTap)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
         // Avatar — real sender photo if available, emoji fallback otherwise
         Box(contentAlignment = Alignment.BottomEnd) {
             Box(
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(if (compact) 40.dp else 46.dp)
                     .clip(CircleShape)
                     .background(SurfaceAlt),
                 contentAlignment = Alignment.Center
@@ -555,7 +561,7 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
             ) { Text(notif.emoji(), fontSize = 10.sp) }
         }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(if (compact) 8.dp else 12.dp))
 
         Column(Modifier.weight(1f)) {
             Text(
@@ -586,7 +592,7 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
             Text(notif.timeAgo(), color = TertiaryText, fontSize = 11.sp)
         }
 
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
 
         Column(horizontalAlignment = Alignment.End) {
             if (isUnread) {
@@ -596,7 +602,7 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Box(
                     Modifier
-                        .size(48.dp)
+                        .size(if (compact) 36.dp else 48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(SurfaceAlt),
                     Alignment.Center
@@ -610,6 +616,7 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
                 }
             }
         }
+    }
     }
 }
 
