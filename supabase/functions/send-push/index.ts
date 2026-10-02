@@ -18,7 +18,8 @@ function preferenceForType(type: string): string | null {
     case "mention": return "notif_mentions";
     case "message": return "notif_messages";
     case "upvote":
-    case "like": return "notif_upvotes";
+    case "like":
+    case "comment_like": return "notif_upvotes";
     case "trending": return "notif_trending";
     case "community": return "notif_community";
     case "digest": return "notif_digest";
