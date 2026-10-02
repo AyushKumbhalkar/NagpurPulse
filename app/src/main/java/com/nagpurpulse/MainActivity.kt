@@ -74,7 +74,7 @@ class MainActivity : FragmentActivity() {
         intent?.getStringExtra("post_id")?.let {
             NotifDeepLink.pendingPostId.value = it
         }
-        intent?.getStringExtra("conversation_id")?.let {
+        intent?.getStringExtra("conversation_id")?.takeIf { it.isNotBlank() }?.let {
             NotifDeepLink.pendingConversationId.value = it
         }
 
