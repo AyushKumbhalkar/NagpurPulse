@@ -598,7 +598,7 @@ private fun NotifRow(notif: Notification, onTap: () -> Unit) {
             if (isUnread) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(OrangePrimary))
             }
-            if (notif.relatedPostId != null) {
+            if (notif.relatedPostId != null && !compact) {
                 Spacer(Modifier.height(4.dp))
                 Box(
                     Modifier
@@ -654,7 +654,7 @@ private fun PushEnableBanner(
             )
         }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(if (compact) 8.dp else 12.dp))
 
         Column(Modifier.weight(1f)) {
             Text(
