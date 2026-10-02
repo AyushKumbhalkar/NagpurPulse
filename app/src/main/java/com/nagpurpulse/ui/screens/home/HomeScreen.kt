@@ -313,7 +313,8 @@ class HomeViewModel @Inject constructor(
 
         val userId = authRepository.currentUserId ?: return
 
-        val votes = mutableMapOf<String, String?>()
+        // Preserve the last known vote if Supabase temporarily fails to read it.
+        val votes = _uiState.value.userVotes.toMutableMap()
 
         _uiState.value.posts.forEach { post ->
 
@@ -321,13 +322,12 @@ class HomeViewModel @Inject constructor(
                 "VOTE_DEBUG",
                 "currentUserId=$userId postId=${post.id}"
             )
-            postRepository.getUserVote(
-                userId,
-                post.id
-            ).getOrNull()?.let { vote ->
-
-                votes[post.id] = vote
-            }
+            postRepository.getUserVote(userId, post.id).fold(
+                onSuccess = { vote -> votes[post.id] = vote },
+                onFailure = { error ->
+                    android.util.Log.w("VOTE_DEBUG", "Couldn't refresh vote for post ${post.id}", error)
+                }
+            )
         }
 
         _uiState.value = _uiState.value.copy(
@@ -403,11 +403,12 @@ class HomeViewModel @Inject constructor(
 
         // Save to Supabase in background
         viewModelScope.launch {
-            postRepository.votePost(
-                userId,
-                postId,
-                voteType
-            )
+            postRepository.votePost(userId, postId, voteType).onFailure { error ->
+                android.util.Log.e("VOTE_DEBUG", "Saving vote failed for post $postId", error)
+                // Refresh authoritative state after a failed save; do not assume it toggled off.
+                loadUserVotes()
+                loadPosts()
+            }
         }
     }
 
