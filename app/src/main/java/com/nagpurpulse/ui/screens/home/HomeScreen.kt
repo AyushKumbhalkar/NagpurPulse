@@ -85,6 +85,7 @@ data class HomeUiState(
     val sortBy: String = "top",
     val category: String? = null,
     val unreadNotifCount: Int = 0,
+    val hasLoadedUnreadNotifications: Boolean = false,
     val unreadMsgCount: Int = 0,
     val temperature: Int? = null,
     val aqi: Int? = null,
@@ -155,7 +156,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = authRepository.currentUserId ?: return@launch
             notificationRepository.getUnreadCount(userId).onSuccess { count ->
-                _uiState.value = _uiState.value.copy(unreadNotifCount = count)
+                _uiState.value = _uiState.value.copy(unreadNotifCount = count, hasLoadedUnreadNotifications = true)
             }
         }
     }
@@ -550,9 +551,9 @@ fun HomeScreen(
     val bellRotation = remember { androidx.compose.animation.core.Animatable(0f) }
     val messageRotation = remember { androidx.compose.animation.core.Animatable(0f) }
 
-    LaunchedEffect(uiState.unreadNotifCount) {
+    LaunchedEffect(uiState.unreadNotifCount, uiState.hasLoadedUnreadNotifications) {
         val current = uiState.unreadNotifCount
-        if (notificationCountInitialized && current > previousUnreadNotifCount) {
+        if (uiState.hasLoadedUnreadNotifications && notificationCountInitialized && current > previousUnreadNotifCount) {
             bellRotation.snapTo(0f)
             bellRotation.animateTo(0f, animationSpec = keyframes {
                 durationMillis = 900
@@ -565,8 +566,10 @@ fun HomeScreen(
                 0f at 700
             })
         }
-        previousUnreadNotifCount = current
-        notificationCountInitialized = true
+        if (uiState.hasLoadedUnreadNotifications) {
+            previousUnreadNotifCount = current
+            notificationCountInitialized = true
+        }
     }
 
     LaunchedEffect(uiState.unreadMsgCount) {
