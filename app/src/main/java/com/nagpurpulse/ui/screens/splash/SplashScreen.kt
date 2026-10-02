@@ -20,6 +20,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.ui.theme.*
@@ -27,6 +29,10 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
+    val configuration = LocalConfiguration.current
+    val compactHeight = configuration.screenHeightDp < 700
+    val compactWidth = configuration.screenWidthDp < 360
+    val logoSize = if (compactHeight) 112.dp else 140.dp
     var logoVisible by remember { mutableStateOf(false) }
     var textVisible by remember { mutableStateOf(false) }
     var tagVisible  by remember { mutableStateOf(false) }
@@ -56,7 +62,9 @@ fun SplashScreen(onFinished: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(500.dp)
+                .fillMaxWidth(0.95f)
+                .aspectRatio(1f)
+                .sizeIn(maxWidth = 500.dp, maxHeight = 500.dp)
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
@@ -78,10 +86,10 @@ fun SplashScreen(onFinished: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Logo
-            Box(modifier = Modifier.size(140.dp).offset(y = floatY.dp).scale(logoScale), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(logoSize).offset(y = (floatY * if (compactHeight) 0.6f else 1f).dp).scale(logoScale), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
-                        .size(136.dp)
+                        .size(logoSize * 0.97f)
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
@@ -97,7 +105,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                             )
                         )
                 )
-                Box(modifier = Modifier.size(110.dp).graphicsLayer { rotationZ = ringRotation }.border(
+                Box(modifier = Modifier.size(logoSize * 0.79f).graphicsLayer { rotationZ = ringRotation }.border(
                     1.5.dp,
                     Brush.sweepGradient(
                         listOf(
@@ -127,7 +135,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                 ))
                 Box(
                     modifier = Modifier
-                        .size(88.dp)
+                        .size(logoSize * 0.63f)
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
@@ -151,23 +159,30 @@ fun SplashScreen(onFinished: () -> Unit) {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("∿", color = OrangePrimary, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                    Text("∿", color = OrangePrimary, fontSize = if (compactHeight) 32.sp else 38.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(if (compactHeight) 16.dp else 28.dp))
 
             AnimatedVisibility(textVisible, enter = fadeIn(tween(500)) + slideInVertically { 30 }) {
                 Text(buildAnnotatedString {
-                    withStyle(SpanStyle(color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 36.sp)) { append("Nagpur ") }
-                    withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.Black, fontSize = 36.sp)) { append("Pulse") }
+                    withStyle(SpanStyle(color = PrimaryText, fontWeight = FontWeight.Black, fontSize = brandFontSize)) { append("Nagpur ") }
+                    withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.Black, fontSize = brandFontSize)) { append("Pulse") }
                 })
             }
             Spacer(Modifier.height(10.dp))
             AnimatedVisibility(tagVisible, enter = fadeIn(tween(500)) + slideInVertically { 20 }) {
-                Text("Your city. Your community. Your pulse.", color = SecondaryText, fontSize = 14.sp)
+                Text(
+                    "Your city. Your community. Your pulse.",
+                    color = SecondaryText,
+                    fontSize = if (compactWidth) 12.sp else 14.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                )
             }
-            Spacer(Modifier.height(60.dp))
+            Spacer(Modifier.height(if (compactHeight) 28.dp else 60.dp))
             AnimatedVisibility(tagVisible, enter = fadeIn(tween(400, 300))) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     repeat(3) { i ->
