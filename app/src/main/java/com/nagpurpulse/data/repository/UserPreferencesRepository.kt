@@ -102,8 +102,11 @@ class UserPreferencesRepository @Inject constructor(
 
     /** Save a single boolean notif preference to Supabase + sync SharedPreferences */
     suspend fun saveNotifPref(ctx: Context, field: String, value: Boolean): Result<Unit> {
-        NotifPrefsHelper.save(ctx, field, value)
-        return updateField(field, value)
+        val result = updateField(field, value)
+        if (result.isSuccess) {
+            NotifPrefsHelper.save(ctx, field, value)
+        }
+        return result
     }
 
     /** Load all notif prefs from Supabase and sync to SharedPreferences */
