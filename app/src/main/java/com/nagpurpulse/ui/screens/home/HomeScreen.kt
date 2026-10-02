@@ -674,8 +674,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                                 .clickable {
                                     android.util.Log.d("HOME_THEME", "Moon clicked")
                                     viewModel.updateTheme(
@@ -703,8 +702,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                                 .pressScale(onClick = onNotifications),
                             contentAlignment = Alignment.Center
                         ) {
