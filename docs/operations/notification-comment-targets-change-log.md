@@ -37,13 +37,22 @@ The branch's `supabase/functions/send-push-notification/index.ts`:
 
 Deploy this function only after the SQL migration succeeds, otherwise its SELECT would reference a column that does not yet exist.
 
+## Deployment record
+
+- SQL migration applied successfully on 2026-10-02. Supabase recorded migration version `20261002174056`, name `notification_comment_targets`.
+- Verified `related_comment_id` exists as nullable UUID.
+- Verified partial index `notifications_related_comment_id_idx` exists.
+- Verified `create_notification_event` now has eight arguments, ending in `p_comment_id uuid`.
+- Deployed `send-push-notification` Edge Function version 12 (previously version 11), with JWT verification still disabled because the function authenticates using the existing secret-header validation RPC.
+- Production schema/function checks passed. End-to-end Android/FCM tap testing has **not** yet been performed.
+
 ## Verification checklist
 
-- [ ] Migration appears in Supabase migration history.
-- [ ] `public.notifications.related_comment_id` exists as nullable UUID.
-- [ ] Partial index exists.
-- [ ] The 8-argument `create_notification_event` and both updated trigger functions exist.
-- [ ] `send-push-notification` Edge Function deployed with `related_comment_id` query and `comment_id` FCM data.
+- [x] Migration appears in Supabase migration history.
+- [x] `public.notifications.related_comment_id` exists as nullable UUID.
+- [x] Partial index exists.
+- [x] The 8-argument `create_notification_event` exists.
+- [x] `send-push-notification` Edge Function deployed with `related_comment_id` query and `comment_id` FCM data.
 - [ ] Test one reply/comment/mention/comment-like end-to-end on a test account and confirm tapping the notification opens the intended post/comment.
 - [ ] Confirm existing message and post notifications still route as before.
 
