@@ -717,13 +717,13 @@ fun HomeScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(
-                                            width = if (uiState.unreadNotifCount > 9) 18.dp else 14.dp,
-                                            height = 14.dp
+                                            width = if (uiState.unreadNotifCount > 9) 16.dp else 12.dp,
+                                            height = 12.dp
                                         )
                                         .clip(CircleShape)
                                         .background(OrangePrimary)
                                         .align(Alignment.TopEnd)
-                                        .offset(x = 3.dp, y = (-3).dp),
+                                        .offset(x = (-1).dp, y = 1.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -751,7 +751,7 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Filled.ChatBubbleOutline,
+                                Icons.Filled.Forum,
                                 contentDescription = "Messages",
                                 tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp).rotate(messageRotation.value)
@@ -760,11 +760,11 @@ fun HomeScreen(
                             if (uiState.unreadMsgCount > 0) {
                                 Box(
                                     modifier = Modifier
-                                        .size(14.dp)
+                                        .size(12.dp)
                                         .clip(CircleShape)
                                         .background(OrangePrimary)
                                         .align(Alignment.TopEnd)
-                                        .offset(x = 3.dp, y = (-3).dp),
+                                        .offset(x = (-1).dp, y = 1.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
