@@ -652,11 +652,16 @@ private fun ProfileHeader(
             // Name + meta
             AnimatedVisibility(nv, enter = fadeIn(tween(400)) + slideInVertically { 20 }) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val profileScreenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
                     Text(
                         displayName,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp
+                        fontSize = if (profileScreenWidth < 360) 23.sp else if (profileScreenWidth < 400) 26.sp else 28.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                     )
 
                     Row(
@@ -666,7 +671,9 @@ private fun ProfileHeader(
                         Text(
                             "u/${profile?.username ?: ""}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         if (profile?.isVerified == true) {
