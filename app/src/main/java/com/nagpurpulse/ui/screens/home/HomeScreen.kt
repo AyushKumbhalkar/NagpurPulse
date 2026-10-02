@@ -763,7 +763,15 @@ fun HomeScreen(
                             }
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(
+                            modifier = Modifier.width(
+                                if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) {
+                                    24.dp
+                                } else {
+                                    8.dp
+                                }
+                            )
+                        )
 
                         SortChipGroup(
                             selected = uiState.sortBy,
