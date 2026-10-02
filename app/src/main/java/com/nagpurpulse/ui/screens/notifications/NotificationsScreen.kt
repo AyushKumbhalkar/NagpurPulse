@@ -696,6 +696,7 @@ fun NotificationsScreen(
                                         groupedCount = item.notificationIds.size.takeIf { it > 1 },
                                         onTap = {
                                             viewModel.markGroupRead(item.notificationIds)
+                                            viewModel.trackNotificationOpened(notif.type)
                                             notif.relatedConversationId?.let {
                                                 navController.navigate(Screen.Chat.createRoute(it))
                                             } ?: notif.relatedPostId?.let { postId ->
