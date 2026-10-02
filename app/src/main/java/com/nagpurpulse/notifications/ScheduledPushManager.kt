@@ -34,7 +34,9 @@ fun createNotificationChannels(context: Context) {
         Triple(CHANNEL_ALERTS,    "Live Alerts",         NotificationManager.IMPORTANCE_HIGH),
         Triple(CHANNEL_COMMUNITY, "Community Updates",   NotificationManager.IMPORTANCE_DEFAULT),
         Triple(CHANNEL_DIGEST,    "Daily Digest",        NotificationManager.IMPORTANCE_LOW),
-        Triple(CHANNEL_MESSAGES,  "Direct Messages",     NotificationManager.IMPORTANCE_HIGH)
+        Triple(CHANNEL_MESSAGES,  "Direct Messages",     NotificationManager.IMPORTANCE_HIGH),
+        // Use a new ID because Android preserves the importance of existing channels.
+        Triple(CHANNEL_SOCIAL, "Comments and Votes", NotificationManager.IMPORTANCE_HIGH)
     ).forEach { (id, name, importance) ->
         nm.createNotificationChannel(
             NotificationChannel(id, name, importance).apply {
