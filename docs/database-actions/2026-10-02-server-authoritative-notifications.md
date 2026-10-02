@@ -83,6 +83,7 @@ Source: `supabase/migrations/20261002170000_comment_likes_and_notifications.sql`
 
 - Status: **APPLIED TO PRODUCTION; schema/RLS/trigger verification passed.**
 - Supabase migration name: `comment_likes_and_notifications`
+- Supabase migration version confirmed by migration history: `20261002111134`
 - Apply operation returned: success.
 - Verification found the three expected policies: own likes SELECT, INSERT, DELETE.
 - Verification found the three expected triggers on `public.comment_likes`: count maintenance on INSERT, count maintenance on DELETE, and notification on INSERT.
