@@ -2,7 +2,7 @@
 
 - Project: `eazkmfzegxmdkbowohiy`
 - Repository branch: `more-updates-on-nagpur-pulse`
-- Migration: `supabase/migrations/20261002190000_notification_aggregate_analytics.sql`
+- Migrations: `supabase/migrations/20261002190000_notification_aggregate_analytics.sql`, `supabase/migrations/20261002200000_restrict_notification_analytics_push_events.sql`
 - Purpose: measure notification inbox opens, notification taps, successful push sends, and (once wired to preference changes) push opt-outs without storing user-level analytics.
 - Data minimization: counters are keyed only by UTC day, event type, and notification type. No user ID, notification ID, post/comment ID, conversation ID, device ID, FCM token, message body, or IP address is stored.
 
@@ -17,7 +17,7 @@
 
 1. Create `public.notification_analytics_daily` with primary key `(event_date, event_type, notification_type)`, a non-negative `event_count`, and `updated_at`.
 2. Enable RLS and revoke table access from `anon` and `authenticated`. Only the trusted `service_role` gets direct table privileges.
-3. Add `public.record_notification_analytics(text,text)` with a strict event/type allow-list. It accepts authenticated app calls and trusted service-role calls, increments a daily aggregate, and stores no actor identity.
+3. Add `public.record_notification_analytics(text,text)` with a strict event/type allow-list. It accepts authenticated app calls for client-observable events and trusted service-role calls. A follow-up hardening migration restricts `push_delivered` events to service-role calls, preventing clients from spoofing push-delivery counts. It stores no actor identity.
 4. Android inbox opening and notification tapping increment best-effort counters. Analytics failures are logged at debug level and must not block the inbox or navigation.
 5. After FCM accepts a push, the Edge Function increments `push_delivered`. A failed analytics counter does not turn a successful push into a failed delivery.
 6. The Android notification settings view model records a best-effort `push_opt_out` counter when the master push switch or an individual notification category is turned off. This measures toggle-off actions, not current preference state or unique users.
@@ -48,6 +48,7 @@ This removes all aggregate counters collected since rollout. It does not modify 
 ## Deployment record
 
 - SQL migration applied successfully on 2026-10-02. Supabase recorded migration version `20261002175350`, name `notification_aggregate_analytics`.
+- Analytics authorization hardening migration applied successfully on 2026-10-02; only service-role calls may increment `push_delivered`.
 - Verification query confirmed the table exists, RLS is enabled, `anon` and `authenticated` cannot SELECT from the table, and the RPC exists.
 - Deployed `send-push-notification` Edge Function version 13 (previously version 12), with JWT verification still disabled because the function uses the existing secret-header validation RPC. Deployment SHA: `eb150d13ea8130056cc091265d1efdf1a8a389d7723c0ec41a246ae981171b9a`.
 - No end-to-end Android/FCM analytics test has been performed yet.
