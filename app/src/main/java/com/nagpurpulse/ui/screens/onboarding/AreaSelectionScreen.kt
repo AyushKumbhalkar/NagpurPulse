@@ -146,9 +146,9 @@ fun AreaSelectionScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                Text("Where are you in Nagpur?", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("Where are you in Nagpur?", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(4.dp))
-                Text("We'll show you the most relevant posts", color = TextSecondary, fontSize = 14.sp)
+                Text("We'll show you the most relevant posts", color = TextSecondary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
 
