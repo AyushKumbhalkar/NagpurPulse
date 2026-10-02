@@ -242,7 +242,7 @@ class NotificationsViewModel @Inject constructor(
 // ── Type helpers ──────────────────────────────────────────────────────────────
 
 private fun notificationTypeIcon(type: String) = when (type.lowercase()) {
-    "comment", "reply" -> Icons.AutoMirrored.Filled.Chat
+    "comment", "reply" -> Icons.Filled.ModeComment
     "mention" -> Icons.Filled.AlternateEmail
     "upvote", "like" -> Icons.Filled.ThumbUp
     "message" -> Icons.AutoMirrored.Filled.Message
