@@ -252,7 +252,7 @@ class NotificationsViewModel @Inject constructor(
             it.type == "mention"
         }
         "upvotes"  -> _s.value.notifications.filter {
-            it.type in listOf("upvote", "like")
+            it.type in listOf("upvote", "like", "comment_like")
         }
         "alerts"   -> _s.value.notifications.filter {
             it.type in listOf("alert", "emergency", "badge", "trending",
@@ -285,7 +285,7 @@ private fun parseNotificationDate(value: String, zoneId: ZoneId): LocalDate? {
 private fun notificationTypeIcon(type: String) = when (type.lowercase()) {
     "comment", "reply" -> Icons.Filled.ModeComment
     "mention" -> Icons.Filled.AlternateEmail
-    "upvote", "like" -> Icons.Filled.ThumbUp
+    "upvote", "like", "comment_like" -> Icons.Filled.ThumbUp
     "message" -> Icons.AutoMirrored.Filled.Message
     "alert", "emergency", "admin_warning" -> Icons.Filled.Warning
     "badge" -> Icons.Filled.Star
@@ -301,7 +301,7 @@ private fun notificationTypeIcon(type: String) = when (type.lowercase()) {
 private fun typeColor(type: String): Color = when (type) {
     "comment", "reply"     -> OrangePrimary
     "mention"              -> BlueInfo
-    "upvote", "like"       -> GreenSuccess
+    "upvote", "like", "comment_like" -> GreenSuccess
     "message"              -> BlueInfo
     "alert", "emergency"   -> RedAlert
     "badge"                -> YellowWarn
