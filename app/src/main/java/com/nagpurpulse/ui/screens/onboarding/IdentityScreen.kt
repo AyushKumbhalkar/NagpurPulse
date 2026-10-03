@@ -454,10 +454,10 @@ fun OnboardingProgressStepper(
     currentStep: Int, // 0-based
     modifier: Modifier = Modifier
 ) {
+    // Each step owns an equal-width slot so labels never push the circles around.
     Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
     ) {
         steps.forEachIndexed { index, label ->
             val isCompleted = index < currentStep
@@ -474,15 +474,15 @@ fun OnboardingProgressStepper(
                 label = "onboardingLabelColor"
             )
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Circle
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Box(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (isCompleted || isActive) animatedStepColor else Color.Transparent
-                        )
+                        .background(if (isCompleted || isActive) animatedStepColor else Color.Transparent)
                         .border(1.5.dp, animatedStepColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -493,32 +493,30 @@ fun OnboardingProgressStepper(
                         fontSize = 13.sp
                     )
                 }
-
                 Spacer(Modifier.height(4.dp))
-
-                // Label
                 Text(
-                    label,
+                    text = label,
+                    modifier = Modifier.fillMaxWidth(),
                     fontSize = 9.sp,
                     fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
                     color = animatedLabelColor,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    lineHeight = 11.sp,
+                    maxLines = 2,
+                    softWrap = true
                 )
             }
 
-            // Connector line (not after last item)
-            if (index < steps.size - 1) {
-                val targetProgress = if (index < currentStep) 1f else 0f
+            if (index < steps.lastIndex) {
                 val connectorProgress by animateFloatAsState(
-                    targetValue = targetProgress,
+                    targetValue = if (index < currentStep) 1f else 0f,
                     animationSpec = tween(durationMillis = 420),
                     label = "onboardingConnectorProgress"
                 )
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 3.dp)
-                        .padding(bottom = 20.dp)
+                        .weight(0.42f)
+                        .padding(top = 13.dp, horizontal = 1.dp)
                         .height(2.dp)
                         .clip(RoundedCornerShape(50))
                         .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
