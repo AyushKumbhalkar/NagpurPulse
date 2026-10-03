@@ -190,6 +190,9 @@ class AuthRepository @Inject constructor(
 
     suspend fun updateProfile(userId: String, tagline: String? = null, areas: List<String>? = null): Result<Unit> {
         return try {
+            if (currentUserId != userId) {
+                return Result.failure(SecurityException("You can only update your own profile"))
+            }
             val updates = mutableMapOf<String, Any?>()
             tagline?.let { updates["tagline"] = it }
             areas?.let   { updates["areas"]   = it }
@@ -347,6 +350,9 @@ class AuthRepository @Inject constructor(
         hideFromSearch: Boolean? = null
     ): Result<Unit> {
         return try {
+            if (currentUserId != userId) {
+                return Result.failure(SecurityException("You can only update your own privacy settings"))
+            }
             val m = mutableMapOf<String, Boolean>()
             hideComments?.let    { m["hide_comments"]      = it }
             hidePosts?.let       { m["hide_posts"]         = it }
