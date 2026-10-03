@@ -4,6 +4,7 @@ package com.nagpurpulse.ui.screens.onboarding
 
 
 import com.nagpurpulse.ui.screens.profile.RandomImages
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -134,7 +135,7 @@ fun ProfilePictureScreen(
             // ── Title ─────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400)) + slideInVertically { 30 }
+                enter = EnterTransition.None
             ) {
                 Column(
                     modifier = Modifier
@@ -171,7 +172,7 @@ fun ProfilePictureScreen(
             // ── Avatar preview ────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 100)) + slideInVertically { 40 }
+                enter = EnterTransition.None
             ) {
                 Box(
                     modifier = Modifier
@@ -217,7 +218,7 @@ fun ProfilePictureScreen(
             // ── Generate New button ───────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 150))
+                enter = EnterTransition.None
             ) {
                 Box(
                     modifier = Modifier
@@ -272,7 +273,7 @@ fun ProfilePictureScreen(
             // ── "You can change it later" info card ───────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 200))
+                enter = EnterTransition.None
             ) {
                 Row(
                     modifier = Modifier
@@ -322,7 +323,7 @@ fun ProfilePictureScreen(
             // ── Continue button ───────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 250))
+                enter = EnterTransition.None
             ) {
                 Box(
                     modifier = Modifier
