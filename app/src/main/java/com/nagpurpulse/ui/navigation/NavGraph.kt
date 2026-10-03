@@ -46,6 +46,7 @@ sealed class Screen(val route: String) {
     object Splash            : Screen("splash")
     object Onboarding        : Screen("onboarding")
     object Login             : Screen("login")
+    object PasswordRecovery  : Screen("password_recovery")
     object Signup            : Screen("signup")
     object Identity          : Screen("identity")
     object Username          : Screen("username")
@@ -234,6 +235,93 @@ fun NagpurPulseNavGraph(
                     }
                 }
             )
+        }
+
+        // Password recovery: the Supabase deep-link handler imports the recovery
+        // session before this screen calls updateUser through AuthRepository.
+        composable(Screen.PasswordRecovery.route) {
+            var password by rememberSaveable { mutableStateOf("") }
+            var confirmation by rememberSaveable { mutableStateOf("") }
+            var saving by remember { mutableStateOf(false) }
+            var recoveryError by remember { mutableStateOf<String?>(null) }
+            var recoverySuccess by remember { mutableStateOf(false) }
+            val recoveryScope = rememberCoroutineScope()
+
+            Column(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Set a new password", style = MaterialTheme.typography.headlineSmall)
+                Spacer(androidx.compose.ui.Modifier.height(12.dp))
+                Text("Choose a new password for your NagpurPulse account.")
+                Spacer(androidx.compose.ui.Modifier.height(20.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it; recoveryError = null },
+                    label = { Text("New password") },
+                    singleLine = true,
+                    enabled = !saving && !recoverySuccess,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                )
+                Spacer(androidx.compose.ui.Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = confirmation,
+                    onValueChange = { confirmation = it; recoveryError = null },
+                    label = { Text("Confirm new password") },
+                    singleLine = true,
+                    enabled = !saving && !recoverySuccess,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                )
+                if (recoveryError != null) {
+                    Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                    Text(recoveryError!!, color = MaterialTheme.colorScheme.error)
+                }
+                if (recoverySuccess) {
+                    Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                    Text("Password updated. You can sign in with your new password.")
+                }
+                Spacer(androidx.compose.ui.Modifier.height(20.dp))
+                Button(
+                    enabled = !saving && !recoverySuccess && password.isNotEmpty() && confirmation.isNotEmpty(),
+                    onClick = {
+                        when {
+                            password.length < 8 -> recoveryError = "Use at least 8 characters."
+                            password != confirmation -> recoveryError = "Passwords do not match."
+                            else -> recoveryScope.launch {
+                                saving = true
+                                recoveryError = null
+                                authRepository.changePassword(password).fold(
+                                    onSuccess = { recoverySuccess = true },
+                                    onFailure = {
+                                        recoveryError = it.message
+                                            ?: "The recovery link may have expired. Request a new one and try again."
+                                    }
+                                )
+                                saving = false
+                            }
+                        }
+                    },
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                ) {
+                    if (saving) CircularProgressIndicator()
+                    else Text("Update password")
+                }
+                if (recoverySuccess) {
+                    TextButton(
+                        onClick = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.PasswordRecovery.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                    ) { Text("Return to sign in") }
+                }
+            }
         }
 
         // Auth
