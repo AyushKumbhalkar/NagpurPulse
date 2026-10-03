@@ -461,7 +461,18 @@ fun OnboardingProgressStepper(
     ) {
         steps.forEachIndexed { index, label ->
             val isCompleted = index < currentStep
-            val isActive    = index == currentStep
+            val isActive = index == currentStep
+            val targetStepColor = if (isCompleted || isActive) OrangePrimary else MaterialTheme.colorScheme.outline
+            val animatedStepColor by animateColorAsState(
+                targetValue = targetStepColor,
+                animationSpec = tween(durationMillis = 300),
+                label = "onboardingStepColor"
+            )
+            val animatedLabelColor by animateColorAsState(
+                targetValue = if (isActive) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                animationSpec = tween(durationMillis = 300),
+                label = "onboardingLabelColor"
+            )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // Circle
@@ -470,17 +481,9 @@ fun OnboardingProgressStepper(
                         .size(28.dp)
                         .clip(CircleShape)
                         .background(
-                            when {
-                                isCompleted || isActive -> OrangePrimary
-                                else -> Color.Transparent
-                            }
+                            if (isCompleted || isActive) animatedStepColor else Color.Transparent
                         )
-                        .border(
-                            1.5.dp,
-                            if (isCompleted || isActive) OrangePrimary
-                            else MaterialTheme.colorScheme.outline,
-                            CircleShape
-                        ),
+                        .border(1.5.dp, animatedStepColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isCompleted) {
@@ -507,7 +510,7 @@ fun OnboardingProgressStepper(
                     label,
                     fontSize = 9.sp,
                     fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isActive) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = animatedLabelColor,
                     textAlign = TextAlign.Center
                 )
             }
@@ -520,7 +523,7 @@ fun OnboardingProgressStepper(
                         .height(1.5.dp)
                         .padding(bottom = 20.dp)
                         .background(
-                            if (index < currentStep) OrangePrimary
+                            if (index < currentStep) animatedStepColor
                             else MaterialTheme.colorScheme.outline.copy(0.4f)
                         )
                 )
