@@ -284,19 +284,25 @@ class HomeViewModel @Inject constructor(
 
     fun loadPosts(refresh: Boolean = false) {
         viewModelScope.launch {
+            val requestedSort = _uiState.value.sortBy
+            val requestedCategory = _uiState.value.category
+            Log.d("HomeSortTrace", "loadPosts START refresh=$refresh sort=$requestedSort category=$requestedCategory")
             _uiState.value = _uiState.value.copy(isLoading = !refresh, isRefreshing = refresh)
             postRepository.getPosts(
-                category = _uiState.value.category,
-                sortBy = _uiState.value.sortBy
+                category = requestedCategory,
+                sortBy = requestedSort
             ).fold(
                 onSuccess = { posts ->
+                    Log.d("HomeSortTrace", "loadPosts SUCCESS requestedSort=$requestedSort returnedPosts=${posts.size} currentSort=${_uiState.value.sortBy}")
                     _uiState.value = _uiState.value.copy(
                         posts = posts, isLoading = false, isRefreshing = false
                     )
                     loadSavedPostIds()
                     loadUserVotes()
+                    Log.d("HomeSortTrace", "loadPosts STATE_APPLIED requestedSort=$requestedSort finalSort=${_uiState.value.sortBy} postCount=${_uiState.value.posts.size}")
                 },
                 onFailure = { e ->
+                    Log.e("HomeSortTrace", "loadPosts FAILED requestedSort=$requestedSort error=${e.message}", e)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false, isRefreshing = false, error = e.message
                     )
@@ -417,10 +423,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun setSortBy(sort: String) {
-        Log.d("HomeFeedSwipe", "setSortBy called: requested=$sort previous=${_uiState.value.sortBy}")
-        _uiState.value = _uiState.value.copy(sortBy = sort)
-        Log.d("HomeFeedSwipe", "sort state immediately updated to=${_uiState.value.sortBy}")
+        val normalized = sort.trim().lowercase()
+        Log.d("HomeSortTrace", "ViewModel.setSortBy ENTER requested=$sort normalized=$normalized previous=${_uiState.value.sortBy}")
+        _uiState.value = _uiState.value.copy(sortBy = normalized)
+        Log.d("HomeSortTrace", "ViewModel.setSortBy STATE_WRITTEN sort=${_uiState.value.sortBy}")
         loadPosts()
+        Log.d("HomeSortTrace", "ViewModel.setSortBy EXIT sort=${_uiState.value.sortBy}")
     }
 
     fun setCategory(cat: String?) {
@@ -494,6 +502,12 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ){
     val uiState by viewModel.uiState.collectAsState()
+    SideEffect {
+        Log.d("HomeSortTrace", "COMPOSE HomeScreen recomposed sortBy=${uiState.sortBy} posts=${uiState.posts.size} loading=${uiState.isLoading}")
+    }
+    LaunchedEffect(uiState.sortBy) {
+        Log.d("HomeSortTrace", "COMPOSE sortBy effect observed=${uiState.sortBy}")
+    }
     val context = LocalContext.current
     val locationPermissionLauncher =
         rememberLauncherForActivityResult(
@@ -604,35 +618,49 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier.pointerInput(uiState.sortBy) {
             var horizontalDistance = 0f
+            Log.d("HomeSortTrace", "GESTURE detector CREATED keySort=${uiState.sortBy}")
             detectHorizontalDragGestures(
-                onHorizontalDrag = { _, dragAmount ->
+                onDragStart = { offset ->
+                    horizontalDistance = 0f
+                    Log.d("HomeSortTrace", "GESTURE START x=${offset.x} y=${offset.y} sortAtStart=${uiState.sortBy} detectorKey=${uiState.sortBy}")
+                },
+                onHorizontalDrag = { change, dragAmount ->
                     horizontalDistance += dragAmount
-                    Log.d("HomeFeedSwipe", "drag amount=$dragAmount total=$horizontalDistance sort=${uiState.sortBy}")
+                    Log.d("HomeSortTrace", "GESTURE DRAG dx=$dragAmount totalDx=$horizontalDistance pointerX=${change.position.x} previousX=${change.previousPosition.x} sortSnapshot=${uiState.sortBy} consumed=${change.isConsumed}")
                 },
                 onDragEnd = {
                     val tabs = listOf("top", "new", "hot")
-                    val currentIndex = tabs.indexOf(uiState.sortBy.lowercase())
-                        .takeIf { it >= 0 } ?: 0
-                    Log.d("HomeFeedSwipe", "drag ended total=$horizontalDistance current=${uiState.sortBy}")
+                    val sortSnapshot = uiState.sortBy.lowercase()
+                    val currentIndex = tabs.indexOf(sortSnapshot)
+                    val direction = when {
+                        horizontalDistance < 0f -> "LEFT / next tab"
+                        horizontalDistance > 0f -> "RIGHT / previous tab"
+                        else -> "NO HORIZONTAL MOVEMENT"
+                    }
+                    Log.d("HomeSortTrace", "GESTURE END totalDx=$horizontalDistance direction=$direction sortSnapshot=$sortSnapshot index=$currentIndex tabs=$tabs threshold=80")
                     if (abs(horizontalDistance) > 80f) {
                         when {
-                            horizontalDistance < 0f && currentIndex < tabs.lastIndex -> {
-                                Log.d("HomeFeedSwipe", "switching to ${tabs[currentIndex + 1]}")
-                                viewModel.setSortBy(tabs[currentIndex + 1])
+                            horizontalDistance < 0f && currentIndex >= 0 && currentIndex < tabs.lastIndex -> {
+                                val target = tabs[currentIndex + 1]
+                                Log.d("HomeSortTrace", "GESTURE ACTION LEFT target=$target old=$sortSnapshot")
+                                viewModel.setSortBy(target)
+                                Log.d("HomeSortTrace", "GESTURE ACTION LEFT setSortBy invoked target=$target")
                             }
                             horizontalDistance > 0f && currentIndex > 0 -> {
-                                Log.d("HomeFeedSwipe", "switching to ${tabs[currentIndex - 1]}")
-                                viewModel.setSortBy(tabs[currentIndex - 1])
+                                val target = tabs[currentIndex - 1]
+                                Log.d("HomeSortTrace", "GESTURE ACTION RIGHT target=$target old=$sortSnapshot")
+                                viewModel.setSortBy(target)
+                                Log.d("HomeSortTrace", "GESTURE ACTION RIGHT setSortBy invoked target=$target")
                             }
-                            else -> Log.d("HomeFeedSwipe", "swipe reached boundary; no tab change")
+                            else -> Log.w("HomeSortTrace", "GESTURE BOUNDARY/BAD_INDEX dx=$horizontalDistance sort=$sortSnapshot index=$currentIndex targetNotChanged")
                         }
                     } else {
-                        Log.d("HomeFeedSwipe", "ignored: swipe below 80px threshold")
+                        Log.d("HomeSortTrace", "GESTURE IGNORED below threshold absDx=${abs(horizontalDistance)}")
                     }
                     horizontalDistance = 0f
                 },
                 onDragCancel = {
-                    Log.d("HomeFeedSwipe", "drag cancelled total=$horizontalDistance")
+                    Log.w("HomeSortTrace", "GESTURE CANCEL totalDx=$horizontalDistance sortSnapshot=${uiState.sortBy}")
                     horizontalDistance = 0f
                 }
             )
@@ -892,9 +920,14 @@ fun HomeScreen(
                             )
                         )
 
+                        Log.d("HomeSortTrace", "HEADER rendering SortChipGroup selected=${uiState.sortBy}")
                         SortChipGroup(
                             selected = uiState.sortBy,
-                            onSelected = { sort -> viewModel.setSortBy(sort.lowercase()) }
+                            onSelected = { sort ->
+                                Log.d("HomeSortTrace", "CHIP CALLBACK tapped=$sort stateBefore=${uiState.sortBy}")
+                                viewModel.setSortBy(sort.lowercase())
+                                Log.d("HomeSortTrace", "CHIP CALLBACK completed tapped=$sort")
+                            }
                         )
                     }
 
@@ -1093,6 +1126,9 @@ private fun SortChipGroup(
     selected: String,
     onSelected: (String) -> Unit
 ) {
+    SideEffect {
+        Log.d("HomeSortTrace", "CHIPS COMPOSE selectedRaw=$selected normalized=${selected.trim().lowercase()}")
+    }
     // Keep the three sort labels on one line on narrow phones (e.g. Oppo A5).
     // The existing spacing and typography remain unchanged on wider phones.
     val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
@@ -1109,7 +1145,10 @@ private fun SortChipGroup(
             .padding(3.dp)
     ) {
         listOf("top", "new", "hot").forEach { item ->
-            val isSelected = item.equals(selected, ignoreCase = true)
+            val isSelected = item.equals(selected.trim(), ignoreCase = true)
+            SideEffect {
+                Log.d("HomeSortTrace", "CHIP RENDER item=$item selected=$selected isSelected=$isSelected")
+            }
 
             Box(
                 modifier = Modifier
