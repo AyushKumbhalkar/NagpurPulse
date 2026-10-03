@@ -687,20 +687,24 @@ fun HomeScreen(
                     }
                     Log.d("HomeSortTrace", "GESTURE END totalDx=$horizontalDistance direction=$direction sortSnapshot=$sortSnapshot index=$currentIndex tabs=$tabs threshold=80")
                     if (abs(horizontalDistance) > 80f) {
-                        when {
-                            horizontalDistance < 0f && currentIndex >= 0 && currentIndex < tabs.lastIndex -> {
-                                val target = tabs[currentIndex + 1]
-                                Log.d("HomeSortTrace", "GESTURE ACTION LEFT target=$target old=$sortSnapshot")
-                                viewModel.setSortBy(target)
-                                Log.d("HomeSortTrace", "GESTURE ACTION LEFT setSortBy invoked target=$target")
+                        if (currentIndex >= 0) {
+                            // Cycle through Top -> New -> Hot in either direction.
+                            // Swiping past either end wraps around to the opposite tab.
+                            val targetIndex = when {
+                                horizontalDistance < 0f -> (currentIndex + 1) % tabs.size
+                                horizontalDistance > 0f -> (currentIndex - 1 + tabs.size) % tabs.size
+                                else -> currentIndex
                             }
-                            horizontalDistance > 0f && currentIndex > 0 -> {
-                                val target = tabs[currentIndex - 1]
-                                Log.d("HomeSortTrace", "GESTURE ACTION RIGHT target=$target old=$sortSnapshot")
-                                viewModel.setSortBy(target)
-                                Log.d("HomeSortTrace", "GESTURE ACTION RIGHT setSortBy invoked target=$target")
-                            }
-                            else -> Log.w("HomeSortTrace", "GESTURE BOUNDARY/BAD_INDEX dx=$horizontalDistance sort=$sortSnapshot index=$currentIndex targetNotChanged")
+                            val target = tabs[targetIndex]
+                            val gestureDirection = if (horizontalDistance < 0f) "LEFT/NEXT" else "RIGHT/PREVIOUS"
+                            Log.d(
+                                "HomeSortTrace",
+                                "GESTURE ACTION $gestureDirection target=$target old=$sortSnapshot index=$currentIndex targetIndex=$targetIndex"
+                            )
+                            viewModel.setSortBy(target)
+                            Log.d("HomeSortTrace", "GESTURE ACTION setSortBy invoked target=$target")
+                        } else {
+                            Log.w("HomeSortTrace", "GESTURE BAD_INDEX dx=$horizontalDistance sort=$sortSnapshot index=$currentIndex")
                         }
                     } else {
                         Log.d("HomeSortTrace", "GESTURE IGNORED below threshold absDx=${abs(horizontalDistance)}")
