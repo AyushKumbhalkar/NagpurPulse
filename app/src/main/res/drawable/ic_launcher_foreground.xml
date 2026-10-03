@@ -4,17 +4,28 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Orange fruit behind the N ribbon -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M25,76 L25,34 L34,34 L57,61 L57,34 L67,34 L67,76 L58,76 L35,49 L35,76 Z" />
+        android:fillColor="#FF8F00"
+        android:pathData="M66,43 C70,34 84,32 91,40 C98,48 98,64 90,73 C84,80 75,82 68,76 C62,70 60,57 62,49 C63,46 64,44 66,43 Z" />
     <path
-        android:fillColor="#FFFFD9C9"
-        android:pathData="M74,39 C75,31 81,25 88,23"
-        android:strokeColor="#FFFFD9C9"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:fillColor="#FFFFA726"
+        android:pathData="M68,44 C73,38 81,38 85,43 C79,47 76,55 76,64 C69,59 66,51 68,44 Z" />
+    <!-- Green leaf -->
     <path
-        android:fillColor="#FFFFD9C9"
-        android:pathData="M89,18 C91.2,18 93,19.8 93,22 C93,24.2 91.2,26 89,26 C86.8,26 85,24.2 85,22 C85,19.8 86.8,18 89,18 Z" />
+        android:fillColor="#16852B"
+        android:pathData="M57,39 C60,25 75,13 96,12 C93,29 80,41 57,43 C56,42 56,40 57,39 Z" />
+    <path
+        android:fillColor="#2EAD45"
+        android:pathData="M59,39 C70,30 82,22 94,14 C84,26 73,35 59,41 Z" />
+    <!-- The bold orange N ribbon -->
+    <path
+        android:fillColor="#FF9D00"
+        android:pathData="M12,79 L12,36 C12,25 24,20 32,28 L79,76 L70,85 L24,39 L24,79 C24,87 12,88 12,79 Z" />
+    <path
+        android:fillColor="#FF5A1F"
+        android:pathData="M23,31 C26,30 29,32 32,35 L80,76 C84,80 89,77 89,71 L89,54 L98,50 L98,72 C98,84 85,90 76,82 L28,39 C25,36 23,34 23,31 Z" />
+    <path
+        android:fillColor="#FF7414"
+        android:pathData="M12,36 C12,25 24,20 32,28 L41,37 L32,47 L24,39 L24,79 C24,87 12,88 12,79 Z" />
 </vector>
