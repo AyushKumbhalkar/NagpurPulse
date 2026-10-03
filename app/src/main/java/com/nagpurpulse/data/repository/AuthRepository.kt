@@ -271,54 +271,43 @@ class AuthRepository @Inject constructor(
         gender: String? = null
     ): Result<Unit> {
         return try {
+            val authenticatedUserId = currentUserId
+                ?: return Result.failure(IllegalStateException("Please sign in again to save your profile"))
+            if (authenticatedUserId != userId) {
+                return Result.failure(SecurityException("You can only update your own profile"))
+            }
 
             val m = mutableMapOf<String, String?>()
             displayName?.let { m["display_name"] = it }
             username?.let { m["username"] = it }
-            gender?.let { m["gender"] = it }
-            android.util.Log.d("PROFILE_SAVE", "Bio Value = $bio")
+            // Gender is onboarding-only and must not be written to the public profile.
             bio?.let { m["tagline"] = it }
             location?.let { m["location"] = it }
             website?.let { m["website"] = it }
             avatarUrl?.let { m["avatar_url"] = it }
             coverUrl?.let { m["cover_url"] = it }
 
-            android.util.Log.d("PROFILE_SAVE", "UserId = $userId")
-            android.util.Log.d("PROFILE_SAVE", "Data = $m")
-
             if (m.isNotEmpty()) {
-
-                android.util.Log.d(
-                    "PRIVACY_DEBUG",
-                    "BEFORE UPDATE"
-                )
-
                 client.postgrest["profiles"].update(m) {
-                    filter { eq("id", userId) }
+                    filter { eq("id", authenticatedUserId) }
                 }
 
-                android.util.Log.d(
-                    "PRIVACY_DEBUG",
-                    "AFTER UPDATE SUCCESS"
-                )
+                // PostgREST may return success for an update that affected zero rows.
+                // Confirm that the authenticated user's profile still exists before
+                // reporting onboarding/profile-save success.
+                client.postgrest["profiles"]
+                    .select {
+                        filter { eq("id", authenticatedUserId) }
+                    }
+                    .decodeSingle<Profile>()
             }
 
-            android.util.Log.d("PROFILE_SAVE", "SUCCESS")
-
             Result.success(Unit)
-
         } catch (e: Exception) {
-
-            android.util.Log.e(
-                "PROFILE_SAVE",
-                "FAILED",
-                e
-            )
-
+            // Avoid logging profile values, user IDs, or other personal data.
+            android.util.Log.w("PROFILE_SAVE", "Profile update failed")
             Result.failure(e)
         }
-
-
     }
 
     suspend fun createProfileIfMissing(
