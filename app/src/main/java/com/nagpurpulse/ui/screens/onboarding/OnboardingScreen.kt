@@ -2,6 +2,7 @@
 
 package com.nagpurpulse.ui.screens.onboarding
 
+import com.nagpurpulse.R
 import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.ui.graphics.vector.ImageVector
