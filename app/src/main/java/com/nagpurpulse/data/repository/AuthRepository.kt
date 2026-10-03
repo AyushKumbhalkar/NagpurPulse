@@ -89,8 +89,6 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut(): Result<Unit> {
         return try {
-            // This schema currently stores one token per user, so this removes
-            // that user's registered token. Multi-device support needs a schema change.
             removeCurrentDeviceToken()
             client.auth.signOut()
             Result.success(Unit)
@@ -101,6 +99,8 @@ class AuthRepository @Inject constructor(
         val userId = currentUserId ?: return
         try {
             val token = FirebaseMessaging.getInstance().token.await()
+            // One row per physical FCM token supports the same account on multiple devices.
+            // If this device switches accounts, its token row is reassigned to the signed-in user.
             client.postgrest["device_tokens"].upsert(
                 mapOf(
                     "user_id" to userId,
@@ -108,7 +108,7 @@ class AuthRepository @Inject constructor(
                     "updated_at" to java.time.Instant.now().toString()
                 )
             ) {
-                onConflict = "user_id"
+                onConflict = "fcm_token"
             }
         } catch (e: Exception) {
             // Push registration must never turn a successful login into a failure.
@@ -119,8 +119,14 @@ class AuthRepository @Inject constructor(
     private suspend fun removeCurrentDeviceToken() {
         val userId = currentUserId ?: return
         try {
+            // Remove only this installation's token. Do not disable push on the
+            // user's other signed-in devices.
+            val token = FirebaseMessaging.getInstance().token.await()
             client.postgrest["device_tokens"].delete {
-                filter { eq("user_id", userId) }
+                filter {
+                    eq("user_id", userId)
+                    eq("fcm_token", token)
+                }
             }
         } catch (e: Exception) {
             // Continue sign-out even if the device-token cleanup is temporarily unavailable.
