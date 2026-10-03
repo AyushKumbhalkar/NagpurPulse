@@ -6,6 +6,7 @@ package com.nagpurpulse.ui.screens.onboarding
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -456,11 +457,22 @@ fun OnboardingProgressStepper(
     modifier: Modifier = Modifier
 ) {
     val safeStep = currentStep.coerceIn(0, (steps.size - 1).coerceAtLeast(0))
-    val progress by animateFloatAsState(
-        targetValue = if (steps.size <= 1) 1f else safeStep.toFloat() / (steps.size - 1).toFloat(),
-        animationSpec = tween(durationMillis = 360),
-        label = "onboardingProgress"
-    )
+    val targetProgress = if (steps.size <= 1) 1f else safeStep.toFloat() / (steps.size - 1).toFloat()
+    // A destination is often newly composed after Next is tapped, so start one step
+    // behind and animate forward instead of drawing the target position immediately.
+    val progressAnimation = androidx.compose.runtime.remember(steps.size) {
+        Animatable(
+            if (steps.size <= 1 || safeStep == 0) 0f
+            else (safeStep - 1).toFloat() / (steps.size - 1).toFloat()
+        )
+    }
+    LaunchedEffect(safeStep, steps.size) {
+        progressAnimation.animateTo(
+            targetValue = targetProgress,
+            animationSpec = tween(durationMillis = 650, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+        )
+    }
+    val progress = progressAnimation.value
     val inactiveLine = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
 
     // One shared drawing layer owns all connector geometry. Step centers are always
