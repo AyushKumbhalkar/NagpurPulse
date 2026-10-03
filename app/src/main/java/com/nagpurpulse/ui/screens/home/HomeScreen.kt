@@ -26,6 +26,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -880,7 +882,32 @@ fun HomeScreen(
         SwipeRefresh(
             state = swipeRefreshState,
             onRefresh = { viewModel.loadPosts(refresh = true) },
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier
+                .padding(paddingValues)
+                // Horizontal swipes switch Top -> New -> Hot while vertical
+                // gestures remain available for pull-to-refresh and scrolling.
+                .pointerInput(uiState.sortBy) {
+                    var horizontalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            horizontalDrag += dragAmount
+                        },
+                        onDragEnd = {
+                            val sortTabs = listOf("top", "new", "hot")
+                            val currentIndex = sortTabs.indexOf(uiState.sortBy.lowercase())
+                                .takeIf { it >= 0 } ?: 0
+                            when {
+                                horizontalDrag < -80f && currentIndex < sortTabs.lastIndex ->
+                                    viewModel.setSortBy(sortTabs[currentIndex + 1])
+                                horizontalDrag > 80f && currentIndex > 0 ->
+                                    viewModel.setSortBy(sortTabs[currentIndex - 1])
+                            }
+                            horizontalDrag = 0f
+                        },
+                        onDragCancel = { horizontalDrag = 0f }
+                    )
+                }
         ) {
             when {
                 uiState.isLoading -> {
