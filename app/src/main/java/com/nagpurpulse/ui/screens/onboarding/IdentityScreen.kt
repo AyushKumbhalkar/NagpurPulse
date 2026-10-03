@@ -454,78 +454,98 @@ fun OnboardingProgressStepper(
     currentStep: Int, // 0-based
     modifier: Modifier = Modifier
 ) {
-    // Each step owns an equal-width slot so labels never push the circles around.
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        steps.forEachIndexed { index, label ->
-            val isCompleted = index < currentStep
-            val isActive = index == currentStep
-            val targetStepColor = if (isCompleted || isActive) OrangePrimary else MaterialTheme.colorScheme.outline
-            val animatedStepColor by animateColorAsState(
-                targetValue = targetStepColor,
-                animationSpec = tween(durationMillis = 220),
-                label = "onboardingStepColor"
-            )
-            val animatedLabelColor by animateColorAsState(
-                targetValue = if (isActive) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                animationSpec = tween(durationMillis = 220),
-                label = "onboardingLabelColor"
-            )
+    val safeStep = currentStep.coerceIn(0, (steps.size - 1).coerceAtLeast(0))
+    val progress by animateFloatAsState(
+        targetValue = if (steps.size <= 1) 1f else safeStep.toFloat() / (steps.size - 1).toFloat(),
+        animationSpec = tween(durationMillis = 360),
+        label = "onboardingProgress"
+    )
+    val inactiveLine = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
 
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(if (isCompleted || isActive) animatedStepColor else Color.Transparent)
-                        .border(1.5.dp, animatedStepColor, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "${index + 1}",
-                        color = if (isActive || isCompleted) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = label,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontSize = 9.sp,
-                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                    color = animatedLabelColor,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 11.sp,
-                    maxLines = 2,
-                    softWrap = true
+    // One shared drawing layer owns all connector geometry. Step centers are always
+    // at the same fractions of the available width on every onboarding screen.
+    Box(modifier = modifier.fillMaxWidth()) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp)
+        ) {
+            if (steps.size > 1) {
+                val centerY = 14.dp.toPx()
+                val startX = size.width / steps.size / 2f
+                val endX = size.width - startX
+                val stroke = 2.dp.toPx()
+                drawLine(
+                    color = inactiveLine,
+                    start = androidx.compose.ui.geometry.Offset(startX, centerY),
+                    end = androidx.compose.ui.geometry.Offset(endX, centerY),
+                    strokeWidth = stroke,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+                drawLine(
+                    color = OrangePrimary,
+                    start = androidx.compose.ui.geometry.Offset(startX, centerY),
+                    end = androidx.compose.ui.geometry.Offset(
+                        x = startX + (endX - startX) * progress,
+                        y = centerY
+                    ),
+                    strokeWidth = stroke,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
             }
+        }
 
-            if (index < steps.lastIndex) {
-                val connectorProgress by animateFloatAsState(
-                    targetValue = if (index < currentStep) 1f else 0f,
-                    animationSpec = tween(durationMillis = 420),
-                    label = "onboardingConnectorProgress"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            steps.forEachIndexed { index, label ->
+                val isCompleted = index < safeStep
+                val isActive = index == safeStep
+                val isHighlighted = isCompleted || isActive
+                val circleColor by animateColorAsState(
+                    targetValue = if (isHighlighted) OrangePrimary else MaterialTheme.colorScheme.outline,
+                    animationSpec = tween(durationMillis = 180),
+                    label = "onboardingCircleColor"
                 )
-                Box(
-                    modifier = Modifier
-                        .weight(0.42f)
-                        .padding(top = 13.dp, horizontal = 1.dp)
-                        .height(2.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
+                val labelColor by animateColorAsState(
+                    targetValue = if (isActive) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    animationSpec = tween(durationMillis = 180),
+                    label = "onboardingLabelColor"
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(connectorProgress)
-                            .background(OrangePrimary)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(if (isHighlighted) circleColor else MaterialTheme.colorScheme.surface)
+                            .border(1.5.dp, circleColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            color = if (isHighlighted) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = label,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp),
+                        fontSize = 9.sp,
+                        fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                        color = labelColor,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 11.sp,
+                        maxLines = 2,
+                        softWrap = true
                     )
                 }
             }
