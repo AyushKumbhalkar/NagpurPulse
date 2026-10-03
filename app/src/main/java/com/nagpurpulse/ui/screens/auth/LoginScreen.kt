@@ -97,7 +97,6 @@ fun LoginScreen(
     var email         by remember { mutableStateOf("") }
     var password      by remember { mutableStateOf("") }
     var pwVisible     by remember { mutableStateOf(false) }
-    var rememberMe    by remember { mutableStateOf(false) }
 
     val scroll = rememberScrollState()
     val context = LocalContext.current
@@ -200,48 +199,22 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(8.dp))
 
-                    // Remember me + Forgot password row
-                    var rememberVisible by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) { delay(380); rememberVisible = true }
-                    AnimatedVisibility(rememberVisible, enter = fadeIn(tween(350))) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Row(
-                                modifier = Modifier.pressScale { rememberMe = !rememberMe },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(RoundedCornerShape(5.dp))
-                                        .background(
-                                            if (rememberMe)
-                                                OrangePrimary
-                                            else
-                                                SurfaceAlt
-                                        )
-                                        .border(
-                                            1.dp,
-                                            if (rememberMe)
-                                                OrangePrimary
-                                            else
-                                                Divider, RoundedCornerShape(5.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (rememberMe) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Check,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Text("Remember me", color = TertiaryText, fontSize = 13.sp)
-                            }
-                            Spacer(Modifier.weight(1f))
-                            Text("Forgot password?", color = OrangePrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                                modifier = Modifier.pressScale(onClick = { viewModel.sendPasswordReset(email) }))
+                    // Keep only the action that is implemented. Session persistence
+                    // is managed by Supabase and is not controlled by a local checkbox.
+                    var resetVisible by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { delay(380); resetVisible = true }
+                    AnimatedVisibility(resetVisible, enter = fadeIn(tween(350))) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Text(
+                                "Forgot password?",
+                                color = OrangePrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.pressScale(onClick = { viewModel.sendPasswordReset(email) })
+                            )
                         }
                     }
 
