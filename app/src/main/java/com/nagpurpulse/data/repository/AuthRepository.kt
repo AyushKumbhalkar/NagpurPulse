@@ -169,7 +169,8 @@ class AuthRepository @Inject constructor(
                 }
                 .decodeList<Profile>()
 
-            result.isEmpty()
+            val signedInUserId = currentUserId
+            result.none { profile -> profile.id != signedInUserId }
 
         } catch (e: Exception) {
 
@@ -193,7 +194,9 @@ class AuthRepository @Inject constructor(
                     }
                     .decodeSingle<Profile>()
 
-            !profile.gender.isNullOrBlank()
+            !profile.gender.isNullOrBlank() &&
+                profile.username.isNotBlank() &&
+                !profile.avatarUrl.isNullOrBlank()
 
         } catch (_: Exception) {
 
@@ -228,19 +231,29 @@ class AuthRepository @Inject constructor(
 
     private var _guestAvatarUrl: String? = null
     val guestAvatarUrl get() = _guestAvatarUrl
+    private var _guestUsername: String? = null
+    val guestUsername get() = _guestUsername
+    private var _guestGender: String? = null
+    val guestGender get() = _guestGender
 
     val isGuest get() = _isGuest && !isLoggedIn()
 
     fun enterGuestMode(
-        avatarUrl: String? = null
+        avatarUrl: String? = null,
+        username: String? = null,
+        gender: String? = null
     ) {
         _isGuest = true
-        _guestAvatarUrl = avatarUrl
+        _guestAvatarUrl = avatarUrl ?: _guestAvatarUrl
+        _guestUsername = username ?: _guestUsername
+        _guestGender = gender ?: _guestGender
     }
 
     fun exitGuestMode() {
         _isGuest = false
         _guestAvatarUrl = null
+        _guestUsername = null
+        _guestGender = null
     }
 
     /** Returns true if user can perform write actions */
@@ -250,6 +263,7 @@ class AuthRepository @Inject constructor(
     suspend fun updateFullProfile(
         userId: String,
         displayName: String? = null,
+        username: String? = null,
         bio: String? = null,
         location: String? = null,
         website: String? = null,
@@ -261,6 +275,7 @@ class AuthRepository @Inject constructor(
 
             val m = mutableMapOf<String, String?>()
             displayName?.let { m["display_name"] = it }
+            username?.let { m["username"] = it }
             gender?.let { m["gender"] = it }
             android.util.Log.d("PROFILE_SAVE", "Bio Value = $bio")
             bio?.let { m["tagline"] = it }
