@@ -257,7 +257,7 @@ fun LoginScreen(
                     PremiumButton(
                         text = "Login  →",
                         isLoading = uiState.isLoading,
-                        enabled = email.isNotBlank() && password.isNotBlank(),
+                        enabled = emailLooksValid && password.isNotBlank(),
                         onClick = { viewModel.signIn(email, password, onLoginSuccess) },
                         delayMs = 420
                     )
