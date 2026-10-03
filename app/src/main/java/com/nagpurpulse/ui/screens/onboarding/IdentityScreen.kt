@@ -539,12 +539,13 @@ fun OnboardingProgressStepper(
                         text = label,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(24.dp),
+                            .heightIn(min = 24.dp),
                         fontSize = 9.sp,
                         fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
                         color = labelColor,
                         textAlign = TextAlign.Center,
                         lineHeight = 11.sp,
+                        minLines = 2,
                         maxLines = 2,
                         softWrap = true
                     )
