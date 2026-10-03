@@ -4,6 +4,14 @@
 
 package com.nagpurpulse.ui.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import com.nagpurpulse.ui.screens.admin.AdminPanelScreen          // NEW
 import com.nagpurpulse.ui.screens.explore.CategoryPostsScreen
