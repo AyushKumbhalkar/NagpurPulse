@@ -297,6 +297,7 @@ fun NagpurPulseNavGraph(
             ProfilePictureScreen(
                 onBack = { navController.popBackStack() },
                 isSaving = isSavingProfile,
+                gender = selectedGender,
                 onContinue = { avatarUrl ->
                     isSavingProfile = true
                     selectedAvatar = avatarUrl
