@@ -307,6 +307,10 @@ class AuthRepository @Inject constructor(
 
         return try {
 
+            if (currentUserId != userId) {
+                return Result.failure(SecurityException("You can only create your own profile"))
+            }
+
             val existing =
                 client.postgrest["profiles"]
                     .select {
