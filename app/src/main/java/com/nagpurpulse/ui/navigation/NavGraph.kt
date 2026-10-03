@@ -351,8 +351,7 @@ fun NagpurPulseNavGraph(
                                 userId = userId,
                                 username = username,
                                 displayName = username,
-                                avatarUrl = avatarUrl,
-                                gender = gender
+                                avatarUrl = avatarUrl
                             )
                             result.fold(
                                 onSuccess = {
