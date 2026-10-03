@@ -352,39 +352,14 @@ class AuthRepository @Inject constructor(
             hideFromSearch?.let  { m["hide_from_search"]   = it }
             if (m.isNotEmpty()) {
 
-                android.util.Log.d(
-                    "PRIVACY_DEBUG",
-                    """
-updatePrivacySettings()
-userId=$userId
-hideProfile=$hideProfile
-map=$m
-""".trimIndent()
-                )
-
-                android.util.Log.d(
-                    "PRIVACY_DEBUG",
-                    "BEFORE PRIVACY UPDATE"
-                )
-
                 client.postgrest["profiles"].update(m) {
                     filter { eq("id", userId) }
                 }
 
-                android.util.Log.d(
-                    "PRIVACY_DEBUG",
-                    "AFTER PRIVACY UPDATE SUCCESS"
-                )
             }
             Result.success(Unit)
 
         } catch (e: Exception) {
-
-            android.util.Log.e(
-                "PRIVACY_DEBUG",
-                "PRIVACY UPDATE FAILED",
-                e
-            )
 
             Result.failure(e)
         }
