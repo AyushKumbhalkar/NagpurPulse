@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nagpurpulse.data.repository.UsernameAvailability
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.*
 import kotlinx.coroutines.delay
@@ -150,24 +151,24 @@ fun generateNagpurUsername(): String {
 fun UsernameScreen(
     onBack: () -> Unit,
     onNext: (String) -> Unit,
-    checkUsernameAvailable: suspend (String) -> Boolean,
+    checkUsernameAvailable: suspend (String) -> UsernameAvailability,
     initialUsername: String? = null
 ) {
     var username by rememberSaveable { mutableStateOf((initialUsername ?: generateNagpurUsername()).lowercase()) }
     var isCheckingUsername by remember { mutableStateOf(false) }
-    var isUsernameAvailable by remember { mutableStateOf<Boolean?>(null) }
+    var usernameAvailability by remember { mutableStateOf<UsernameAvailability?>(null) }
     val usernameIsValid = username.matches(Regex("^[A-Za-z][A-Za-z0-9_]{2,23}$"))
     var visible by remember { mutableStateOf(true) }
 
     LaunchedEffect(username) {
-        isUsernameAvailable = null
+        usernameAvailability = null
         if (!usernameIsValid) {
             isCheckingUsername = false
             return@LaunchedEffect
         }
         isCheckingUsername = true
         kotlinx.coroutines.delay(350)
-        isUsernameAvailable = checkUsernameAvailable(username)
+        usernameAvailability = checkUsernameAvailable(username)
         isCheckingUsername = false
     }
 
@@ -332,7 +333,7 @@ fun UsernameScreen(
                                 .padding(horizontal = 18.dp),
                             label = { Text("Username") },
                             singleLine = true,
-                            isError = username.isNotEmpty() && (!usernameIsValid || isUsernameAvailable == false),
+                            isError = username.isNotEmpty() && (!usernameIsValid || usernameAvailability == UsernameAvailability.TAKEN),
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.None,
                                 keyboardType = KeyboardType.Ascii
@@ -347,15 +348,16 @@ fun UsernameScreen(
                         val statusText = when {
                             !usernameIsValid -> "Enter a valid username"
                             isCheckingUsername -> "Checking availability…"
-                            isUsernameAvailable == true -> "Username is available"
-                            isUsernameAvailable == false -> "Username is already taken or could not be checked"
+                            usernameAvailability == UsernameAvailability.AVAILABLE -> "Username is available"
+                            usernameAvailability == UsernameAvailability.TAKEN -> "Username is already taken"
+                            usernameAvailability == UsernameAvailability.UNABLE_TO_CHECK -> "Couldn’t check availability. Check your connection and edit to retry."
                             else -> "Checking availability…"
                         }
                         Text(
                             text = statusText,
                             color = when {
-                                !usernameIsValid || isUsernameAvailable == false -> MaterialTheme.colorScheme.error
-                                isUsernameAvailable == true -> GreenSuccess
+                                !usernameIsValid || usernameAvailability == UsernameAvailability.TAKEN -> MaterialTheme.colorScheme.error
+                                usernameAvailability == UsernameAvailability.AVAILABLE -> GreenSuccess
                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                             },
                             fontWeight = FontWeight.Medium,
@@ -446,7 +448,7 @@ fun UsernameScreen(
                             .clip(RoundedCornerShape(24.dp))
                             .background(Brush.horizontalGradient(listOf(OrangePrimary, OrangeLight)))
                             .then(
-                                if (usernameIsValid && isUsernameAvailable == true && !isCheckingUsername)
+                                if (usernameIsValid && usernameAvailability == UsernameAvailability.AVAILABLE && !isCheckingUsername)
                                     Modifier.pressScale(onClick = { onNext(username.trim()) })
                                 else Modifier
                             ),
