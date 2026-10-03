@@ -35,8 +35,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Email
@@ -68,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
-import com.nagpurpulse.ui.screens.onboarding.OnboardingProgressStepper
 import com.nagpurpulse.ui.theme.OrangePrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -89,7 +86,6 @@ fun SignupScreen(
     var confirmPassword by remember { mutableStateOf("") }
     val emailLooksValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
     var pwVisible by remember { mutableStateOf(false) }
-    val scroll    = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -103,23 +99,12 @@ fun SignupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
-                .verticalScroll(scroll)
-                .imePadding(),
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            PremiumLogo("Join Nagpur's best community")
-            Spacer(Modifier.height(8.dp))
-
-            OnboardingProgressStepper(
-                steps = listOf("Create Account", "Your Identity", "Choose Username", "Profile Picture"),
-                currentStep = 0,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-            )
-            Spacer(Modifier.height(8.dp))
+            PremiumLogo("Join Nagpur's best community", compact = true)
+            Spacer(Modifier.height(5.dp))
 
             // ── Form card ───────────────────────────────────────────────
             AnimatedVisibility(
@@ -148,9 +133,7 @@ fun SignupScreen(
                             OrangePrimary.copy(0.30f),
                             RoundedCornerShape(24.dp)
                         )
-                        .padding(
-    DensityManager.cardPadding.dp
-)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     PremiumInputField(
                         value = email, onValueChange = { email = it },
@@ -185,7 +168,7 @@ fun SignupScreen(
                         index = 2
                     )
 
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(3.dp))
 
 
                     PremiumInputField(
@@ -250,7 +233,7 @@ fun SignupScreen(
 
                     )
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(6.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(
@@ -332,7 +315,7 @@ fun SignupScreen(
                 }
             }
 
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(1.dp))
 
             // ── Trust badges ────────────────────────────────────────────
             var trustVisible by remember { mutableStateOf(false) }
