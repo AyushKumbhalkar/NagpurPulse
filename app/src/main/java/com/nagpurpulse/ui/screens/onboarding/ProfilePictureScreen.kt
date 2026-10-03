@@ -334,6 +334,16 @@ fun ProfilePictureScreen(
 
             Spacer(Modifier.height(8.dp))
 
+            if (avatarLoadFailed) {
+                Text(
+                    text = "This avatar couldn't load. Generate another one to continue.",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+                )
+            }
+
             saveError?.let { message ->
                 Text(
                     text = message,
@@ -359,7 +369,7 @@ fun ProfilePictureScreen(
                         .clip(RoundedCornerShape(28.dp))
                         .background(Brush.horizontalGradient(listOf(OrangePrimary, OrangeLight)))
                         .then(
-                            if (!isSaving)
+                            if (!isSaving && !avatarLoadFailed)
                                 Modifier.pressScale(
                                     onClick = {
                                         onContinue(currentAvatar)
