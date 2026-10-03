@@ -292,6 +292,10 @@ class HomeViewModel @Inject constructor(
         val requestedCategory = _uiState.value.category
 
         viewModelScope.launch {
+            if (requestId != latestPostsLoadRequestId) {
+                Log.d("HomeSortTrace", "loadPosts STALE_BEFORE_START_IGNORED requestId=$requestId latest=$latestPostsLoadRequestId")
+                return@launch
+            }
             Log.d("HomeSortTrace", "loadPosts START requestId=$requestId refresh=$refresh sort=$requestedSort category=$requestedCategory")
             _uiState.value = _uiState.value.copy(isLoading = !refresh, isRefreshing = refresh)
             postRepository.getPosts(
