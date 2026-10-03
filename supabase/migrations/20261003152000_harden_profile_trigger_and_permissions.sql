@@ -36,8 +36,10 @@ begin
         || '_'
         || substr(replace(new.id::text, '-', ''), 1, 8);
 
+    -- Keep avatar_url empty so a Google provider avatar cannot accidentally
+    -- make hasCompletedOnboarding() treat a new account as fully onboarded.
     insert into public.profiles (id, username, avatar_url)
-    values (new.id, candidate_name, new.raw_user_meta_data->>'avatar_url');
+    values (new.id, candidate_name, null);
 
     return new;
 end;
