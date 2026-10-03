@@ -3,6 +3,7 @@
 package com.nagpurpulse.ui.screens.onboarding
 
 
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -167,7 +168,7 @@ fun IdentityScreen(
             // ── Title ─────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400)) + slideInVertically { 30 }
+                enter = EnterTransition.None
             ) {
                 Column(
                     modifier = Modifier
@@ -208,7 +209,7 @@ fun IdentityScreen(
             // ── Gender options ────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(500, delayMillis = 100)) + slideInVertically { 40 }
+                enter = EnterTransition.None
             ) {
                 Column(
                     modifier = Modifier
@@ -231,7 +232,7 @@ fun IdentityScreen(
             // ── Privacy card ──────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(500, delayMillis = 200))
+                enter = EnterTransition.None
             ) {
                 Row(
                     modifier = Modifier
@@ -281,7 +282,7 @@ fun IdentityScreen(
             // ── Continue button ───────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 250))
+                enter = EnterTransition.None
             ) {
                 Box(
                     modifier = Modifier
