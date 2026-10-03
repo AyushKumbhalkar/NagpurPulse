@@ -54,7 +54,6 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.signIn(email, password).fold(
                 onSuccess = {
-                    notificationRepository.saveFcmToken()
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
