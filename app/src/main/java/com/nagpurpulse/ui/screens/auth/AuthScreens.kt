@@ -1,6 +1,5 @@
 package com.nagpurpulse.ui.screens.auth
 
-import com.nagpurpulse.data.repository.NotificationRepository
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -28,8 +27,7 @@ data class AuthUiState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
-    private val notificationRepository: NotificationRepository
+    private val authRepository: AuthRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
@@ -43,7 +41,6 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.signUp(email, password).fold(
                 onSuccess = {
-                    notificationRepository.saveFcmToken()
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
@@ -77,7 +74,6 @@ class AuthViewModel @Inject constructor(
             authRepository.signInWithGoogleToken(idToken)
                 .fold(
                     onSuccess = {
-                        notificationRepository.saveFcmToken()
                         _uiState.value = AuthUiState(isSuccess = true)
                         onSuccess()
                     },
@@ -124,16 +120,10 @@ class AuthViewModel @Inject constructor(
 
                     onSuccess =
                         {
-                            notificationRepository.saveFcmToken()
 
                         val completed =
                             authRepository
                                 .hasCompletedOnboarding()
-
-                        android.util.Log.d(
-                            "GOOGLE_FLOW",
-                            "completed = $completed"
-                        )
 
                         _uiState.value =
                             AuthUiState(isSuccess = true)
@@ -141,17 +131,8 @@ class AuthViewModel @Inject constructor(
                         if (completed) {
                             onExistingUser()
 
-                            android.util.Log.d(
-                                "GOOGLE_FLOW",
-                                "EXISTING USER"
-                            )
-
                         } else {
                             onNewUser()
-                            android.util.Log.d(
-                                "GOOGLE_FLOW",
-                                "NEW USER"
-                            )
                         }
                     },
 
