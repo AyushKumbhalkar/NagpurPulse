@@ -606,9 +606,7 @@ fun PremiumInputField(
                             onValueChange = onValueChange,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0x3322AAFF))
-                                // TEMP DIAGNOSTIC: GREEN = BasicTextField's own bounds.
-                                .border(2.dp, Color.Green, RoundedCornerShape(3.dp)),
+                                
                             singleLine = true,
                             textStyle = TextStyle(
                                 color = MaterialTheme.colorScheme.onSurface,
