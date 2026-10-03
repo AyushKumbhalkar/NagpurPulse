@@ -45,7 +45,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import kotlin.math.abs
@@ -905,18 +904,20 @@ fun HomeScreen(
                         var horizontalSwipe = false
                         val touchSlop = viewConfiguration.touchSlop
 
-                        while (!finished) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change == null || !change.pressed) {
-                                finished = true
-                            } else {
-                                val delta = change.position - change.previousPosition
-                                totalX += delta.x
-                                totalY += delta.y
+                        awaitPointerEventScope {
+                            while (!finished) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null || !change.pressed) {
+                                    finished = true
+                                } else {
+                                    val delta = change.position - change.previousPosition
+                                    totalX += delta.x
+                                    totalY += delta.y
 
-                                if (abs(totalX) > touchSlop && abs(totalX) > abs(totalY) * 1.2f) {
-                                    horizontalSwipe = true
+                                    if (abs(totalX) > touchSlop && abs(totalX) > abs(totalY) * 1.2f) {
+                                        horizontalSwipe = true
+                                    }
                                 }
                             }
                         }
