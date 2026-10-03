@@ -522,11 +522,10 @@ fun PremiumInputField(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x2233AAFF))
-                // TEMP DIAGNOSTIC: MAGENTA = outer input container.
+                .background(Color(0x22FF00FF))
                 .border(
-                    width = 3.dp,
-                    color = Color.Magenta,
+                    width = 1.dp,
+                    color = Color(0x22FF00FF),
                     shape = RoundedCornerShape(16.dp)
                 )
 
@@ -561,9 +560,6 @@ fun PremiumInputField(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0x22FF0000))
-                    // TEMP DIAGNOSTIC: RED = icon/text row bounds.
-                    .border(2.dp, Color.Red, RoundedCornerShape(8.dp))
                     .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
