@@ -95,6 +95,7 @@ fun LoginScreen(
 ){
     val uiState       by viewModel.uiState.collectAsState()
     var email         by remember { mutableStateOf("") }
+    val emailLooksValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
     var password      by remember { mutableStateOf("") }
     var pwVisible     by remember { mutableStateOf(false) }
 
@@ -177,6 +178,14 @@ fun LoginScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         index = 0
                     )
+                    if (email.isNotBlank() && !emailLooksValid) {
+                        Text(
+                            text = "Enter a valid email address",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                        )
+                    }
 
                     Spacer(Modifier.height(8.dp))
 
