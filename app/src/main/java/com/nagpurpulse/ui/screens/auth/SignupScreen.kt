@@ -211,6 +211,14 @@ fun SignupScreen(
 
                     Spacer(Modifier.height(8.dp))
                     AnimatedErrorMessage(uiState.error)
+                    uiState.infoMessage?.let { message ->
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
 
                     if (
