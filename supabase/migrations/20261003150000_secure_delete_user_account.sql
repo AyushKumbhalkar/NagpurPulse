@@ -81,7 +81,8 @@ begin
         join comments_to_remove parent on child.parent_id = parent.id
     )
     delete from public.comment_likes
-    where comment_id in (select id from comments_to_remove);
+    where user_id = target_user_id
+       or comment_id in (select id from comments_to_remove);
 
     with recursive comments_to_remove(id) as (
         select c.id
