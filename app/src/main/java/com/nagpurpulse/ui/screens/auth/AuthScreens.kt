@@ -94,14 +94,15 @@ class AuthViewModel @Inject constructor(
 
 
     fun sendPasswordReset(email: String) {
-        if (email.isBlank()) {
-            _uiState.value = AuthUiState(error = "Please enter your email first")
+        val normalizedEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            _uiState.value = AuthUiState(error = "Enter a valid email address first")
             return
         }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.sendPasswordReset(email).fold(
+            authRepository.sendPasswordReset(normalizedEmail).fold(
                 onSuccess = { _uiState.value = AuthUiState(forgotPasswordSent = true) },
                 onFailure = { e -> _uiState.value = AuthUiState(error = e.message ?: "Failed to send reset email") }
             )
