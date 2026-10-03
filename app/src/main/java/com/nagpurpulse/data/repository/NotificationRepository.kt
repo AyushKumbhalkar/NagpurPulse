@@ -37,12 +37,19 @@ class NotificationRepository @Inject constructor(
                 "updated_at" to java.time.Instant.now().toString()
             )
         ) {
-            onConflict = "user_id"
+            onConflict = "fcm_token"
         }
     }
     suspend fun deleteFcmToken(): Result<Unit> = runCatching {
         val userId = authRepository.currentUserId ?: return@runCatching
-        client.postgrest["device_tokens"].delete { filter { eq("user_id", userId) } }
+        val fcmToken = FirebaseMessaging.getInstance().token.await()
+        // Delete only this installation's token; preserve push delivery on other devices.
+        client.postgrest["device_tokens"].delete {
+            filter {
+                eq("user_id", userId)
+                eq("fcm_token", fcmToken)
+            }
+        }
         FirebaseMessaging.getInstance().deleteToken().await()
     }
 
