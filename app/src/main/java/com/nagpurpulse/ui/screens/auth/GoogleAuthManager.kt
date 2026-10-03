@@ -2,7 +2,6 @@ package com.nagpurpulse.ui.screens.auth
 
 
 
-import android.util.Log
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -15,8 +14,6 @@ class GoogleAuthManager(
 
     suspend fun getGoogleIdToken(): String {
 
-        Log.e("GOOGLE_TEST", "STEP 1 - Entered getGoogleIdToken")
-
         val googleIdOption =
             GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
@@ -26,19 +23,13 @@ class GoogleAuthManager(
                 .setAutoSelectEnabled(false)
                 .build()
 
-        Log.e("GOOGLE_TEST", "STEP 2 - GoogleIdOption created")
-
         val request =
             GetCredentialRequest.Builder()
                 .addCredentialOption(googleIdOption)
                 .build()
 
-        Log.e("GOOGLE_TEST", "STEP 3 - Request created")
-
         val credentialManager =
             CredentialManager.create(context)
-
-        Log.e("GOOGLE_TEST", "STEP 4 - CredentialManager created")
 
         val result =
             credentialManager.getCredential(
@@ -46,16 +37,12 @@ class GoogleAuthManager(
                 request = request
             )
 
-        Log.e("GOOGLE_TEST", "STEP 5 - Credential received")
-
         val credential = result.credential
 
         val googleCredential =
             GoogleIdTokenCredential.createFrom(
                 credential.data
             )
-
-        Log.e("GOOGLE_TEST", "STEP 6 - Token parsed")
 
         return googleCredential.idToken
     }
