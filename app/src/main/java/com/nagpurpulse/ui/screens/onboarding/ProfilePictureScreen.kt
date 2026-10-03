@@ -52,6 +52,7 @@ fun ProfilePictureScreen(
     onBack: () -> Unit,
     isSaving: Boolean,
     gender: String?,
+    saveError: String? = null,
     onContinue: (String) -> Unit
 ) {
     val availableAvatars = remember(gender) { RandomImages.forGender(gender) }
@@ -334,6 +335,18 @@ fun ProfilePictureScreen(
             }
 
             Spacer(Modifier.height(8.dp))
+
+            saveError?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp)
+                )
+            }
 
             // ── Continue button ───────────────────────────────────────
             AnimatedVisibility(
