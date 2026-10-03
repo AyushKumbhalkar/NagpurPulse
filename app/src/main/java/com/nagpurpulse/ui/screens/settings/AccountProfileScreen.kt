@@ -365,6 +365,32 @@ class AccountProfileViewModel @Inject constructor(
     }
 
 
+    fun changeEmail(newEmail: String, onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            authRepository.changeEmail(newEmail.trim()).fold(
+                onSuccess = {
+                    onComplete(true, "Email update requested. Check your inbox to confirm the new address.")
+                },
+                onFailure = {
+                    onComplete(false, it.message ?: "Unable to update email. Please try again.")
+                }
+            )
+        }
+    }
+
+    fun changePassword(newPassword: String, onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            authRepository.changePassword(newPassword).fold(
+                onSuccess = {
+                    onComplete(true, "Password updated successfully.")
+                },
+                onFailure = {
+                    onComplete(false, it.message ?: "Unable to update password. Please try again.")
+                }
+            )
+        }
+    }
+
     fun deleteAccount(
         onSuccess: () -> Unit
     ) {
@@ -407,6 +433,14 @@ fun AccountProfileScreen(
     var showDeleteDialog by remember {
         mutableStateOf(false)
     }
+    var showChangeEmailDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var newEmail by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var accountActionBusy by remember { mutableStateOf(false) }
+    var accountActionMessage by remember { mutableStateOf<String?>(null) }
+    var accountActionError by remember { mutableStateOf<String?>(null) }
     val pickAvatar =
         rememberLauncherForActivityResult(
             ActivityResultContracts.PickVisualMedia()
@@ -748,9 +782,9 @@ fun AccountProfileScreen(
             item { SectionHeader("ACCOUNT") }
             item {
                 SettingsGroup {
-                    SettingsRow("Change Email",       "Update your email address",            Icons.Filled.Email,  BlueInfo)   {}
+                    SettingsRow("Change Email",       "Update your email address",            Icons.Filled.Email,  BlueInfo)   { showChangeEmailDialog = true; accountActionMessage = null; accountActionError = null }
                     SettingsDivider()
-                    SettingsRow("Change Password",    "Update your account password",         Icons.Filled.Lock,   OrangePrimary) {}
+                    SettingsRow("Change Password",    "Update your account password",         Icons.Filled.Lock,   OrangePrimary) { showChangePasswordDialog = true; accountActionMessage = null; accountActionError = null }
                     SettingsDivider()
                     SettingsRow("Deactivate Account", "Temporarily disable your account",     Icons.Filled.PauseCircle, SecondaryText) {}
                     SettingsDivider()
@@ -768,6 +802,109 @@ fun AccountProfileScreen(
         }
     }
 
+
+    if (accountActionMessage != null || accountActionError != null) {
+        AlertDialog(
+            onDismissRequest = { accountActionMessage = null; accountActionError = null },
+            title = { Text(if (accountActionError == null) "Account update" else "Could not update account") },
+            text = { Text(accountActionMessage ?: accountActionError.orEmpty()) },
+            confirmButton = {
+                TextButton(onClick = { accountActionMessage = null; accountActionError = null }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (showChangeEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!accountActionBusy) showChangeEmailDialog = false },
+            title = { Text("Change email") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("A confirmation email may be sent to your new address.")
+                    OutlinedTextField(
+                        value = newEmail,
+                        onValueChange = { newEmail = it },
+                        label = { Text("New email address") },
+                        singleLine = true,
+                        enabled = !accountActionBusy,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                        )
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !accountActionBusy, onClick = { showChangeEmailDialog = false }) { Text("Cancel") }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !accountActionBusy && android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail.trim()).matches(),
+                    onClick = {
+                        accountActionBusy = true
+                        vm.changeEmail(newEmail) { success, message ->
+                            accountActionBusy = false
+                            showChangeEmailDialog = false
+                            newEmail = ""
+                            if (success) accountActionMessage = message else accountActionError = message
+                        }
+                    }
+                ) { Text(if (accountActionBusy) "Updating…" else "Update email") }
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!accountActionBusy) showChangePasswordDialog = false },
+            title = { Text("Change password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New password") },
+                        singleLine = true,
+                        enabled = !accountActionBusy,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm new password") },
+                        singleLine = true,
+                        enabled = !accountActionBusy,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    )
+                    if (newPassword.isNotEmpty() && newPassword.length < 8) {
+                        Text("Use at least 8 characters.", color = RedAlert, fontSize = 12.sp)
+                    }
+                    if (confirmPassword.isNotEmpty() && newPassword != confirmPassword) {
+                        Text("Passwords do not match.", color = RedAlert, fontSize = 12.sp)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !accountActionBusy, onClick = { showChangePasswordDialog = false }) { Text("Cancel") }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !accountActionBusy && newPassword.length >= 8 && newPassword == confirmPassword,
+                    onClick = {
+                        accountActionBusy = true
+                        vm.changePassword(newPassword) { success, message ->
+                            accountActionBusy = false
+                            showChangePasswordDialog = false
+                            newPassword = ""
+                            confirmPassword = ""
+                            if (success) accountActionMessage = message else accountActionError = message
+                        }
+                    }
+                ) { Text(if (accountActionBusy) "Updating…" else "Update password") }
+            }
+        )
+    }
 
     if (showDeleteDialog) {
 
