@@ -522,20 +522,35 @@ fun PremiumInputField(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x22FF00FF))
+                .background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = bgAlpha)
+                )
                 .border(
-                    width = 1.dp,
-                    color = Color(0x22FF00FF),
+                    width = if (focused) 1.6.dp else 1.2.dp,
+                    brush = Brush.linearGradient(
+                        colors =
+                            if (focused) {
+                                listOf(
+                                    Color(0xFFFFA54B),
+                                    OrangePrimary,
+                                    Color(0xFFFFA54B)
+                                )
+                            } else {
+                                listOf(
+                                    Color(0x33FF8C1A),
+                                    Color(0x66FF8C1A),
+                                    Color(0x33FF8C1A)
+                                )
+                            }
+                    ),
                     shape = RoundedCornerShape(16.dp)
                 )
-
                 .shadow(
                     elevation = if (focused) 10.dp else 3.dp,
                     shape = RoundedCornerShape(16.dp),
                     ambientColor = OrangePrimary.copy(alpha = 0.25f),
                     spotColor = OrangePrimary.copy(alpha = 0.25f)
-                )
-        ) {
+                ) {
             // Focus glow
             if (focused) {
                 Box(
