@@ -2,6 +2,7 @@
 
 package com.nagpurpulse.ui.screens.onboarding
 
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -225,7 +226,7 @@ fun UsernameScreen(
             // ── Title ─────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400)) + slideInVertically { 30 }
+                enter = EnterTransition.None
             ) {
                 Column(
                     modifier = Modifier
@@ -262,7 +263,7 @@ fun UsernameScreen(
             // ── Username card ─────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 100)) + slideInVertically { 40 }
+                enter = EnterTransition.None
             ) {
                 Box(
                     modifier = Modifier
@@ -356,7 +357,7 @@ fun UsernameScreen(
             // ── Three buttons row ─────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 150))
+                enter = EnterTransition.None
             ) {
                 Row(
                     modifier = Modifier
@@ -455,7 +456,7 @@ fun UsernameScreen(
             // ── "Why this username?" info card ────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, delayMillis = 200))
+                enter = EnterTransition.None
             ) {
                 Row(
                     modifier = Modifier
