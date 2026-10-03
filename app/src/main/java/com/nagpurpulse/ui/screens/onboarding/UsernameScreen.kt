@@ -333,7 +333,7 @@ fun UsernameScreen(
                                 .padding(horizontal = 18.dp),
                             label = { Text("Username") },
                             singleLine = true,
-                            isError = username.isNotEmpty() && (!usernameIsValid || usernameAvailability == UsernameAvailability.TAKEN),
+                            isError = username.isNotEmpty() && (!usernameIsValid || usernameAvailability == UsernameAvailability.TAKEN || usernameAvailability == UsernameAvailability.UNABLE_TO_CHECK),
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.None,
                                 keyboardType = KeyboardType.Ascii
@@ -356,7 +356,7 @@ fun UsernameScreen(
                         Text(
                             text = statusText,
                             color = when {
-                                !usernameIsValid || usernameAvailability == UsernameAvailability.TAKEN -> MaterialTheme.colorScheme.error
+                                !usernameIsValid || usernameAvailability == UsernameAvailability.TAKEN || usernameAvailability == UsernameAvailability.UNABLE_TO_CHECK -> MaterialTheme.colorScheme.error
                                 usernameAvailability == UsernameAvailability.AVAILABLE -> GreenSuccess
                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                             },
