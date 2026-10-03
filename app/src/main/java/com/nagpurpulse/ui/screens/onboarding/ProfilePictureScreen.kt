@@ -122,8 +122,8 @@ fun ProfilePictureScreen(
 
             // ── Progress stepper (3 steps - all leading up to profile pic) ─
             OnboardingProgressStepper(
-                steps = listOf("Create Account", "Choose Username", "Profile Picture"),
-                currentStep = 2,
+                steps = listOf("Create Account", "Your Identity", "Choose Username", "Profile Picture"),
+                currentStep = 3,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
