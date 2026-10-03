@@ -255,7 +255,7 @@ fun OnboardingScreen(
                     )
                     // NagpurPulse brand mark in the hero's top-right corner.
                     Image(
-                        painter = painterResource(id = R.drawable.nagpurpulse_app_icon_transparent),
+                        painter = painterResource(id = R.drawable.nagpurpulse_app_icon),
                         contentDescription = "NagpurPulse logo",
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -291,7 +291,7 @@ fun OnboardingScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.nagpurpulse_app_icon_transparent),
+                                painter = painterResource(id = R.drawable.nagpurpulse_app_icon),
                                 contentDescription = "NagpurPulse logo",
                                 modifier = Modifier.size(38.dp)
                             )
