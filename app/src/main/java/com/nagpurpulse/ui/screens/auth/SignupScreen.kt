@@ -87,6 +87,7 @@ fun SignupScreen(
     var email     by remember { mutableStateOf("") }
     var password  by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    val emailLooksValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
     var pwVisible by remember { mutableStateOf(false) }
     val scroll    = rememberScrollState()
     val context = LocalContext.current
@@ -158,11 +159,15 @@ fun SignupScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         index = 0
                     )
-                    Spacer(Modifier.height(4.dp))
-
-
-
-
+                    if (email.isNotBlank() && !emailLooksValid) {
+                        Text(
+                            text = "Enter a valid email address",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
 
                     PremiumInputField(
                         value = password, onValueChange = { password = it },
@@ -223,7 +228,7 @@ fun SignupScreen(
                         text = "Create Account  →",
                         isLoading = uiState.isLoading,
                         enabled =
-                            email.isNotBlank() &&
+                            emailLooksValid &&
                                     password.isNotBlank() &&
                                     confirmPassword.isNotBlank() &&
                                     password == confirmPassword,
