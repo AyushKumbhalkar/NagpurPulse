@@ -36,8 +36,12 @@ class AuthRepository @Inject constructor(
     ): Result<Unit> {
         return try {
             client.auth.signUpWith(Email) { this.email = email; this.password = password }
-            val userId = client.auth.currentUserOrNull()?.id
-                ?: return Result.failure(Exception("User creation failed"))
+            client.auth.currentUserOrNull()?.id
+                ?: return Result.failure(
+                    IllegalStateException(
+                        "Your account may have been created, but email confirmation is required before you can continue. Check your inbox, then sign in."
+                    )
+                )
             // The database trigger on auth.users already creates the profiles row.
             // Do not insert it again here: profiles.id is the primary key.
             registerFcmTokenForCurrentUser()
