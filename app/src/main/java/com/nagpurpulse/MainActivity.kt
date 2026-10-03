@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.first
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+private val pendingAuthRecovery = kotlinx.coroutines.flow.MutableStateFlow(false)
+
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
@@ -59,6 +61,9 @@ class MainActivity : FragmentActivity() {
 
         // Let supabase-kt parse and import auth/OTP callback sessions from deep links.
         SupabaseClientProvider.client.handleDeeplinks(intent)
+        if (intent?.data?.let { it.scheme == "nagpurpulse" && it.host == "auth" } == true) {
+            pendingAuthRecovery.value = true
+        }
 
         enableEdgeToEdge()
 
@@ -111,6 +116,21 @@ class MainActivity : FragmentActivity() {
                             LockScreen { authenticated = true }
                         } else {
                             val navController = rememberNavController()
+
+                            LaunchedEffect(navController, "auth-recovery-deeplink") {
+                                pendingAuthRecovery.collect { shouldOpenRecovery ->
+                                    if (shouldOpenRecovery) {
+                                        navController.currentBackStackEntryFlow.first {
+                                            it.destination.route != null &&
+                                                it.destination.route != Screen.Splash.route
+                                        }
+                                        navController.navigate(Screen.PasswordRecovery.route) {
+                                            launchSingleTop = true
+                                        }
+                                        pendingAuthRecovery.value = false
+                                    }
+                                }
+                            }
 
                             // ── Deep link collector ───────────────────────────
                             // Handles both cold-start (set in onCreate above)
@@ -181,6 +201,9 @@ class MainActivity : FragmentActivity() {
         setIntent(intent)
         // Process warm-start auth callbacks as well as notification deep links.
         SupabaseClientProvider.client.handleDeeplinks(intent)
+        if (intent.data?.let { it.scheme == "nagpurpulse" && it.host == "auth" } == true) {
+            pendingAuthRecovery.value = true
+        }
         intent.getStringExtra("comment_id")?.let {
             NotifDeepLink.pendingCommentId.value = it
         }
