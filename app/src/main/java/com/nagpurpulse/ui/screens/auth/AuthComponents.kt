@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,6 +73,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -233,7 +235,7 @@ fun CinematicBackground(isLogin: Boolean) {
 
 
 @Composable
-fun PremiumLogo(subtitle: String) {
+fun PremiumLogo(subtitle: String, compact: Boolean = false) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -275,7 +277,7 @@ fun PremiumLogo(subtitle: String) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(210.dp),
+                .height(if (compact) 132.dp else 210.dp),
             contentAlignment = Alignment.TopCenter
         ) {
 
@@ -353,7 +355,7 @@ fun PremiumLogo(subtitle: String) {
             )
 
             Column(
-                modifier = Modifier.padding(top = 40.dp),
+                modifier = Modifier.padding(top = if (compact) 18.dp else 40.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
@@ -595,41 +597,37 @@ fun PremiumInputField(
                 Box(modifier = Modifier.weight(1f)) {
 
 
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = onValueChange,
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
-
-                        placeholder = {
-                            Text(
-                                placeholder,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 14.sp
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                            BasicTextField(
+                                value = value,
+                                onValueChange = onValueChange,
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                visualTransformation = visualTransformation,
+                                keyboardOptions = keyboardOptions,
+                                cursorBrush = SolidColor(OrangePrimary)
                             )
-                        },
-                        trailingIcon = trailingIcon,
-                        visualTransformation = visualTransformation,
-                        keyboardOptions = keyboardOptions,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            disabledBorderColor = Color.Transparent,
-                            errorBorderColor = Color.Transparent,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            cursorColor = OrangePrimary,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                        ),
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    )
+                            if (value.isEmpty()) {
+                                Text(
+                                    text = placeholder,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        trailingIcon?.invoke()
+                    }
 
 
                 }
