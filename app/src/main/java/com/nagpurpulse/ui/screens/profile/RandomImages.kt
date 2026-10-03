@@ -1,69 +1,33 @@
-//java/com/nagpurpulse/ui/screens/profile/RandomImages.kt
-
 package com.nagpurpulse.ui.screens.profile
 
+/**
+ * Public avatars stored in the Supabase "Nagpu Pulse Avatars" bucket.
+ * Keep these URL paths in sync with the exact Storage bucket/folder names.
+ */
 object RandomImages {
+    private const val BASE_URL =
+        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/Nagpu%20Pulse%20Avatars"
 
-    val avatars = listOf(
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_1.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_2.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_3.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_4.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_5.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_6.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_7.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_8.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_9.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_10.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_11.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_12.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_13.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_14.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_15.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_16.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_17.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_18.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_19.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_20.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_21.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_22.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_23.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_24.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_25.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_26.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_27.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_28.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_29.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_30.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_31.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_32.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_33.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_34.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_35.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_36.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_37.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_38.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_39.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_40.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_41.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_42.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_43.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_44.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_45.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_46.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_47.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_48.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_49.png",
-        "https://eazkmfzegxmdkbowohiy.supabase.co/storage/v1/object/public/avatars/Avatar_boy_50.png",
+    val boysAvatars: List<String> = (1..50).map { index ->
+        "$BASE_URL/Boys_Avatar/Avatar_boy_$index.png"
+    }
 
-    )
+    val girlsAvatars: List<String> = (1..46).map { index ->
+        "$BASE_URL/Girls_Avatar/Avatar_girl_$index.png"
+    }
 
-    /*
-    val banners = listOf(
-        "https://picsum.photos/1200/400?random=1",
-        "https://picsum.photos/1200/400?random=2",
-        "https://picsum.photos/1200/400?random=3",
-        "https://picsum.photos/1200/400?random=4",
-        "https://picsum.photos/1200/400?random=5"
-    ) */
+    val allAvatars: List<String> = boysAvatars + girlsAvatars
+
+    /**
+     * Male and female users get their matching avatar set.
+     * Other/prefer-not-to-say and guest flows can choose from both sets.
+     */
+    fun forGender(gender: String?): List<String> = when (gender?.trim()?.lowercase()) {
+        "male", "man", "boy" -> boysAvatars
+        "female", "woman", "girl" -> girlsAvatars
+        else -> allAvatars
+    }
+
+    // Backwards-compatible list for existing random-avatar entry points.
+    val avatars: List<String> get() = allAvatars
 }
