@@ -14,7 +14,6 @@ import kotlinx.serialization.Serializable
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import com.nagpurpulse.data.model.Profile
-import com.nagpurpulse.data.model.CreateProfileRequest
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -37,13 +36,8 @@ class AuthRepository @Inject constructor(
             client.auth.signUpWith(Email) { this.email = email; this.password = password }
             val userId = client.auth.currentUserOrNull()?.id
                 ?: return Result.failure(Exception("User creation failed"))
-            client.postgrest["profiles"].insert(
-                CreateProfileRequest(
-                    id = userId,
-                    username = "",
-                    karma = 0
-                )
-            )
+            // The database trigger on auth.users already creates the profiles row.
+            // Do not insert it again here: profiles.id is the primary key.
             registerFcmTokenForCurrentUser()
             Result.success(Unit)
         } catch (e: Exception) {
