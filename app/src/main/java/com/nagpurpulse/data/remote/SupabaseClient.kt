@@ -35,6 +35,9 @@ object SupabaseClientProvider {
         install(Auth) {
             autoLoadFromStorage = true
             autoSaveToStorage = true
+            // Used by Supabase OTP/recovery callbacks on Android.
+            scheme = "nagpurpulse"
+            host = "auth"
         }
 
         install(Postgrest)
