@@ -318,7 +318,6 @@ class AuthRepository @Inject constructor(
                             "username" to username,
                             "display_name" to username,
                             "avatar_url" to avatarUrl,
-                            "gender" to gender,
                             "karma" to 0
                         )
                     )
