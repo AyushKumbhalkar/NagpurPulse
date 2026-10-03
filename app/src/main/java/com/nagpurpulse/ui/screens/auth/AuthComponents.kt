@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Shadow
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.MaterialTheme
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -799,7 +798,6 @@ fun GoogleSignInButton(
                 RoundedCornerShape(18.dp)
             )
             .clickable {
-                Log.e("GOOGLE_TEST", "RAW CLICK")
                 onClick()
             },
         horizontalArrangement = Arrangement.Center,
