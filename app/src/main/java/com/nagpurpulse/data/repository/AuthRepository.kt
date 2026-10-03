@@ -41,11 +41,6 @@ class AuthRepository @Inject constructor(
             registerFcmTokenForCurrentUser()
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e(
-                "SUPABASE_AUTH",
-                "Auth error: ${e.message}",
-                e
-            )
             Result.failure(e)
         }
     }
