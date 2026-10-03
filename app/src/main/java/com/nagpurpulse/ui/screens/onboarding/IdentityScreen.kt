@@ -465,12 +465,12 @@ fun OnboardingProgressStepper(
             val targetStepColor = if (isCompleted || isActive) OrangePrimary else MaterialTheme.colorScheme.outline
             val animatedStepColor by animateColorAsState(
                 targetValue = targetStepColor,
-                animationSpec = tween(durationMillis = 300),
+                animationSpec = tween(durationMillis = 220),
                 label = "onboardingStepColor"
             )
             val animatedLabelColor by animateColorAsState(
                 targetValue = if (isActive) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                animationSpec = tween(durationMillis = 300),
+                animationSpec = tween(durationMillis = 220),
                 label = "onboardingLabelColor"
             )
 
@@ -486,21 +486,12 @@ fun OnboardingProgressStepper(
                         .border(1.5.dp, animatedStepColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isCompleted) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = "Completed",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    } else {
-                        Text(
-                            "${index + 1}",
-                            color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
+                    Text(
+                        "${index + 1}",
+                        color = if (isActive || isCompleted) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                 }
 
                 Spacer(Modifier.height(4.dp))
@@ -517,16 +508,28 @@ fun OnboardingProgressStepper(
 
             // Connector line (not after last item)
             if (index < steps.size - 1) {
+                val targetProgress = if (index < currentStep) 1f else 0f
+                val connectorProgress by animateFloatAsState(
+                    targetValue = targetProgress,
+                    animationSpec = tween(durationMillis = 420),
+                    label = "onboardingConnectorProgress"
+                )
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(1.5.dp)
+                        .padding(horizontal = 3.dp)
                         .padding(bottom = 20.dp)
-                        .background(
-                            if (index < currentStep) animatedStepColor
-                            else MaterialTheme.colorScheme.outline.copy(0.4f)
-                        )
-                )
+                        .height(2.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(connectorProgress)
+                            .background(OrangePrimary)
+                    )
+                }
             }
         }
     }
