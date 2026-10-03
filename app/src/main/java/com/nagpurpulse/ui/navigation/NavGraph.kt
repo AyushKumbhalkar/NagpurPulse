@@ -176,6 +176,7 @@ fun NagpurPulseNavGraph(
     var selectedAvatar by rememberSaveable { mutableStateOf<String?>(null) }
     var isSavingProfile by remember { mutableStateOf(false) }
     var profileSaveError by rememberSaveable { mutableStateOf<String?>(null) }
+    var onboardingOriginRoute by rememberSaveable { mutableStateOf(Screen.Signup.route) }
     val onboardingScope = rememberCoroutineScope()
     var showLoginDialog by remember { mutableStateOf(false) }
 
@@ -214,6 +215,7 @@ fun NagpurPulseNavGraph(
                     selectedUsername = null
                     selectedAvatar = null
                     profileSaveError = null
+                    onboardingOriginRoute = Screen.Signup.route
                     authRepository.enterGuestMode()
                     navController.navigate(Screen.Signup.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
@@ -234,9 +236,8 @@ fun NagpurPulseNavGraph(
                     }
                 },
                 onGoogleNewUser = {
-                    navController.navigate(Screen.Identity.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
+                    onboardingOriginRoute = Screen.Login.route
+                    navController.navigate(Screen.Identity.route)
                 },
                 onNavigateToSignup = { navController.navigate(Screen.Signup.route) }
             )
@@ -248,9 +249,8 @@ fun NagpurPulseNavGraph(
             popEnterTransition = { tabEnter(this) }, popExitTransition = { tabExit(this) }) {
             SignupScreen(
                 onSignupSuccess = {
-                    navController.navigate(Screen.Identity.route) {
-                        popUpTo(Screen.Signup.route) { inclusive = true }
-                    }
+                    onboardingOriginRoute = Screen.Signup.route
+                    navController.navigate(Screen.Identity.route)
                 },
                 onNavigateToLogin = { navController.navigate(Screen.Login.route) },
                 onGuestContinue = {
@@ -258,6 +258,7 @@ fun NagpurPulseNavGraph(
                     selectedUsername = null
                     selectedAvatar = null
                     profileSaveError = null
+                    onboardingOriginRoute = Screen.Signup.route
                     authRepository.enterGuestMode()
                     navController.navigate(Screen.Identity.route)
                 },
@@ -335,7 +336,7 @@ fun NagpurPulseNavGraph(
                                 )
                                 isSavingProfile = false
                                 navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Signup.route) { inclusive = true }
+                                    popUpTo(onboardingOriginRoute) { inclusive = true }
                                 }
                                 return@launch
                             }
@@ -357,7 +358,7 @@ fun NagpurPulseNavGraph(
                                 onSuccess = {
                                     isSavingProfile = false
                                     navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Signup.route) { inclusive = true }
+                                        popUpTo(onboardingOriginRoute) { inclusive = true }
                                     }
                                 },
                                 onFailure = { error ->
