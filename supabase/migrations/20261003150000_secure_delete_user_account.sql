@@ -137,8 +137,17 @@ begin
             select id from public.posts where user_id = target_user_id
        );
 
-    delete from public.votes where user_id = target_user_id;
-    delete from public.saved_posts where user_id = target_user_id;
+    delete from public.votes
+    where user_id = target_user_id
+       or post_id in (
+            select id from public.posts where user_id = target_user_id
+       );
+
+    delete from public.saved_posts
+    where user_id = target_user_id
+       or post_id in (
+            select id from public.posts where user_id = target_user_id
+       );
     delete from public.notification_queue
     where post_id in (select id from public.posts where user_id = target_user_id);
 
