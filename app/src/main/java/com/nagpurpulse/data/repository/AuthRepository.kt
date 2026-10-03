@@ -22,6 +22,10 @@ import javax.inject.Inject
 
 enum class UsernameAvailability { AVAILABLE, TAKEN, UNABLE_TO_CHECK }
 
+class EmailConfirmationRequiredException : IllegalStateException(
+    "Your account was created. Check your email to confirm your address, then sign in."
+)
+
 class AuthRepository @Inject constructor(
     private val client: SupabaseClient
 ) {
