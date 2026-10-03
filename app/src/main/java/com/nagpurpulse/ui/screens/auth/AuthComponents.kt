@@ -604,9 +604,7 @@ fun PremiumInputField(
                         BasicTextField(
                             value = value,
                             onValueChange = onValueChange,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                
+                            modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             textStyle = TextStyle(
                                 color = MaterialTheme.colorScheme.onSurface,
