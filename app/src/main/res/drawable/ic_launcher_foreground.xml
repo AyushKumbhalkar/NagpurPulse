@@ -8,15 +8,13 @@
         android:fillColor="#FFFFFFFF"
         android:pathData="M25,76 L25,34 L34,34 L57,61 L57,34 L67,34 L67,76 L58,76 L35,49 L35,76 Z" />
     <path
-        android:fillColor="@android:color/transparent"
+        android:fillColor="#FFFFD9C9"
         android:pathData="M74,39 C75,31 81,25 88,23"
         android:strokeColor="#FFFFD9C9"
         android:strokeWidth="5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
-    <circle
+    <path
         android:fillColor="#FFFFD9C9"
-        android:cx="89"
-        android:cy="22"
-        android:radius="4" />
+        android:pathData="M89,18 C91.2,18 93,19.8 93,22 C93,24.2 91.2,26 89,26 C86.8,26 85,24.2 85,22 C85,19.8 86.8,18 89,18 Z" />
 </vector>
