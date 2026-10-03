@@ -86,14 +86,6 @@ class AccountProfileViewModel @Inject constructor(
             authRepository.getCurrentProfile().fold(
                 onSuccess = { p ->
 
-                    android.util.Log.d("PROFILE_LOAD", "avatar=${p.avatarUrl}")
-                    android.util.Log.d("PROFILE_LOAD", "banner=${p.coverUrl}")
-
-                    android.util.Log.d(
-                        "PROFILE_LOAD",
-                        "username=${p.username}, tagline=${p.tagline}, location=${p.location}"
-                    )
-
                     _s.value = _s.value.copy(
                         profile = p,
                         avatarUrl = p.avatarUrl,
@@ -210,10 +202,6 @@ class AccountProfileViewModel @Inject constructor(
                                 )
                             },
                             onFailure = {
-                                android.util.Log.e(
-                                    "AVATAR_UPLOAD",
-                                    it.message ?: "Update failed"
-                                )
 
                                 _s.value = _s.value.copy(
                                     isAvatarUploading = false
@@ -223,10 +211,6 @@ class AccountProfileViewModel @Inject constructor(
                     },
 
                     onFailure = {
-                        android.util.Log.e(
-                            "AVATAR_UPLOAD",
-                            it.message ?: "Unknown error"
-                        )
 
                         _s.value = _s.value.copy(
                             isAvatarUploading = false
@@ -235,7 +219,6 @@ class AccountProfileViewModel @Inject constructor(
                 )
 
             } catch (e: Exception) {
-                android.util.Log.e("AVATAR_UPLOAD", "Failed", e)
             }
         }
     }
@@ -275,24 +258,15 @@ class AccountProfileViewModel @Inject constructor(
                                     load()
                                 },
                                 onFailure = {
-                                    android.util.Log.e(
-                                        "BANNER_UPLOAD",
-                                        it.message ?: "Update failed"
-                                    )
                                 }
                             )
                         },
 
                         onFailure = {
-                            android.util.Log.e(
-                                "BANNER_UPLOAD",
-                                it.message ?: "Unknown error"
-                            )
                         }
                     )
 
             } catch (e: Exception) {
-                android.util.Log.e("BANNER_UPLOAD", "Failed", e)
             }
         }
     }
