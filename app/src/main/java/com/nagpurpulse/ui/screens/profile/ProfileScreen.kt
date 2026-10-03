@@ -80,6 +80,9 @@ class ProfileViewModel @Inject constructor(
     val guestAvatarUrl: String?
         get() = authRepository.guestAvatarUrl
 
+    val guestUsername: String?
+        get() = authRepository.guestUsername
+
     init {
         loadAll()
     }
@@ -165,6 +168,7 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     val guestAvatarUrl = viewModel.guestAvatarUrl
+    val guestUsername = viewModel.guestUsername
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -294,6 +298,7 @@ fun ProfileScreen(
                 ProfileHeader(
                     profile = uiState.profile,
                     guestAvatarUrl = guestAvatarUrl,
+                    guestUsername = guestUsername,
                     badges = uiState.badges,
                     postCount = uiState.posts.size,
                     savedCount = uiState.savedPosts.size,
@@ -466,6 +471,7 @@ fun ProfileScreen(
 private fun ProfileHeader(
     profile: Profile?,
     guestAvatarUrl: String?,
+    guestUsername: String?,
     badges: List<Badge>,
     postCount: Int,
     savedCount: Int,
@@ -475,6 +481,7 @@ private fun ProfileHeader(
         profile?.displayName
             ?.takeIf { it.isNotBlank() }
             ?: profile?.username
+            ?: guestUsername?.takeIf { it.isNotBlank() }
             ?: "NagpurUser"
 
     android.util.Log.d(
