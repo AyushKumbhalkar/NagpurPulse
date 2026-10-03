@@ -220,7 +220,7 @@ fun UsernameScreen(
                     .padding(horizontal = 24.dp)
             )
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(8.dp))
 
             // ── Title ─────────────────────────────────────────────────
             AnimatedVisibility(
