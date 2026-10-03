@@ -213,8 +213,8 @@ fun UsernameScreen(
 
             // ── Progress stepper (2 steps shown per screenshot) ───────
             OnboardingProgressStepper(
-                steps = listOf("Create Account", "Choose Username"),
-                currentStep = 1,
+                steps = listOf("Create Account", "Your Identity", "Choose Username", "Profile Picture"),
+                currentStep = 2,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 60.dp)
