@@ -260,10 +260,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.Identity.route,
-            enterTransition = { slideEnter(this) },
-            exitTransition = { slideExit(this) },
-            popEnterTransition = { slidePopEnter(this) },
-            popExitTransition = { slidePopExit(this) }) {
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }) {
             IdentityScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { gender ->
@@ -275,10 +275,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.Username.route,
-            enterTransition = { slideEnter(this) },
-            exitTransition = { slideExit(this) },
-            popEnterTransition = { slidePopEnter(this) },
-            popExitTransition = { slidePopExit(this) }) {
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }) {
             UsernameScreen(
                 onBack = { navController.popBackStack() },
                 onNext = { username ->
@@ -290,10 +290,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.ProfilePicture.route,
-            enterTransition = { slideEnter(this) },
-            exitTransition = { slideExit(this) },
-            popEnterTransition = { slidePopEnter(this) },
-            popExitTransition = { slidePopExit(this) }) {
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }) {
             ProfilePictureScreen(
                 onBack = { navController.popBackStack() },
                 isSaving = isSavingProfile,
