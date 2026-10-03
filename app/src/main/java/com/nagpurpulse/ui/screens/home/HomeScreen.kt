@@ -678,12 +678,16 @@ fun HomeScreen(
                     val tabs = listOf("top", "new", "hot")
                     val sortSnapshot = uiState.sortBy.lowercase()
                     val currentIndex = tabs.indexOf(sortSnapshot)
-                    dragPreviewTab = if (abs(horizontalDistance) > 35f && currentIndex >= 0) {
+                    dragPreviewTab = if (abs(horizontalDistance) > 12f && currentIndex >= 0) {
                         when {
                             sortSnapshot == "top" -> "new"
-                            sortSnapshot == "new" -> "hot"
-                            horizontalDistance < 0f -> tabs[(currentIndex + 1) % tabs.size]
-                            else -> tabs[(currentIndex - 1 + tabs.size) % tabs.size]
+                            // From New: swipe right previews Hot; swipe left previews Top.
+                            sortSnapshot == "new" && horizontalDistance > 0f -> "hot"
+                            sortSnapshot == "new" && horizontalDistance < 0f -> "top"
+                            // From Hot: swipe right goes to New; swipe left wraps to Top.
+                            sortSnapshot == "hot" && horizontalDistance > 0f -> "new"
+                            sortSnapshot == "hot" && horizontalDistance < 0f -> "top"
+                            else -> null
                         }
                     } else null
                     Log.d("HomeSortTrace", "GESTURE DRAG dx=$dragAmount totalDx=$horizontalDistance pointerX=${change.position.x} previousX=${change.previousPosition.x} sortSnapshot=${uiState.sortBy} consumed=${change.isConsumed}")
@@ -700,14 +704,15 @@ fun HomeScreen(
                     Log.d("HomeSortTrace", "GESTURE END totalDx=$horizontalDistance direction=$direction sortSnapshot=$sortSnapshot index=$currentIndex tabs=$tabs threshold=80")
                     if (abs(horizontalDistance) > 80f) {
                         if (currentIndex >= 0) {
-                            // From Top, either swipe direction opens New.
-                            // From New, either swipe direction opens Hot.
-                            // From Hot, retain normal bidirectional navigation.
+                            // Top always leads to New. From New, direction matters:
+                            // swipe right -> Hot; swipe left -> Top.
+                            // From Hot, swipe right -> New; swipe left wraps to Top.
                             val targetIndex = when {
                                 sortSnapshot == "top" -> tabs.indexOf("new")
-                                sortSnapshot == "new" -> tabs.indexOf("hot")
-                                horizontalDistance < 0f -> (currentIndex + 1) % tabs.size
-                                horizontalDistance > 0f -> (currentIndex - 1 + tabs.size) % tabs.size
+                                sortSnapshot == "new" && horizontalDistance > 0f -> tabs.indexOf("hot")
+                                sortSnapshot == "new" && horizontalDistance < 0f -> tabs.indexOf("top")
+                                sortSnapshot == "hot" && horizontalDistance > 0f -> tabs.indexOf("new")
+                                sortSnapshot == "hot" && horizontalDistance < 0f -> tabs.indexOf("top")
                                 else -> currentIndex
                             }
                             val target = tabs[targetIndex]
