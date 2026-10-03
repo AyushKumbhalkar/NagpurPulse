@@ -174,6 +174,8 @@ fun NagpurPulseNavGraph(
     var selectedUsername by remember { mutableStateOf<String?>(null) }
     var selectedAvatar by remember { mutableStateOf<String?>(null) }
     var isSavingProfile by remember { mutableStateOf(false) }
+    var profileSaveError by remember { mutableStateOf<String?>(null) }
+    val onboardingScope = rememberCoroutineScope()
     var showLoginDialog by remember { mutableStateOf(false) }
 
     NavHost(
@@ -207,8 +209,12 @@ fun NagpurPulseNavGraph(
                 onGetStarted = { navController.navigate(Screen.Signup.route) },
                 onLogin = { navController.navigate(Screen.Login.route) },
                 onGuestMode = {
+                    selectedGender = null
+                    selectedUsername = null
+                    selectedAvatar = null
+                    profileSaveError = null
                     authRepository.enterGuestMode()
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Signup.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
                 }
@@ -247,8 +253,12 @@ fun NagpurPulseNavGraph(
                 },
                 onNavigateToLogin = { navController.navigate(Screen.Login.route) },
                 onGuestContinue = {
-                    android.util.Log.d("GUEST_FLOW", "SIGNUP GUEST CLICKED")
-                    navController.navigate(Screen.ProfilePicture.route)
+                    selectedGender = null
+                    selectedUsername = null
+                    selectedAvatar = null
+                    profileSaveError = null
+                    authRepository.enterGuestMode()
+                    navController.navigate(Screen.Identity.route)
                 },
                 onExistingGoogleUser = {
                     navController.navigate(Screen.Home.route) {
@@ -265,6 +275,7 @@ fun NagpurPulseNavGraph(
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }) {
             IdentityScreen(
+                initialGender = selectedGender,
                 onBack = { navController.popBackStack() },
                 onContinue = { gender ->
                     selectedGender = gender
@@ -280,6 +291,8 @@ fun NagpurPulseNavGraph(
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None }) {
             UsernameScreen(
+                initialUsername = selectedUsername,
+                checkUsernameAvailable = { candidate -> authRepository.isUsernameAvailable(candidate) },
                 onBack = { navController.popBackStack() },
                 onNext = { username ->
                     selectedUsername = username
@@ -297,49 +310,70 @@ fun NagpurPulseNavGraph(
             ProfilePictureScreen(
                 onBack = { navController.popBackStack() },
                 isSaving = isSavingProfile,
+                gender = selectedGender,
+                saveError = profileSaveError,
                 onContinue = { avatarUrl ->
+                    if (isSavingProfile) return@ProfilePictureScreen
+                    val username = selectedUsername?.trim()
+                    val gender = selectedGender
+                    if (gender.isNullOrBlank() || username.isNullOrBlank()) {
+                        profileSaveError = "Your identity or username is missing. Please go back and complete the previous steps."
+                        return@ProfilePictureScreen
+                    }
+
                     isSavingProfile = true
+                    profileSaveError = null
                     selectedAvatar = avatarUrl
-                    android.util.Log.d(
-                        "ONBOARDING",
-                        "Gender=$selectedGender Username=$selectedUsername Avatar=$selectedAvatar"
-                    )
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                        val userId = authRepository.currentUserId
-                        if (userId == null) {
-                            authRepository.enterGuestMode(avatarUrl = avatarUrl)
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    onboardingScope.launch {
+                        try {
+                            if (authRepository.isGuest) {
+                                authRepository.enterGuestMode(
+                                    avatarUrl = avatarUrl,
+                                    username = username,
+                                    gender = gender
+                                )
+                                isSavingProfile = false
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Signup.route) { inclusive = true }
+                                }
+                                return@launch
                             }
-                            return@launch
-                        }
-                        if (!selectedUsername.isNullOrBlank()) {
-                            // Supabase's auth.users trigger creates the profiles row.
-                            // Update that row below; do not race with a second INSERT.
-                            android.util.Log.d("ONBOARDING", "About to save profile")
+
+                            val userId = authRepository.currentUserId
+                            if (userId == null) {
+                                profileSaveError = "Your session has expired. Please sign in again."
+                                isSavingProfile = false
+                                return@launch
+                            }
+
                             val result = authRepository.updateFullProfile(
                                 userId = userId,
-                                displayName = selectedUsername,
-                                avatarUrl = selectedAvatar,
-                                gender = selectedGender
+                                username = username,
+                                displayName = username,
+                                avatarUrl = avatarUrl,
+                                gender = gender
                             )
-                            android.util.Log.d("ONBOARDING", "updateFullProfile returned")
                             result.fold(
                                 onSuccess = {
-                                    android.util.Log.d("ONBOARDING", "PROFILE SAVED")
+                                    isSavingProfile = false
                                     navController.navigate(Screen.Home.route) {
                                         popUpTo(Screen.Signup.route) { inclusive = true }
                                     }
                                 },
-                                onFailure = {
+                                onFailure = { error ->
+                                    profileSaveError = if (error.message?.contains("username", ignoreCase = true) == true) {
+                                        "That username is already taken. Go back and choose another."
+                                    } else {
+                                        "We couldn't save your profile. Check your connection and try again."
+                                    }
                                     isSavingProfile = false
-                                    android.util.Log.e(
-                                        "ONBOARDING",
-                                        "SAVE FAILED: ${it.message}",
-                                        it
-                                    )
+                                    android.util.Log.e("ONBOARDING", "Profile save failed", error)
                                 }
                             )
+                        } catch (error: Exception) {
+                            profileSaveError = "We couldn't save your profile. Check your connection and try again."
+                            isSavingProfile = false
+                            android.util.Log.e("ONBOARDING", "Unexpected profile save failure", error)
                         }
                     }
                 }
