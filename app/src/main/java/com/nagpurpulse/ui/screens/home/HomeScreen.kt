@@ -7,6 +7,7 @@ package com.nagpurpulse.ui.screens.home
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.content.Context
+import android.util.Log
 import com.nagpurpulse.data.repository.AdminRepository
 import com.nagpurpulse.data.repository.UserPreferencesRepository
 import com.nagpurpulse.ui.theme.ThemeManager
@@ -604,22 +605,34 @@ fun HomeScreen(
             detectHorizontalDragGestures(
                 onHorizontalDrag = { _, dragAmount ->
                     horizontalDistance += dragAmount
+                    Log.d("HomeFeedSwipe", "drag amount=$dragAmount total=$horizontalDistance sort=${uiState.sortBy}")
                 },
                 onDragEnd = {
+                    val tabs = listOf("top", "new", "hot")
+                    val currentIndex = tabs.indexOf(uiState.sortBy.lowercase())
+                        .takeIf { it >= 0 } ?: 0
+                    Log.d("HomeFeedSwipe", "drag ended total=$horizontalDistance current=${uiState.sortBy}")
                     if (abs(horizontalDistance) > 80f) {
-                        val tabs = listOf("top", "new", "hot")
-                        val currentIndex = tabs.indexOf(uiState.sortBy.lowercase())
-                            .takeIf { it >= 0 } ?: 0
                         when {
-                            horizontalDistance < 0f && currentIndex < tabs.lastIndex ->
+                            horizontalDistance < 0f && currentIndex < tabs.lastIndex -> {
+                                Log.d("HomeFeedSwipe", "switching to ${tabs[currentIndex + 1]}")
                                 viewModel.setSortBy(tabs[currentIndex + 1])
-                            horizontalDistance > 0f && currentIndex > 0 ->
+                            }
+                            horizontalDistance > 0f && currentIndex > 0 -> {
+                                Log.d("HomeFeedSwipe", "switching to ${tabs[currentIndex - 1]}")
                                 viewModel.setSortBy(tabs[currentIndex - 1])
+                            }
+                            else -> Log.d("HomeFeedSwipe", "swipe reached boundary; no tab change")
                         }
+                    } else {
+                        Log.d("HomeFeedSwipe", "ignored: swipe below 80px threshold")
                     }
                     horizontalDistance = 0f
                 },
-                onDragCancel = { horizontalDistance = 0f }
+                onDragCancel = {
+                    Log.d("HomeFeedSwipe", "drag cancelled total=$horizontalDistance")
+                    horizontalDistance = 0f
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
