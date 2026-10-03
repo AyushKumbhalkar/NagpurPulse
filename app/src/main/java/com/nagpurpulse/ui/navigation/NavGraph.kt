@@ -14,6 +14,7 @@ import com.nagpurpulse.ui.screens.settings.DisplayDensityScreen
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -170,11 +171,11 @@ fun NagpurPulseNavGraph(
     authRepository: AuthRepository
 ) {
 
-    var selectedGender by remember { mutableStateOf<String?>(null) }
-    var selectedUsername by remember { mutableStateOf<String?>(null) }
-    var selectedAvatar by remember { mutableStateOf<String?>(null) }
-    var isSavingProfile by remember { mutableStateOf(false) }
-    var profileSaveError by remember { mutableStateOf<String?>(null) }
+    var selectedGender by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedUsername by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedAvatar by rememberSaveable { mutableStateOf<String?>(null) }
+    var isSavingProfile by rememberSaveable { mutableStateOf(false) }
+    var profileSaveError by rememberSaveable { mutableStateOf<String?>(null) }
     val onboardingScope = rememberCoroutineScope()
     var showLoginDialog by remember { mutableStateOf(false) }
 
