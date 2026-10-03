@@ -164,7 +164,7 @@ class AuthRepository @Inject constructor(
             val result = client.postgrest["profiles"]
                 .select {
                     filter {
-                        eq("username", username)
+                        ilike("username", username.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_"))
                     }
                 }
                 .decodeList<Profile>()
