@@ -85,8 +85,8 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut(): Result<Unit> {
         return try {
-            // Remove this installation's token mapping before signing out so
-            // the previous account cannot keep receiving pushes on this device.
+            // This schema currently stores one token per user, so this removes
+            // that user's registered token. Multi-device support needs a schema change.
             removeCurrentDeviceToken()
             client.auth.signOut()
             Result.success(Unit)
@@ -108,7 +108,7 @@ class AuthRepository @Inject constructor(
             }
         } catch (e: Exception) {
             // Push registration must never turn a successful login into a failure.
-            android.util.Log.w("FCM_DEBUG", "Could not register device token after authentication", e)
+            android.util.Log.w("FCM_DEBUG", "Could not register device token after authentication")
         }
     }
 
@@ -120,7 +120,7 @@ class AuthRepository @Inject constructor(
             }
         } catch (e: Exception) {
             // Continue sign-out even if the device-token cleanup is temporarily unavailable.
-            android.util.Log.w("FCM_DEBUG", "Could not remove device token during sign-out", e)
+            android.util.Log.w("FCM_DEBUG", "Could not remove device token during sign-out")
         }
     }
 
