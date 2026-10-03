@@ -92,8 +92,7 @@ fun IdentityScreen(
     onContinue: (String) -> Unit
 ) {
     var selectedGender by remember { mutableStateOf<String?>(null) }
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(80); visible = true }
+    var visible by remember { mutableStateOf(true) }
 
     val isDark = LocalIsDarkTheme.current
     val bgColor = if (isDark) BackgroundDark else BackgroundLight
