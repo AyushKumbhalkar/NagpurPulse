@@ -302,14 +302,19 @@ fun SettingsScreen(
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(profile?.username ?: "User", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Box(Modifier.size(16.dp).clip(CircleShape).background(OrangePrimary), Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(10.dp)
-                                    )
+                                if (profile?.isVerified == true) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Box(
+                                        Modifier.size(16.dp).clip(CircleShape).background(OrangePrimary),
+                                        Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = "Verified",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(10.dp)
+                                        )
+                                    }
                                 }
                             }
                             Text("Incognito User", color = SecondaryText, fontSize = 12.sp)
