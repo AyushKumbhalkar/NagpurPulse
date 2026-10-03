@@ -118,13 +118,14 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
 
             // ── Logo ────────────────────────────────────────────────────
-            PremiumLogo("Welcome back to Nagpur", compact = true)
+            PremiumLogo("Welcome back to Nagpur")
 
           //  PremiumLogo(" ")
             Spacer(Modifier.height(8.dp))
@@ -167,7 +168,7 @@ fun LoginScreen(
                             OrangePrimary.copy(0.30f),
                             RoundedCornerShape(24.dp)
                         )
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .padding(DensityManager.cardPadding.dp)
                 ) {
                     // Email
                     PremiumInputField(
@@ -261,7 +262,7 @@ fun LoginScreen(
                         delayMs = 420
                     )
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     // Divider
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
