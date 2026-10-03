@@ -584,6 +584,7 @@ fun HomeScreen(
     val swipeRefreshState = rememberSwipeRefreshState(uiState.isRefreshing)
     val listState = rememberLazyListState()
     var sortExpanded by remember { mutableStateOf(false) }
+    var dragPreviewTab by remember { mutableStateOf<String?>(null) }
     var selectedCategory by remember { mutableStateOf("All") }
     var headerVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
@@ -674,6 +675,17 @@ fun HomeScreen(
                 },
                 onHorizontalDrag = { change, dragAmount ->
                     horizontalDistance += dragAmount
+                    val tabs = listOf("top", "new", "hot")
+                    val sortSnapshot = uiState.sortBy.lowercase()
+                    val currentIndex = tabs.indexOf(sortSnapshot)
+                    dragPreviewTab = if (abs(horizontalDistance) > 35f && currentIndex >= 0) {
+                        when {
+                            sortSnapshot == "top" -> "new"
+                            sortSnapshot == "new" -> "hot"
+                            horizontalDistance < 0f -> tabs[(currentIndex + 1) % tabs.size]
+                            else -> tabs[(currentIndex - 1 + tabs.size) % tabs.size]
+                        }
+                    } else null
                     Log.d("HomeSortTrace", "GESTURE DRAG dx=$dragAmount totalDx=$horizontalDistance pointerX=${change.position.x} previousX=${change.previousPosition.x} sortSnapshot=${uiState.sortBy} consumed=${change.isConsumed}")
                 },
                 onDragEnd = {
@@ -713,10 +725,12 @@ fun HomeScreen(
                         Log.d("HomeSortTrace", "GESTURE IGNORED below threshold absDx=${abs(horizontalDistance)}")
                     }
                     horizontalDistance = 0f
+                    dragPreviewTab = null
                 },
                 onDragCancel = {
                     Log.w("HomeSortTrace", "GESTURE CANCEL totalDx=$horizontalDistance sortSnapshot=${uiState.sortBy}")
                     horizontalDistance = 0f
+                    dragPreviewTab = null
                 }
             )
         },
@@ -1006,6 +1020,7 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
+        Box(Modifier.fillMaxSize()) {
         SwipeRefresh(
             state = swipeRefreshState,
             onRefresh = { viewModel.loadPosts(refresh = true) },
@@ -1131,6 +1146,32 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        AnimatedVisibility(
+            visible = dragPreviewTab != null,
+            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.88f, animationSpec = tween(180)),
+            exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.92f, animationSpec = tween(120)),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+                    .border(1.dp, OrangePrimary.copy(alpha = 0.55f), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(18.dp))
+                Text(
+                    text = "Release to ${dragPreviewTab?.replaceFirstChar { it.uppercase() } ?: ""}",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+        }
         }
     }
 
