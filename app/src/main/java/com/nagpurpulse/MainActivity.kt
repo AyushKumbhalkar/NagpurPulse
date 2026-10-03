@@ -18,7 +18,6 @@ import com.nagpurpulse.data.remote.SupabaseClientProvider
 import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.data.repository.UserPreferencesRepository
 import com.nagpurpulse.notifications.NotifDeepLink
-import com.nagpurpulse.notifications.NotifPrefsHelper
 import com.nagpurpulse.ui.navigation.NagpurPulseNavGraph
 import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.preferences.DensityManager
@@ -35,6 +34,25 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 private val pendingAuthRecovery = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+private fun isPasswordRecoveryCallback(intent: Intent?): Boolean {
+    val uri = intent?.data ?: return false
+    if (uri.scheme != "nagpurpulse" || uri.host != "auth") return false
+
+    // Supabase callback parameters may be in the query or fragment.
+    val parameters = listOfNotNull(uri.query, uri.fragment)
+        .flatMap { it.split('&') }
+        .mapNotNull { part ->
+            val separator = part.indexOf('=')
+            if (separator <= 0) null
+            else part.substring(0, separator) to part.substring(separator + 1)
+        }
+
+    return parameters.any { (key, value) ->
+        key.equals("type", ignoreCase = true) &&
+            value.equals("recovery", ignoreCase = true)
+    }
+}
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
@@ -61,7 +79,7 @@ class MainActivity : FragmentActivity() {
 
         // Let supabase-kt parse and import auth/OTP callback sessions from deep links.
         SupabaseClientProvider.client.handleDeeplinks(intent)
-        if (intent?.data?.let { it.scheme == "nagpurpulse" && it.host == "auth" } == true) {
+        if (isPasswordRecoveryCallback(intent)) {
             pendingAuthRecovery.value = true
         }
 
@@ -201,7 +219,7 @@ class MainActivity : FragmentActivity() {
         setIntent(intent)
         // Process warm-start auth callbacks as well as notification deep links.
         SupabaseClientProvider.client.handleDeeplinks(intent)
-        if (intent.data?.let { it.scheme == "nagpurpulse" && it.host == "auth" } == true) {
+        if (isPasswordRecoveryCallback(intent)) {
             pendingAuthRecovery.value = true
         }
         intent.getStringExtra("comment_id")?.let {
