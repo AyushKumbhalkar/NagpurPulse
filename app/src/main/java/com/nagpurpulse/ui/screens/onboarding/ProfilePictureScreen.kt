@@ -50,17 +50,20 @@ import kotlin.random.Random
 fun ProfilePictureScreen(
     onBack: () -> Unit,
     isSaving: Boolean,
+    gender: String? = null,
     onContinue: (String) -> Unit
 ) {
-    var currentAvatarIndex by remember {
-        mutableStateOf(Random.nextInt(RandomImages.avatars.size))
+    // Rebuild the available set when the selected gender changes.
+    val availableAvatars = remember(gender) { RandomImages.forGender(gender) }
+    var currentAvatarIndex by remember(gender) {
+        mutableStateOf(Random.nextInt(availableAvatars.size))
     }
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(80); visible = true }
 
     val isDark = LocalIsDarkTheme.current
     val bgColor = if (isDark) BackgroundDark else BackgroundLight
-    val currentAvatar = RandomImages.avatars[currentAvatarIndex]
+    val currentAvatar = availableAvatars[currentAvatarIndex]
 
     Box(
         modifier = Modifier
@@ -239,7 +242,7 @@ fun ProfilePictureScreen(
                             var newIndex: Int
 
                             do {
-                                newIndex = Random.nextInt(RandomImages.avatars.size)
+                                newIndex = Random.nextInt(availableAvatars.size)
                             } while (newIndex == currentAvatarIndex)
 
                             currentAvatarIndex = newIndex
