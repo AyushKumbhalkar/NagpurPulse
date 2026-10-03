@@ -73,9 +73,8 @@ fun ProfilePictureScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ){
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             // ── Top bar ──────────────────────────────────────────────
             Row(
                 modifier = Modifier
