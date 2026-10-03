@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { JWT } from "npm:google-auth-library@9";
 
-type DeviceToken = { user_id: string; fcm_token: string };
+type DeviceToken = { id: string; user_id: string; fcm_token: string };
 type Preferences = Record<string, unknown> & { user_id: string };
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -172,7 +172,7 @@ Deno.serve(async (req: Request) => {
     let failed = 0;
     let scanned = 0;
     let eligible = 0;
-    let lastUserId: string | null = null;
+    let lastId: string | null = null;
     const pageSize = 400;
 
     // Keyset pagination avoids PostgREST's default 1,000-row cap and avoids
@@ -180,16 +180,16 @@ Deno.serve(async (req: Request) => {
     for (;;) {
       let query = supabase
         .from("device_tokens")
-        .select("user_id,fcm_token")
-        .order("user_id", { ascending: true })
+        .select("id,user_id,fcm_token")
+        .order("id", { ascending: true })
         .limit(pageSize);
 
       if (mode === "single") {
         query = query.eq("user_id", userId);
-      } else {
-        if (excludeUserId) query = query.neq("user_id", excludeUserId);
-        if (lastUserId) query = query.gt("user_id", lastUserId);
+      } else if (excludeUserId) {
+        query = query.neq("user_id", excludeUserId);
       }
+      if (lastId) query = query.gt("id", lastId);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -197,7 +197,7 @@ Deno.serve(async (req: Request) => {
       if (recipients.length === 0) break;
 
       scanned += recipients.length;
-      lastUserId = recipients[recipients.length - 1].user_id;
+      lastId = recipients[recipients.length - 1].id;
       const result = await deliverBatch(
         supabase, recipients, title, body, postId, commentId, conversationId, notificationId, type, accessToken, projectId,
       );
@@ -205,7 +205,7 @@ Deno.serve(async (req: Request) => {
       failed += result.failed;
       eligible += result.eligible;
 
-      if (mode === "single" || recipients.length < pageSize) break;
+      if (recipients.length < pageSize) break;
     }
 
     return jsonResponse({ sent, failed, scanned, eligible, mode });
