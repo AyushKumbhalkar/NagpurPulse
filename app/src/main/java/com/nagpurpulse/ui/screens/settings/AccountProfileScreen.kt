@@ -304,7 +304,7 @@ class AccountProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
 
-            val url = RandomImages.avatars.random()
+            val url = RandomImages.forGender(_s.value.profile?.gender).random()
 
             authRepository.updateFullProfile(
                 userId = uid,
@@ -742,7 +742,7 @@ fun AccountProfileScreen(
                             )
                         },
                         onRandom = {
-                            pendingAvatarUrl = RandomImages.avatars.random()
+                            pendingAvatarUrl = RandomImages.forGender(s.profile?.gender).random()
                         },
                         onRemove = {
                             pendingAvatarUrl = ""
