@@ -314,14 +314,8 @@ fun NagpurPulseNavGraph(
                             return@launch
                         }
                         if (!selectedUsername.isNullOrBlank()) {
-                            android.util.Log.e("AYUSH_TEST", "BEFORE createProfileIfMissing")
-                            authRepository.createProfileIfMissing(
-                                userId = userId,
-                                username = selectedUsername ?: "NagpurUser",
-                                avatarUrl = selectedAvatar,
-                                gender = selectedGender
-                            )
-                            android.util.Log.e("AYUSH_TEST", "AFTER createProfileIfMissing")
+                            // Supabase's auth.users trigger creates the profiles row.
+                            // Update that row below; do not race with a second INSERT.
                             android.util.Log.d("ONBOARDING", "About to save profile")
                             val result = authRepository.updateFullProfile(
                                 userId = userId,
