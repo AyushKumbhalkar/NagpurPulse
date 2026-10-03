@@ -20,6 +20,8 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import javax.inject.Inject
 
+enum class UsernameAvailability { AVAILABLE, TAKEN, UNABLE_TO_CHECK }
+
 class AuthRepository @Inject constructor(
     private val client: SupabaseClient
 ) {
@@ -136,10 +138,8 @@ class AuthRepository @Inject constructor(
 
     suspend fun isUsernameAvailable(
         username: String
-    ): Boolean {
-
+    ): UsernameAvailability {
         return try {
-
             val result = client.postgrest["profiles"]
                 .select {
                     filter {
@@ -149,11 +149,13 @@ class AuthRepository @Inject constructor(
                 .decodeList<Profile>()
 
             val signedInUserId = currentUserId
-            result.none { profile -> profile.id != signedInUserId }
-
-        } catch (e: Exception) {
-
-            false
+            if (result.none { profile -> profile.id != signedInUserId }) {
+                UsernameAvailability.AVAILABLE
+            } else {
+                UsernameAvailability.TAKEN
+            }
+        } catch (_: Exception) {
+            UsernameAvailability.UNABLE_TO_CHECK
         }
     }
 
