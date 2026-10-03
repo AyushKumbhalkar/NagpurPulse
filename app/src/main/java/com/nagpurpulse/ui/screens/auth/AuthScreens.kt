@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nagpurpulse.data.repository.AuthRepository
+import com.nagpurpulse.data.repository.EmailConfirmationRequiredException
 import com.nagpurpulse.ui.theme.OrangePrimary
 import com.nagpurpulse.ui.theme.TextPrimary
 import com.nagpurpulse.ui.theme.TextSecondary
@@ -21,7 +22,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSuccess: Boolean = false,
-    val forgotPasswordSent: Boolean = false
+    val forgotPasswordSent: Boolean = false,
+    val infoMessage: String? = null
 )
 
 
@@ -49,7 +51,13 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
-                onFailure = { e -> _uiState.value = AuthUiState(error = e.message ?: "Signup failed") }
+                onFailure = { e ->
+                    _uiState.value = if (e is EmailConfirmationRequiredException) {
+                        AuthUiState(infoMessage = e.message)
+                    } else {
+                        AuthUiState(error = e.message ?: "Signup failed")
+                    }
+                }
             )
         }
     }
