@@ -217,7 +217,10 @@ class AuthRepository @Inject constructor(
     // Password reset — triggers Supabase email
     suspend fun sendPasswordReset(email: String): Result<Unit> {
         return try {
-            client.auth.resetPasswordForEmail(email)
+            client.auth.resetPasswordForEmail(
+                email = email,
+                redirectUrl = "nagpurpulse://auth"
+            )
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
