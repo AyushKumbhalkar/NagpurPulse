@@ -148,8 +148,7 @@ fun UsernameScreen(
     onNext: (String) -> Unit
 ) {
     var username by remember { mutableStateOf(generateNagpurUsername()) }
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(80); visible = true }
+    var visible by remember { mutableStateOf(true) }
 
     val isCompactWidth = LocalConfiguration.current.screenWidthDp < 360
     val isDark = LocalIsDarkTheme.current
