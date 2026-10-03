@@ -57,11 +57,6 @@ class AuthRepository @Inject constructor(
             registerFcmTokenForCurrentUser()
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e(
-                "SUPABASE_AUTH",
-                "Auth error: ${e.message}",
-                e
-            )
             Result.failure(e)
         }
     }
@@ -81,12 +76,6 @@ class AuthRepository @Inject constructor(
             Result.success(Unit)
 
         } catch (e: Exception) {
-
-            android.util.Log.e(
-                "GOOGLE_LOGIN",
-                "Supabase Google login failed",
-                e
-            )
 
             Result.failure(e)
         }
@@ -141,11 +130,6 @@ class AuthRepository @Inject constructor(
                 .decodeSingle<Profile>()
             Result.success(profile)
         } catch (e: Exception) {
-            android.util.Log.e(
-                "SUPABASE_AUTH",
-                "Auth error: ${e.message}",
-                e
-            )
             Result.failure(e)
         }
     }
