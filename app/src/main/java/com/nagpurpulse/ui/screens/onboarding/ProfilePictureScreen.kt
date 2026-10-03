@@ -129,7 +129,7 @@ fun ProfilePictureScreen(
                     .padding(horizontal = 24.dp)
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             // ── Title ─────────────────────────────────────────────────
             AnimatedVisibility(
