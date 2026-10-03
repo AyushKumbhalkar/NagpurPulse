@@ -41,8 +41,6 @@ import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.*
 import kotlinx.coroutines.delay
 
-import kotlin.random.Random
-
 // ── Placeholder avatar list ───────────────────────────────────────────────────
 
 
