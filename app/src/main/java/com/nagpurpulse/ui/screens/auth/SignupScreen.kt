@@ -99,12 +99,13 @@ fun SignupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            PremiumLogo("Join Nagpur's best community", compact = true)
-            Spacer(Modifier.height(5.dp))
+            PremiumLogo("Join Nagpur's best community")
+            Spacer(Modifier.height(8.dp))
 
             // ── Form card ───────────────────────────────────────────────
             AnimatedVisibility(
@@ -133,7 +134,7 @@ fun SignupScreen(
                             OrangePrimary.copy(0.30f),
                             RoundedCornerShape(24.dp)
                         )
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .padding(DensityManager.cardPadding.dp)
                 ) {
                     PremiumInputField(
                         value = email, onValueChange = { email = it },
@@ -168,7 +169,7 @@ fun SignupScreen(
                         index = 2
                     )
 
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(4.dp))
 
 
                     PremiumInputField(
@@ -315,7 +316,7 @@ fun SignupScreen(
                 }
             }
 
-            Spacer(Modifier.height(1.dp))
+            Spacer(Modifier.height(4.dp))
 
             // ── Trust badges ────────────────────────────────────────────
             var trustVisible by remember { mutableStateOf(false) }
