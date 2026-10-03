@@ -290,7 +290,11 @@ fun OnboardingScreen(
                                 .border(1.5.dp, OrangePrimary.copy(alpha = 0.3f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("∿", color = OrangePrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Image(
+                                painter = painterResource(id = R.drawable.nagpurpulse_app_icon_transparent),
+                                contentDescription = "NagpurPulse logo",
+                                modifier = Modifier.size(38.dp)
+                            )
                         }
                         Spacer(Modifier.height(10.dp))
                         
