@@ -522,27 +522,11 @@ fun PremiumInputField(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = bgAlpha)
-                )
+                .background(Color(0x2233AAFF))
+                // TEMP DIAGNOSTIC: MAGENTA = outer input container.
                 .border(
-                    width = if (focused) 1.6.dp else 1.2.dp,
-                    brush = Brush.linearGradient(
-                        colors =
-                            if (focused) {
-                                listOf(
-                                    Color(0xFFFFA54B),
-                                    OrangePrimary,
-                                    Color(0xFFFFA54B)
-                                )
-                            } else {
-                                listOf(
-                                    Color(0x33FF8C1A),
-                                    Color(0x66FF8C1A),
-                                    Color(0x33FF8C1A)
-                                )
-                            }
-                    ),
+                    width = 3.dp,
+                    color = Color.Magenta,
                     shape = RoundedCornerShape(16.dp)
                 )
 
@@ -577,6 +561,9 @@ fun PremiumInputField(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color(0x22FF0000))
+                    // TEMP DIAGNOSTIC: RED = icon/text row bounds.
+                    .border(2.dp, Color.Red, RoundedCornerShape(8.dp))
                     .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -617,7 +604,11 @@ fun PremiumInputField(
                         BasicTextField(
                             value = value,
                             onValueChange = onValueChange,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0x3322AAFF))
+                                // TEMP DIAGNOSTIC: GREEN = BasicTextField's own bounds.
+                                .border(2.dp, Color.Green, RoundedCornerShape(3.dp)),
                             singleLine = true,
                             textStyle = TextStyle(
                                 color = MaterialTheme.colorScheme.onSurface,
