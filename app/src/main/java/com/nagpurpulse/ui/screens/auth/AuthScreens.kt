@@ -38,6 +38,7 @@ class AuthViewModel @Inject constructor(
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
+            if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.signUp(email, password).fold(
                 onSuccess = {
@@ -51,6 +52,7 @@ class AuthViewModel @Inject constructor(
 
     fun signIn(email: String, password: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
+            if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.signIn(email, password).fold(
                 onSuccess = {
@@ -67,7 +69,7 @@ class AuthViewModel @Inject constructor(
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-
+            if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
 
             authRepository.signInWithGoogleToken(idToken)
@@ -93,6 +95,7 @@ class AuthViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
+            if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.sendPasswordReset(email).fold(
                 onSuccess = { _uiState.value = AuthUiState(forgotPasswordSent = true) },
@@ -109,9 +112,8 @@ class AuthViewModel @Inject constructor(
     ) {
 
         viewModelScope.launch {
-
-            _uiState.value =
-                AuthUiState(isLoading = true)
+            if (_uiState.value.isLoading) return@launch
+            _uiState.value = AuthUiState(isLoading = true)
 
             authRepository
                 .signInWithGoogleToken(idToken)
