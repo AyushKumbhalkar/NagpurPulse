@@ -74,6 +74,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -594,42 +595,41 @@ fun PremiumInputField(
                     leadingIcon()
                 }
                 Spacer(Modifier.width(12.dp))
-                Box(modifier = Modifier.weight(1f)) {
-
-
-                    Row(
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .weight(1f)
+                            .onFocusChanged { focused = it.isFocused },
+                        contentAlignment = Alignment.CenterStart
                     ) {
-                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                            BasicTextField(
-                                value = value,
-                                onValueChange = onValueChange,
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                textStyle = TextStyle(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                visualTransformation = visualTransformation,
-                                keyboardOptions = keyboardOptions,
-                                cursorBrush = SolidColor(OrangePrimary)
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp
                             )
-                            if (value.isEmpty()) {
-                                Text(
-                                    text = placeholder,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 14.sp
-                                )
-                            }
                         }
-                        trailingIcon?.invoke()
+                        BasicTextField(
+                            value = value,
+                            onValueChange = onValueChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            visualTransformation = visualTransformation,
+                            keyboardOptions = keyboardOptions,
+                            cursorBrush = SolidColor(OrangePrimary)
+                        )
                     }
-
-
+                    trailingIcon?.invoke()
                 }
             }
         }
