@@ -174,7 +174,7 @@ fun NagpurPulseNavGraph(
     var selectedGender by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedUsername by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedAvatar by rememberSaveable { mutableStateOf<String?>(null) }
-    var isSavingProfile by rememberSaveable { mutableStateOf(false) }
+    var isSavingProfile by remember { mutableStateOf(false) }
     var profileSaveError by rememberSaveable { mutableStateOf<String?>(null) }
     val onboardingScope = rememberCoroutineScope()
     var showLoginDialog by remember { mutableStateOf(false) }
