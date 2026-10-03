@@ -335,8 +335,8 @@ fun UsernameScreen(
                             isError = username.isNotEmpty() && (!usernameIsValid || isUsernameAvailable == false),
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.None,
-                                keyboardType = KeyboardType.Ascii,
-                                ),
+                                keyboardType = KeyboardType.Ascii
+                            ),
                             supportingText = {
                                 Text("3–24 characters; start with a letter. Letters, numbers and _ only.")
                             }
