@@ -6,6 +6,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import com.nagpurpulse.ui.theme.Surface
@@ -97,8 +100,9 @@ fun LoginScreen(
     val emailLooksValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
     var password      by remember { mutableStateOf("") }
     var pwVisible     by remember { mutableStateOf(false) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
 
-    val scroll = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -114,15 +118,13 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .navigationBarsPadding()
-                .imePadding()
-                .verticalScroll(scroll),
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
 
             // ── Logo ────────────────────────────────────────────────────
-            PremiumLogo("Welcome back to Nagpur")
+            PremiumLogo("Welcome back to Nagpur", compact = true)
 
           //  PremiumLogo(" ")
             Spacer(Modifier.height(8.dp))
@@ -165,9 +167,7 @@ fun LoginScreen(
                             OrangePrimary.copy(0.30f),
                             RoundedCornerShape(24.dp)
                         )
-                        .padding(
-    DensityManager.cardPadding.dp
-)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     // Email
                     PremiumInputField(
@@ -221,7 +221,7 @@ fun LoginScreen(
                                 color = OrangePrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
-                                modifier = Modifier.pressScale(onClick = { viewModel.sendPasswordReset(email) })
+                                modifier = Modifier.pressScale(onClick = { resetEmail = email; showForgotPasswordDialog = true })
                             )
                         }
                     }
@@ -250,7 +250,7 @@ fun LoginScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     // Login button
                     PremiumButton(
@@ -261,7 +261,7 @@ fun LoginScreen(
                         delayMs = 420
                     )
 
-                    Spacer(Modifier.height(22.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     // Divider
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -332,7 +332,7 @@ fun LoginScreen(
 
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(8.dp))
 
             GuestContinueCard(
                 modifier = Modifier.padding(horizontal = 20.dp),
@@ -410,6 +410,45 @@ fun LoginScreen(
                     )
                 }
             }
+        }
+ 
+        if (showForgotPasswordDialog) {
+            AlertDialog(
+                onDismissRequest = { showForgotPasswordDialog = false },
+                title = { Text("Reset your password") },
+                text = {
+                    Column {
+                        Text(
+                            "Enter the email address linked to your NagpurPulse account. We will send you a reset link.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = resetEmail,
+                            onValueChange = { resetEmail = it },
+                            label = { Text("Email address") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = android.util.Patterns.EMAIL_ADDRESS.matcher(resetEmail.trim()).matches() && !uiState.isLoading,
+                        onClick = {
+                            viewModel.sendPasswordReset(resetEmail.trim())
+                            showForgotPasswordDialog = false
+                        }
+                    ) { Text("Send reset link", color = OrangePrimary) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showForgotPasswordDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
