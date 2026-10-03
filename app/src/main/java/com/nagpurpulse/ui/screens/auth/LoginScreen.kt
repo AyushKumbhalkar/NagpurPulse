@@ -12,7 +12,6 @@ import com.nagpurpulse.ui.theme.Surface
 import com.nagpurpulse.ui.theme.SurfaceAlt
 import com.nagpurpulse.ui.theme.Divider
 import com.nagpurpulse.ui.preferences.DensityManager
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -307,13 +306,8 @@ fun LoginScreen(
                                             }
                                         )
 
-                                    } catch (e: Exception) {
-
-                                        Log.e(
-                                            "GOOGLE_LOGIN",
-                                            "Google login failed",
-                                            e
-                                        )
+                                    } catch (_: Exception) {
+                                        viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
                                     }
                                 }
                             },
