@@ -286,13 +286,8 @@ fun SignupScreen(
                                             }
                                         )
 
-                                    } catch (e: Exception) {
-
-                                        android.util.Log.e(
-                                            "GOOGLE_LOGIN",
-                                            "Google signup failed",
-                                            e
-                                        )
+                                    } catch (_: Exception) {
+                                        viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
                                     }
                                 }
                             },
