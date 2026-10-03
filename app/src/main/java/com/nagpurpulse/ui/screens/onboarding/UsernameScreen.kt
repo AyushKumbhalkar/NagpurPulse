@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,7 +153,7 @@ fun UsernameScreen(
     checkUsernameAvailable: suspend (String) -> Boolean,
     initialUsername: String? = null
 ) {
-    var username by remember { mutableStateOf(initialUsername ?: generateNagpurUsername()) }
+    var username by rememberSaveable { mutableStateOf((initialUsername ?: generateNagpurUsername()).lowercase()) }
     var isCheckingUsername by remember { mutableStateOf(false) }
     var isUsernameAvailable by remember { mutableStateOf<Boolean?>(null) }
     val usernameIsValid = username.matches(Regex("^[A-Za-z][A-Za-z0-9_]{2,23}$"))
@@ -324,7 +325,7 @@ fun UsernameScreen(
                         OutlinedTextField(
                             value = username,
                             onValueChange = { input ->
-                                username = input.filter { it.isLetterOrDigit() || it == '_' }.take(24)
+                                username = input.filter { it.isLetterOrDigit() || it == '_' }.take(24).lowercase()
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -335,8 +336,7 @@ fun UsernameScreen(
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.None,
                                 keyboardType = KeyboardType.Ascii,
-                                autoCorrectEnabled = false
-                            ),
+                                ),
                             supportingText = {
                                 Text("3–24 characters; start with a letter. Letters, numbers and _ only.")
                             }
@@ -414,7 +414,7 @@ fun UsernameScreen(
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color.Transparent)
                             .border(1.dp, MaterialTheme.colorScheme.outline.copy(0.5f), RoundedCornerShape(24.dp))
-                            .pressScale(onClick = { username = generateNagpurUsername() }),
+                            .pressScale(onClick = { username = generateNagpurUsername().lowercase() }),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
