@@ -44,6 +44,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlin.math.abs
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -887,26 +892,47 @@ fun HomeScreen(
                 // Horizontal swipes switch Top -> New -> Hot while vertical
                 // gestures remain available for pull-to-refresh and scrolling.
                 .pointerInput(uiState.sortBy) {
-                    var horizontalDrag = 0f
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            horizontalDrag += dragAmount
-                        },
-                        onDragEnd = {
-                            val sortTabs = listOf("top", "new", "hot")
-                            val currentIndex = sortTabs.indexOf(uiState.sortBy.lowercase())
+                    // Observe the Initial pointer pass so a child LazyColumn or
+                    // SwipeRefresh cannot prevent us from recognizing a horizontal swipe.
+                    awaitEachGesture {
+                        val down = awaitFirstDown(
+                            requireUnconsumed = false,
+                            pass = PointerEventPass.Initial
+                        )
+                        var totalX = 0f
+                        var totalY = 0f
+                        var finished = false
+                        var horizontalSwipe = false
+                        val touchSlop = viewConfiguration.touchSlop
+
+                        while (!finished) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) {
+                                finished = true
+                            } else {
+                                val delta = change.position - change.previousPosition
+                                totalX += delta.x
+                                totalY += delta.y
+
+                                if (abs(totalX) > touchSlop && abs(totalX) > abs(totalY) * 1.2f) {
+                                    horizontalSwipe = true
+                                }
+                            }
+                        }
+
+                        if (horizontalSwipe) {
+                            val tabs = listOf("top", "new", "hot")
+                            val currentIndex = tabs.indexOf(uiState.sortBy.lowercase())
                                 .takeIf { it >= 0 } ?: 0
                             when {
-                                horizontalDrag < -80f && currentIndex < sortTabs.lastIndex ->
-                                    viewModel.setSortBy(sortTabs[currentIndex + 1])
-                                horizontalDrag > 80f && currentIndex > 0 ->
-                                    viewModel.setSortBy(sortTabs[currentIndex - 1])
+                                totalX < 0f && currentIndex < tabs.lastIndex ->
+                                    viewModel.setSortBy(tabs[currentIndex + 1])
+                                totalX > 0f && currentIndex > 0 ->
+                                    viewModel.setSortBy(tabs[currentIndex - 1])
                             }
-                            horizontalDrag = 0f
-                        },
-                        onDragCancel = { horizontalDrag = 0f }
-                    )
+                        }
+                    }
                 }
         ) {
             when {
