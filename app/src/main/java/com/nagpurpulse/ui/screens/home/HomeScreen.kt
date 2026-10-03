@@ -282,30 +282,74 @@ class HomeViewModel @Inject constructor(
     }
 
 
+    // Only the most recently requested feed load may update the visible posts.
+    // This prevents a slower response for an old tab from replacing a newer tab's feed.
+    private var latestPostsLoadRequestId = 0L
+
     fun loadPosts(refresh: Boolean = false) {
+        val requestId = ++latestPostsLoadRequestId
+        val requestedSort = _uiState.value.sortBy
+        val requestedCategory = _uiState.value.category
+
         viewModelScope.launch {
-            val requestedSort = _uiState.value.sortBy
-            val requestedCategory = _uiState.value.category
-            Log.d("HomeSortTrace", "loadPosts START refresh=$refresh sort=$requestedSort category=$requestedCategory")
+            Log.d("HomeSortTrace", "loadPosts START requestId=$requestId refresh=$refresh sort=$requestedSort category=$requestedCategory")
             _uiState.value = _uiState.value.copy(isLoading = !refresh, isRefreshing = refresh)
             postRepository.getPosts(
                 category = requestedCategory,
                 sortBy = requestedSort
             ).fold(
                 onSuccess = { posts ->
-                    Log.d("HomeSortTrace", "loadPosts SUCCESS requestedSort=$requestedSort returnedPosts=${posts.size} currentSort=${_uiState.value.sortBy}")
+                    val currentState = _uiState.value
+                    val isLatestRequest = requestId == latestPostsLoadRequestId
+                    val matchesCurrentFeed = requestedSort == currentState.sortBy &&
+                        requestedCategory == currentState.category
+
+                    Log.d(
+                        "HomeSortTrace",
+                        "loadPosts SUCCESS requestId=$requestId latest=$isLatestRequest " +
+                            "requestedSort=$requestedSort currentSort=${currentState.sortBy} " +
+                            "returnedPosts=${posts.size}"
+                    )
+
+                    if (!isLatestRequest || !matchesCurrentFeed) {
+                        Log.d(
+                            "HomeSortTrace",
+                            "loadPosts STALE_IGNORED requestId=$requestId " +
+                                "requestedSort=$requestedSort currentSort=${currentState.sortBy} " +
+                                "requestedCategory=$requestedCategory currentCategory=${currentState.category}"
+                        )
+                        return@fold
+                    }
+
                     _uiState.value = _uiState.value.copy(
-                        posts = posts, isLoading = false, isRefreshing = false
+                        posts = posts, isLoading = false, isRefreshing = false, error = null
                     )
                     loadSavedPostIds()
                     loadUserVotes()
-                    Log.d("HomeSortTrace", "loadPosts STATE_APPLIED requestedSort=$requestedSort finalSort=${_uiState.value.sortBy} postCount=${_uiState.value.posts.size}")
+                    Log.d(
+                        "HomeSortTrace",
+                        "loadPosts STATE_APPLIED requestId=$requestId " +
+                            "requestedSort=$requestedSort finalSort=${_uiState.value.sortBy} " +
+                            "postCount=${_uiState.value.posts.size}"
+                    )
                 },
                 onFailure = { e ->
-                    Log.e("HomeSortTrace", "loadPosts FAILED requestedSort=$requestedSort error=${e.message}", e)
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false, isRefreshing = false, error = e.message
+                    Log.e(
+                        "HomeSortTrace",
+                        "loadPosts FAILED requestId=$requestId latest=${requestId == latestPostsLoadRequestId} " +
+                            "requestedSort=$requestedSort error=${e.message}",
+                        e
                     )
+                    if (requestId == latestPostsLoadRequestId &&
+                        requestedSort == _uiState.value.sortBy &&
+                        requestedCategory == _uiState.value.category
+                    ) {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false, isRefreshing = false, error = e.message
+                        )
+                    } else {
+                        Log.d("HomeSortTrace", "loadPosts STALE_FAILURE_IGNORED requestId=$requestId")
+                    }
                 }
             )
         }
