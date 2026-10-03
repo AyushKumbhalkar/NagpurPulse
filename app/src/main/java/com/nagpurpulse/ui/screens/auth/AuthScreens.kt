@@ -32,6 +32,10 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    fun showError(message: String) {
+        _uiState.value = AuthUiState(error = message)
+    }
+
     fun signUp(
         email: String,
         password: String,
