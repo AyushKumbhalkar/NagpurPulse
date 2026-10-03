@@ -51,16 +51,16 @@ import kotlin.random.Random
 fun ProfilePictureScreen(
     onBack: () -> Unit,
     isSaving: Boolean,
+    gender: String?,
     onContinue: (String) -> Unit
 ) {
-    var currentAvatarIndex by remember {
-        mutableStateOf(Random.nextInt(RandomImages.avatars.size))
-    }
+    val availableAvatars = remember(gender) { RandomImages.forGender(gender) }
+    var currentAvatar by remember(gender) { mutableStateOf(availableAvatars.random()) }
+    var avatarLoadFailed by remember(currentAvatar) { mutableStateOf(false) }
     var visible by remember { mutableStateOf(true) }
 
     val isDark = LocalIsDarkTheme.current
     val bgColor = if (isDark) BackgroundDark else BackgroundLight
-    val currentAvatar = RandomImages.avatars[currentAvatarIndex]
 
     Box(
         modifier = Modifier
@@ -156,7 +156,11 @@ fun ProfilePictureScreen(
                     Spacer(Modifier.height(6.dp))
 
                     Text(
-                        text = "We've generated a profile picture for you.\nYou can keep it or generate a new one.",
+                        text = when (gender?.lowercase()) {
+                            "male" -> "Choose a profile picture from our boys' collection."
+                            "female" -> "Choose a profile picture from our girls' collection."
+                            else -> "Choose any profile picture from both collections."
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
@@ -200,14 +204,32 @@ fun ProfilePictureScreen(
                             )
                     )
                     // Avatar image
-                    AsyncImage(
-                        model = currentAvatar,
-                        contentDescription = "Profile avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(158.dp)
-                            .clip(CircleShape)
-                    )
+                    if (avatarLoadFailed) {
+                        Box(
+                            modifier = Modifier
+                                .size(158.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = "Avatar preview unavailable",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+                    } else {
+                        AsyncImage(
+                            model = currentAvatar,
+                            contentDescription = "Profile avatar",
+                            contentScale = ContentScale.Crop,
+                            onError = { avatarLoadFailed = true },
+                            modifier = Modifier
+                                .size(158.dp)
+                                .clip(CircleShape)
+                        )
+                    }
                 }
             }
 
@@ -235,13 +257,8 @@ fun ProfilePictureScreen(
 
 
                         .pressScale(onClick = {
-                            var newIndex: Int
-
-                            do {
-                                newIndex = Random.nextInt(RandomImages.avatars.size)
-                            } while (newIndex == currentAvatarIndex)
-
-                            currentAvatarIndex = newIndex
+                            val candidates = availableAvatars.filterNot { it == currentAvatar }
+                            currentAvatar = candidates.randomOrNull() ?: availableAvatars.random()
                         }),
                     contentAlignment = Alignment.Center
                 ) {
