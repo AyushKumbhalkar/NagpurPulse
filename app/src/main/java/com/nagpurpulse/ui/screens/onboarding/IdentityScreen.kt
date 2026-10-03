@@ -89,9 +89,10 @@ private val genderOptions = listOf(
 @Composable
 fun IdentityScreen(
     onBack: () -> Unit,
-    onContinue: (String) -> Unit
+    onContinue: (String) -> Unit,
+    initialGender: String? = null
 ) {
-    var selectedGender by remember { mutableStateOf<String?>(null) }
+    var selectedGender by remember(initialGender) { mutableStateOf(initialGender) }
     var visible by remember { mutableStateOf(true) }
 
     val isDark = LocalIsDarkTheme.current
