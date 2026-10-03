@@ -904,20 +904,18 @@ fun HomeScreen(
                         var horizontalSwipe = false
                         val touchSlop = viewConfiguration.touchSlop
 
-                        awaitPointerEventScope {
-                            while (!finished) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull { it.id == down.id }
-                                if (change == null || !change.pressed) {
-                                    finished = true
-                                } else {
-                                    val delta = change.position - change.previousPosition
-                                    totalX += delta.x
-                                    totalY += delta.y
+                        while (!finished) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) {
+                                finished = true
+                            } else {
+                                val delta = change.position - change.previousPosition
+                                totalX += delta.x
+                                totalY += delta.y
 
-                                    if (abs(totalX) > touchSlop && abs(totalX) > abs(totalY) * 1.2f) {
-                                        horizontalSwipe = true
-                                    }
+                                if (abs(totalX) > touchSlop && abs(totalX) > abs(totalY) * 1.2f) {
+                                    horizontalSwipe = true
                                 }
                             }
                         }
