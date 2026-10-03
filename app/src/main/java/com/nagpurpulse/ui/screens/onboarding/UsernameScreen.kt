@@ -36,6 +36,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.ui.components.pressScale
@@ -145,10 +148,27 @@ fun generateNagpurUsername(): String {
 @Composable
 fun UsernameScreen(
     onBack: () -> Unit,
-    onNext: (String) -> Unit
+    onNext: (String) -> Unit,
+    checkUsernameAvailable: suspend (String) -> Boolean,
+    initialUsername: String? = null
 ) {
-    var username by remember { mutableStateOf(generateNagpurUsername()) }
+    var username by remember { mutableStateOf(initialUsername ?: generateNagpurUsername()) }
+    var isCheckingUsername by remember { mutableStateOf(false) }
+    var isUsernameAvailable by remember { mutableStateOf<Boolean?>(null) }
+    val usernameIsValid = username.matches(Regex("^[A-Za-z][A-Za-z0-9_]{2,23}$"))
     var visible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(username) {
+        isUsernameAvailable = null
+        if (!usernameIsValid) {
+            isCheckingUsername = false
+            return@LaunchedEffect
+        }
+        isCheckingUsername = true
+        kotlinx.coroutines.delay(350)
+        isUsernameAvailable = checkUsernameAvailable(username)
+        isCheckingUsername = false
+    }
 
     val isCompactWidth = LocalConfiguration.current.screenWidthDp < 360
     val isDark = LocalIsDarkTheme.current
@@ -301,51 +321,46 @@ fun UsernameScreen(
 
                         Spacer(Modifier.height(4.dp))
 
-                        // Animated username change
-                        AnimatedContent(
-                            targetState = username,
-                            transitionSpec = {
-                                (fadeIn(tween(200)) + slideInVertically { -20 })
-                                    .togetherWith(fadeOut(tween(150)))
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = { input ->
+                                username = input.filter { it.isLetterOrDigit() || it == '_' }.take(24)
                             },
-                            label = "username_anim"
-                        ) { name ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    name,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 22.sp
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                // Green checkmark badge
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(GreenSuccess),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp),
+                            label = { Text("Username") },
+                            singleLine = true,
+                            isError = username.isNotEmpty() && (!usernameIsValid || isUsernameAvailable == false),
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.None,
+                                keyboardType = KeyboardType.Ascii,
+                                autoCorrectEnabled = false
+                            ),
+                            supportingText = {
+                                Text("3–24 characters; start with a letter. Letters, numbers and _ only.")
                             }
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        val statusText = when {
+                            !usernameIsValid -> "Enter a valid username"
+                            isCheckingUsername -> "Checking availability…"
+                            isUsernameAvailable == true -> "Username is available"
+                            isUsernameAvailable == false -> "Username is already taken or could not be checked"
+                            else -> "Checking availability…"
                         }
-
-                        Spacer(Modifier.height(6.dp))
-
                         Text(
-                            "Username is available",
-                            color = GreenSuccess,
+                            text = statusText,
+                            color = when {
+                                !usernameIsValid || isUsernameAvailable == false -> MaterialTheme.colorScheme.error
+                                isUsernameAvailable == true -> GreenSuccess
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                             fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -430,7 +445,11 @@ fun UsernameScreen(
                             .height(48.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(Brush.horizontalGradient(listOf(OrangePrimary, OrangeLight)))
-                            .pressScale(onClick = { onNext(username) }),
+                            .then(
+                                if (usernameIsValid && isUsernameAvailable == true && !isCheckingUsername)
+                                    Modifier.pressScale(onClick = { onNext(username.trim()) })
+                                else Modifier
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
