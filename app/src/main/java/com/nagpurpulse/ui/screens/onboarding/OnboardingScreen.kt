@@ -5,6 +5,8 @@ package com.nagpurpulse.ui.screens.onboarding
 import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -249,6 +251,15 @@ fun OnboardingScreen(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 3.sp
+                    )
+                    // NagpurPulse brand mark in the hero's top-right corner.
+                    Image(
+                        painter = painterResource(id = R.drawable.nagpurpulse_app_icon_transparent),
+                        contentDescription = "NagpurPulse logo",
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 18.dp, end = 18.dp)
+                            .size(44.dp)
                     )
                 }
             }
