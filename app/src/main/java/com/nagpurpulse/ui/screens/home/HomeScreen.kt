@@ -688,10 +688,12 @@ fun HomeScreen(
                     Log.d("HomeSortTrace", "GESTURE END totalDx=$horizontalDistance direction=$direction sortSnapshot=$sortSnapshot index=$currentIndex tabs=$tabs threshold=80")
                     if (abs(horizontalDistance) > 80f) {
                         if (currentIndex >= 0) {
-                            // From Top, either swipe direction should open New.
-                            // From the other tabs, keep the normal bidirectional navigation.
+                            // From Top, either swipe direction opens New.
+                            // From New, either swipe direction opens Hot.
+                            // From Hot, retain normal bidirectional navigation.
                             val targetIndex = when {
                                 sortSnapshot == "top" -> tabs.indexOf("new")
+                                sortSnapshot == "new" -> tabs.indexOf("hot")
                                 horizontalDistance < 0f -> (currentIndex + 1) % tabs.size
                                 horizontalDistance > 0f -> (currentIndex - 1 + tabs.size) % tabs.size
                                 else -> currentIndex
