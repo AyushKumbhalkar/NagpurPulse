@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.rememberNavController
 import com.nagpurpulse.data.repository.AuthRepository
+import com.nagpurpulse.data.remote.SupabaseClientProvider
 import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.data.repository.UserPreferencesRepository
 import com.nagpurpulse.notifications.NotifDeepLink
@@ -55,6 +56,9 @@ class MainActivity : FragmentActivity() {
         }
 
         super.onCreate(savedInstanceState)
+
+        // Let supabase-kt parse and import auth/OTP callback sessions from deep links.
+        SupabaseClientProvider.client.handleDeeplinks(intent)
 
         enableEdgeToEdge()
 
@@ -174,6 +178,9 @@ class MainActivity : FragmentActivity() {
     // ── Deep link from warm-start tap (app already running) ───────────────────
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
+        // Process warm-start auth callbacks as well as notification deep links.
+        SupabaseClientProvider.client.handleDeeplinks(intent)
         intent.getStringExtra("comment_id")?.let {
             NotifDeepLink.pendingCommentId.value = it
         }
