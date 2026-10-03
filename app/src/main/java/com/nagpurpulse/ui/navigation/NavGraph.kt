@@ -193,12 +193,24 @@ fun NagpurPulseNavGraph(
             Screen.Splash.route,
             enterTransition = { fadeIn(tween(300)) }, exitTransition = { fadeOut(tween(500)) }) {
             SplashScreen(onFinished = {
-                val dest = if (authRepository.isLoggedIn())
-                    Screen.Home.route
-                else
-                    Screen.Signup.route
-                navController.navigate(dest) {
-                    popUpTo(Screen.Splash.route) { inclusive = true }
+                onboardingScope.launch {
+                    val dest = when {
+                        !authRepository.isLoggedIn() -> Screen.Signup.route
+                        authRepository.hasCompletedOnboarding() -> Screen.Home.route
+                        else -> {
+                            // A restored session may belong to a user who closed the app
+                            // before finishing onboarding. Resume onboarding rather than
+                            // sending an incomplete profile directly to the feed.
+                            onboardingOriginRoute = Screen.Signup.route
+                            selectedGender = null
+                            selectedUsername = null
+                            selectedAvatar = null
+                            Screen.Identity.route
+                        }
+                    }
+                    navController.navigate(dest) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
                 }
             })
         }
