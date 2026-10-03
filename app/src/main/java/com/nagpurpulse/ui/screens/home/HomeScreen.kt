@@ -494,8 +494,13 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ){
     val uiState by viewModel.uiState.collectAsState()
+    var selectedSort by remember { mutableStateOf(uiState.sortBy.lowercase()) }
+
+    // Keep the visible chip selection synchronized with the ViewModel, while
+    // updating it immediately on taps/swipes so the highlight never lags behind.
     LaunchedEffect(uiState.sortBy) {
-        Log.d("HomeFeedSwipe", "HomeScreen observed sortBy=${uiState.sortBy}")
+        selectedSort = uiState.sortBy.lowercase()
+        Log.d("HomeFeedSwipe", "HomeScreen observed sortBy=${uiState.sortBy}; selectedSort=$selectedSort")
     }
     val context = LocalContext.current
     val locationPermissionLauncher =
@@ -621,10 +626,12 @@ fun HomeScreen(
                         when {
                             horizontalDistance < 0f && currentIndex < tabs.lastIndex -> {
                                 Log.d("HomeFeedSwipe", "switching to ${tabs[currentIndex + 1]}")
+                                selectedSort = tabs[currentIndex + 1]
                                 viewModel.setSortBy(tabs[currentIndex + 1])
                             }
                             horizontalDistance > 0f && currentIndex > 0 -> {
                                 Log.d("HomeFeedSwipe", "switching to ${tabs[currentIndex - 1]}")
+                                selectedSort = tabs[currentIndex - 1]
                                 viewModel.setSortBy(tabs[currentIndex - 1])
                             }
                             else -> Log.d("HomeFeedSwipe", "swipe reached boundary; no tab change")
@@ -895,10 +902,15 @@ fun HomeScreen(
                             )
                         )
 
-                        SortChipGroup(
-                            selected = uiState.sortBy,
-                            onSelected = { viewModel.setSortBy(it) }
-                        )
+                        key(selectedSort) {
+                            SortChipGroup(
+                                selected = selectedSort,
+                                onSelected = { sort ->
+                                    selectedSort = sort.lowercase()
+                                    viewModel.setSortBy(sort.lowercase())
+                                }
+                            )
+                        }
                     }
 
 
@@ -1112,14 +1124,21 @@ private fun SortChipGroup(
             .padding(3.dp)
     ) {
         listOf("top", "new", "hot").forEach { item ->
-            val isSelected = item == selected
+            val isSelected = item.equals(selected, ignoreCase = true)
 
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (isSelected) OrangePrimary.copy(alpha = 0.12f)
+                        if (isSelected) OrangePrimary.copy(alpha = 0.22f)
                         else Color.Transparent
+                    )
+                    .then(
+                        if (isSelected) Modifier.border(
+                            width = 1.dp,
+                            color = OrangePrimary.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(14.dp)
+                        ) else Modifier
                     )
                     .clickable { onSelected(item) }
                     .padding(
