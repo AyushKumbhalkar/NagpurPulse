@@ -194,8 +194,7 @@ class AuthRepository @Inject constructor(
                     }
                     .decodeSingle<Profile>()
 
-            !profile.gender.isNullOrBlank() &&
-                profile.username.isNotBlank() &&
+            profile.username.isNotBlank() &&
                 !profile.avatarUrl.isNullOrBlank()
 
         } catch (_: Exception) {
