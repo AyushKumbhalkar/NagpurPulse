@@ -417,7 +417,9 @@ class HomeViewModel @Inject constructor(
     }
 
     fun setSortBy(sort: String) {
+        Log.d("HomeFeedSwipe", "setSortBy called: requested=$sort previous=${_uiState.value.sortBy}")
         _uiState.value = _uiState.value.copy(sortBy = sort)
+        Log.d("HomeFeedSwipe", "sort state immediately updated to=${_uiState.value.sortBy}")
         loadPosts()
     }
 
@@ -492,6 +494,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ){
     val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(uiState.sortBy) {
+        Log.d("HomeFeedSwipe", "HomeScreen observed sortBy=${uiState.sortBy}")
+    }
     val context = LocalContext.current
     val locationPermissionLauncher =
         rememberLauncherForActivityResult(
