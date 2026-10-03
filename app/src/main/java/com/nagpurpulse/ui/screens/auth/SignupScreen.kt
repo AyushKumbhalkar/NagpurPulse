@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
+import com.nagpurpulse.ui.screens.onboarding.OnboardingProgressStepper
 import com.nagpurpulse.ui.theme.OrangePrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -99,6 +100,7 @@ fun SignupScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .navigationBarsPadding()
                 .verticalScroll(scroll)
                 .imePadding(),
@@ -106,7 +108,15 @@ fun SignupScreen(
         ) {
 
             PremiumLogo("Join Nagpur's best community")
-            //PremiumLogo(" ")
+            Spacer(Modifier.height(8.dp))
+
+            OnboardingProgressStepper(
+                steps = listOf("Create Account", "Your Identity", "Choose Username", "Profile Picture"),
+                currentStep = 0,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            )
             Spacer(Modifier.height(8.dp))
 
             // ── Form card ───────────────────────────────────────────────
