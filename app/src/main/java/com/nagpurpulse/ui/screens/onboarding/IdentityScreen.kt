@@ -268,7 +268,7 @@ fun IdentityScreen(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            "This information is never shown on your profile and can be changed anytime in settings.",
+                            "We use this choice to tailor your avatar suggestions during setup. You can choose “Prefer not to say”.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             lineHeight = 18.sp
