@@ -217,7 +217,7 @@ fun UsernameScreen(
                 currentStep = 2,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 60.dp)
+                    .padding(horizontal = 24.dp)
             )
 
             Spacer(Modifier.height(28.dp))
