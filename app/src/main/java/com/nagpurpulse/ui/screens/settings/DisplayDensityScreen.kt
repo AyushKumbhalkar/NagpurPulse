@@ -26,6 +26,15 @@ fun DisplayDensityScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
 
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.settingsMessage) {
+        uiState.settingsMessage?.let {
+            snackbar.showSnackbar(it)
+            viewModel.dismissSettingsMessage()
+        }
+    }
+
     val options = listOf(
         "compact",
         "comfortable",
@@ -50,6 +59,7 @@ fun DisplayDensityScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {
