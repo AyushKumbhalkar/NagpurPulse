@@ -4,17 +4,21 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -33,9 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.R
 import com.nagpurpulse.ui.components.pressScale
-import com.nagpurpulse.ui.theme.OrangePrimary
-import com.nagpurpulse.ui.theme.PrimaryText
-import com.nagpurpulse.ui.theme.SecondaryText
+
+private val OnboardingBackground = Color(0xFFFFFBF6)
+private val OnboardingOrange = Color(0xFFF45B0B)
 
 @Composable
 fun OnboardingScreen(
@@ -43,97 +47,132 @@ fun OnboardingScreen(
     onLogin: () -> Unit,
     onGuestMode: () -> Unit = {}
 ) {
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFFBF6))) {
-        // The supplied artwork contains the brand logo and community network.
-        // Keep it edge-to-edge and let the lower blank area hold the copy/CTA.
-        Image(
-            painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
-            contentDescription = "NagpurPulse community network",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds
-        )
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(OnboardingBackground)
+    ) {
+        val artworkHeight = (maxHeight * 0.53f).coerceIn(300.dp, 470.dp)
+        val headlineSize = if (maxWidth < 360.dp) 29.sp else 35.sp
+        val horizontalPadding = if (maxWidth < 360.dp) 20.dp else 28.dp
 
+        // The source artwork includes empty space below the illustration.
+        // Render it at its natural aspect ratio and clip only that blank lower
+        // area. This preserves the logo/avatars without stretching the image.
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .padding(bottom = 26.dp),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = Color(0xFF171717))) { append("Your city, ") }
-                    withStyle(SpanStyle(color = Color(0xFFF45B0B))) { append("together.") }
-                },
-                fontSize = 36.sp,
-                lineHeight = 42.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center,
-                maxLines = 1
-            )
-
-            Spacer(Modifier.height(18.dp))
-
-            Text(
-                text = "Ask questions, share finds and discover\nwhat’s happening around you in Nagpur.",
-                color = Color(0xFF737373),
-                fontSize = 18.sp,
-                lineHeight = 25.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(Modifier.height(34.dp))
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(36.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Color(0xFFF65B0B), Color(0xFFFF7015))
-                        )
-                    )
-                    .pressScale(onClick = onGetStarted),
-                contentAlignment = Alignment.Center
+                    .height(artworkHeight)
+                    .clipToBounds()
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "Get Started",
-                        color = Color.White,
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Text("→", color = Color.White, fontSize = 31.sp, lineHeight = 31.sp)
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
+                    contentDescription = "NagpurPulse logo and community network illustration",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(0.452f)
+                        .align(Alignment.TopCenter),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.TopCenter
+                )
             }
 
-            Spacer(Modifier.height(28.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = horizontalPadding)
+                    .padding(top = 8.dp, bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    Modifier
-                        .width(38.dp)
-                        .height(12.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF45B0B))
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = Color(0xFF171717))) {
+                            append("Your city, ")
+                        }
+                        withStyle(SpanStyle(color = OnboardingOrange)) {
+                            append("together.")
+                        }
+                    },
+                    fontSize = headlineSize,
+                    lineHeight = headlineSize * 1.16f,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
                 )
-                repeat(2) {
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = "Ask questions, share finds and discover\nwhat’s happening around you in Nagpur.",
+                    color = Color(0xFF737373),
+                    fontSize = if (maxWidth < 360.dp) 16.sp else 18.sp,
+                    lineHeight = if (maxWidth < 360.dp) 22.sp else 25.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(28.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(62.dp)
+                        .clip(RoundedCornerShape(36.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFF65B0B), Color(0xFFFF7015))
+                            )
+                        )
+                        .pressScale(onClick = onGetStarted),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Get Started",
+                            color = Color.White,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Text(
+                            text = "→",
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            lineHeight = 30.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         Modifier
-                            .width(12.dp)
+                            .width(38.dp)
                             .height(12.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFD8D5D1))
+                            .background(OnboardingOrange)
                     )
+                    repeat(2) {
+                        Box(
+                            Modifier
+                                .width(12.dp)
+                                .height(12.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFD8D5D1))
+                        )
+                    }
                 }
             }
         }
