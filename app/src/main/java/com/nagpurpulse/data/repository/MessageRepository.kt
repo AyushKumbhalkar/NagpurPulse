@@ -69,6 +69,16 @@ class MessageRepository @Inject constructor(
                 return Result.success(enrichConversation(visibleExisting, myId))
             }
 
+            // Respect the recipient's direct-message preference before creating a
+            // new conversation. Database-side enforcement is still needed because
+            // clients can bypass this repository check.
+            val recipientProfile = profileRepository.getProfile(otherUserId).getOrElse {
+                return Result.failure(it)
+            }
+            if (!recipientProfile.allowDms) {
+                return Result.failure(IllegalStateException("This user isn't accepting new direct messages."))
+            }
+
             // Create new
             val created = client.postgrest["conversations"].insert(
                 buildJsonObject {
