@@ -59,7 +59,7 @@ fun IncognitoSettingsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("Incognito Settings", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("Incognito Mode", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("Incognito is a preference, not guaranteed anonymity", color = SecondaryText, fontSize = 12.sp)
                     }
                     if (state.isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = OrangePrimary, strokeWidth = 2.dp)
