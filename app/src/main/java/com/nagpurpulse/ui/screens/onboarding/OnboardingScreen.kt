@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -75,8 +74,8 @@ fun OnboardingScreen(
                     painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
                     contentDescription = "NagpurPulse logo and community network illustration",
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(0.452f)
+                        .width(maxWidth)
+                        .height(maxWidth / 0.452f)
                         .align(Alignment.TopCenter),
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.TopCenter
