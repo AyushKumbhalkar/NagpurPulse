@@ -68,6 +68,7 @@ data class ProfileUiState(
     val savedPosts: List<Post> = emptyList(),
     val badges: List<Badge> = emptyList(),
     val commentCount: Int = 0,
+    val savedCount: Int = 0,
     val unreadNotifCount: Int = 0,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -109,10 +110,14 @@ class ProfileViewModel @Inject constructor(
                 val postsJob = async { postRepository.getPostsByUser(userId) }
                 val badgesJob = async { profileRepository.getBadges(userId) }
                 val notifJob = async { notificationRepository.getUnreadCount(userId) }
+                val commentsCountJob = async { profileRepository.getCommentCount(userId) }
+                val savedIdsJob = async { savedPostsRepository.getSavedPostIds(userId) }
                 profileJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(profile = p) }
                 postsJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(posts = p) }
                 badgesJob.await().onSuccess { b -> _uiState.value = _uiState.value.copy(badges = b) }
                 notifJob.await().onSuccess { count -> _uiState.value = _uiState.value.copy(unreadNotifCount = count) }
+                commentsCountJob.await().onSuccess { count -> _uiState.value = _uiState.value.copy(commentCount = count) }
+                savedIdsJob.await().onSuccess { ids -> _uiState.value = _uiState.value.copy(savedCount = ids.size) }
                 if (_uiState.value.activeTab == 1) loadComments(userId)
                 if (_uiState.value.activeTab == 2) loadSavedPosts(userId)
             } finally {
@@ -123,14 +128,14 @@ class ProfileViewModel @Inject constructor(
 
     private suspend fun loadComments(userId: String) {
         postRepository.getCommentsByUser(userId).onSuccess { comments ->
-            _uiState.value = _uiState.value.copy(comments = comments)
+            _uiState.value = _uiState.value.copy(comments = comments, commentCount = comments.size)
         }
     }
 
     private suspend fun loadSavedPosts(userId: String) {
         savedPostsRepository.getSavedPostIds(userId).onSuccess { ids ->
             postRepository.getSavedPosts(ids).onSuccess { posts ->
-                _uiState.value = _uiState.value.copy(savedPosts = posts)
+                _uiState.value = _uiState.value.copy(savedPosts = posts, savedCount = posts.size)
             }
         }
     }
@@ -343,8 +348,8 @@ fun ProfileScreen(
             item {
                 val tabs = listOf(
                     "Threads (${uiState.posts.size})",
-                    "Comments (${uiState.comments.size})",
-                    "Saved (${uiState.savedPosts.size})"
+                    "Comments (${uiState.commentCount})",
+                    "Saved (${uiState.savedCount})"
                 )
                 TabRow(
                     selectedTabIndex = uiState.activeTab,
