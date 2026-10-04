@@ -68,6 +68,17 @@ fun IncognitoSettingsScreen(
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = OrangePrimary)
             }
+        } else if (state.loadFailed) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                SettingsGroup {
+                    Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                        Text("Couldn't load your privacy settings", color = PrimaryText, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Retry before changing incognito options so your saved values are not overwritten.", color = SecondaryText)
+                        TextButton(onClick = { vm.retryLoad() }) { Text("Retry", color = OrangePrimary) }
+                    }
+                }
+            }
         } else {
             LazyColumn(
                 Modifier.fillMaxSize().padding(padding),
