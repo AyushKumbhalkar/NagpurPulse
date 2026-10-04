@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -1260,8 +1261,10 @@ private fun AdminLogCard(action: AdminAction) {
             confirmButton = {
                 TextButton(onClick = { showEditDetails = false }) { Text("Close") }
             },
-            containerColor = Surface
-        )
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),)
     }
 }
 
