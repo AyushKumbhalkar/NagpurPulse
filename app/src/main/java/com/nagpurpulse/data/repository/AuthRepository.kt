@@ -379,16 +379,31 @@ class AuthRepository @Inject constructor(
             incognitoMode?.let   { m["incognito_mode"]     = it }
             hideFromSearch?.let  { m["hide_from_search"]   = it }
             if (m.isNotEmpty()) {
-
                 client.postgrest["profiles"].update(m) {
                     filter { eq("id", userId) }
                 }
+            }
 
+            // An update request can succeed without changing a row (for example,
+            // when profile RLS or a missing row blocks the write). Read the saved
+            // profile back before telling the UI that privacy changes were saved.
+            val saved = client.postgrest["profiles"]
+                .select { filter { eq("id", userId) } }
+                .decodeSingle<Profile>()
+
+            val matches = (hideComments == null || saved.hideComments == hideComments) &&
+                (hidePosts == null || saved.hidePosts == hidePosts) &&
+                (hideProfile == null || saved.hideProfile == hideProfile) &&
+                (allowDms == null || saved.allowDms == allowDms) &&
+                (showOnlineStatus == null || saved.showOnlineStatus == showOnlineStatus) &&
+                (incognitoMode == null || saved.incognitoMode == incognitoMode) &&
+                (hideFromSearch == null || saved.hideFromSearch == hideFromSearch)
+
+            if (!matches) {
+                return Result.failure(IllegalStateException("Privacy settings could not be verified after saving"))
             }
             Result.success(Unit)
-
         } catch (e: Exception) {
-
             Result.failure(e)
         }
     }
