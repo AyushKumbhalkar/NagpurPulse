@@ -212,7 +212,7 @@ fun NagpurPulseNavGraph(
             SplashScreen(onFinished = {
                 onboardingScope.launch {
                     val dest = when {
-                        !authRepository.isLoggedIn() -> Screen.Signup.route
+                        !authRepository.isLoggedIn() -> Screen.Onboarding.route
                         authRepository.hasCompletedOnboarding() -> Screen.Home.route
                         else -> {
                             // A restored session may belong to a user who closed the app
