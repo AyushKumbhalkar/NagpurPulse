@@ -209,43 +209,40 @@ fun ProfileScreen(
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // Logout confirmation dialog
+    // Premium logout confirmation dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = {
-                Text(
-                    "Sign out?",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),
+            icon = {
+                Box(
+                    Modifier.size(54.dp).clip(CircleShape)
+                        .background(RedAlert.copy(alpha = 0.12f))
+                        .border(1.dp, RedAlert.copy(alpha = 0.35f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = RedAlert, modifier = Modifier.size(24.dp))
+                }
             },
-            text = {
-                Text(
-                    "You'll need to sign in again to post or comment.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
+            title = { Text("Sign out?", color = Color(0xFFF7F3F5), fontWeight = FontWeight.Bold) },
+            text = { Text("You'll need to sign in again to post or comment.", color = Color(0xFFC7C0CA)) },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         showLogoutDialog = false
-
-                        android.util.Log.e(
-                            "AYUSH_LOGOUT",
-                            "BUTTON CLICKED"
-                        )
-
+                        android.util.Log.e("AYUSH_LOGOUT", "BUTTON CLICKED")
                         onLogout()
-                    }
-                ) {
-                    Text("Sign Out", color = RedAlert, fontWeight = FontWeight.SemiBold)
-                }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RedAlert)
+                ) { Text("Sign out", color = Color.White, fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Stay signed in", color = Color(0xFFC7C0CA))
                 }
             }
         )
