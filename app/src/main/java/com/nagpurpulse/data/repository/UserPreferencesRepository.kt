@@ -72,12 +72,16 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun saveDisplayDensity(density: String): Result<Unit> {
-        DensityManager.density = density
+        if (density !in setOf("compact", "comfortable", "spacious")) {
+            return Result.failure(IllegalArgumentException("Unsupported display density"))
+        }
         return updateField("display_density", density)
     }
 
     suspend fun saveFeedStyle(style: String): Result<Unit> {
-        FeedLayoutManager.feedStyle = style
+        if (style !in setOf("compact", "expanded")) {
+            return Result.failure(IllegalArgumentException("Unsupported feed style"))
+        }
         return updateField("feed_style", style)
     }
 
