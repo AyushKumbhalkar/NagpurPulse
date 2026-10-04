@@ -43,16 +43,16 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun saveTextSize(textSize: String)     = updateField("text_size",       textSize)
     suspend fun saveAmoledMode(enabled: Boolean)   = updateField("amoled_mode",     enabled)
 
-    suspend fun getAmoledMode(): Boolean = try {
-        getPreferences().getOrNull()?.amoledMode ?: true
-    } catch (_: Exception) {
-        true
+    suspend fun getAmoledMode(context: Context): Boolean {
+        // If the account preference cannot be fetched, preserve this device's last
+        // saved choice instead of forcing dark mode on every offline startup.
+        return getPreferences().getOrNull()?.amoledMode ?: getSavedTheme(context)
     }
 
     fun getSavedTheme(context: Context): Boolean {
         return context
             .getSharedPreferences("theme_prefs", Context.MODE_PRIVATE)
-            .getBoolean("amoled_mode", true)
+            .getBoolean("amoled_mode", false)
     }
 
     fun saveThemeLocally(
