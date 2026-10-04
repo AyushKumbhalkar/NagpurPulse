@@ -268,6 +268,10 @@ fun ChatScreen(
     if (editingMessage != null) {
         AlertDialog(
             onDismissRequest = { editingMessage = null },
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),
             title = { Text("Edit message") },
             text = { OutlinedTextField(value = editText, onValueChange = { editText = it }, modifier = Modifier.fillMaxWidth(), maxLines = 5) },
             confirmButton = { TextButton(onClick = { editingMessage?.let { viewModel.editMessage(it.id, editText) }; editingMessage = null }) { Text("Save") } },
@@ -277,6 +281,10 @@ fun ChatScreen(
     if (deletingMessage != null) {
         AlertDialog(
             onDismissRequest = { deletingMessage = null },
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),
             title = { Text("Delete message for both?") },
             text = { Text("This replaces the message content for both participants.") },
             confirmButton = { TextButton(onClick = { deletingMessage?.let { viewModel.deleteMessageForBoth(it.id) }; deletingMessage = null }) { Text("Delete for both", color = RedAlert) } },
