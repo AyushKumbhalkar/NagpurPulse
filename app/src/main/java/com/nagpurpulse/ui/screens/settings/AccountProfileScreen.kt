@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -945,57 +946,227 @@ fun AccountProfileScreen(
     }
 
     if (showDeleteDialog) {
-
-        AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-            },
-
-            title = {
-                Text("Delete Account")
-            },
-
-            text = {
-                Text(
-                    "This action cannot be undone.\n\n" +
-                            "All your posts, comments, votes, saved posts and profile data will be permanently deleted.\n\n" +
-                            "You can deactivate your account instead if you may return later."
-                )
-            },
-
-            dismissButton = {
-
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                    }
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { if (!accountActionBusy) showDeleteDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = !accountActionBusy,
+                dismissOnClickOutside = !accountActionBusy
+            )
+        ) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp)
+                        .heightIn(max = maxHeight * 0.88f)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF211A1D),
+                                    Color(0xFF171416),
+                                    Color(0xFF21191B)
+                                )
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Color(0xFF49383B).copy(alpha = 0.72f),
+                            RoundedCornerShape(32.dp)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 14.dp)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Cancel")
-                }
-            },
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 1.dp)
+                            .width(24.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFF777174).copy(alpha = 0.7f))
+                    )
 
-            confirmButton = {
+                    Spacer(Modifier.height(18.dp))
 
-                Button(
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedAlert
-                    ),
-                    onClick = {
+                    Box(
+                        modifier = Modifier
+                            .size(74.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFA493F).copy(alpha = 0.15f))
+                            .border(1.dp, Color(0xFFFA493F).copy(alpha = 0.22f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFFF5A50),
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
 
-                        showDeleteDialog = false
+                    Spacer(Modifier.height(14.dp))
 
-                        vm.deleteAccount {
+                    Text(
+                        text = "Delete your account?",
+                        color = Color(0xFFF8F6F6),
+                        fontSize = 21.sp,
+                        lineHeight = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
 
-                            navController.navigate("login") {
-                                popUpTo(0)
+                    Spacer(Modifier.height(7.dp))
+
+                    Text(
+                        text = "Your posts, comments, votes and saved items will be permanently removed.",
+                        color = Color(0xFFC2BBBE),
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    Spacer(Modifier.height(17.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF2A201E), Color(0xFF261D1C))
+                                )
+                            )
+                            .border(
+                                1.dp,
+                                Color(0xFF4A342E).copy(alpha = 0.8f),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .pressScale {
+                                if (!accountActionBusy) {
+                                    showDeleteDialog = false
+                                    showDeactivateDialog = true
+                                }
+                            }
+                            .padding(horizontal = 14.dp, vertical = 15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF8D8582).copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.PauseCircle,
+                                contentDescription = null,
+                                tint = Color(0xFFC9C2C0),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Need a break?",
+                                color = Color(0xFFF5F1F1),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                "Deactivate your account instead.",
+                                color = Color(0xFFAAA2A5),
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp
+                            )
+                        }
+
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = "Deactivate account instead",
+                            tint = Color(0xFFAAA2A5),
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF1D1B1D))
+                                .border(1.dp, Color(0xFF484346), RoundedCornerShape(50))
+                                .pressScale {
+                                    if (!accountActionBusy) showDeleteDialog = false
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Keep account",
+                                color = Color(0xFFE0DCDE),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFFFF514A), Color(0xFFFF4038))
+                                    )
+                                )
+                                .pressScale {
+                                    if (!accountActionBusy) {
+                                        accountActionBusy = true
+                                        vm.deleteAccount {
+                                            accountActionBusy = false
+                                            showDeleteDialog = false
+                                            navController.navigate("login") {
+                                                popUpTo(0)
+                                            }
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (accountActionBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    "Delete forever",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
-                ) {
-                    Text("Delete Forever")
                 }
             }
-        )
+        }
     }
 }
 
