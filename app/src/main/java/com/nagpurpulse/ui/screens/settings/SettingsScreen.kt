@@ -450,8 +450,6 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsRow("Privacy & Safety",  "Control your privacy and safety settings",   Icons.Filled.PrivacyTip,    GreenSuccess)  { navController.navigate(Screen.PrivacySettings.route) }
                     SettingsDivider()
-                    SettingsRow("Incognito Settings","Manage incognito mode and visibility",   Icons.Filled.VisibilityOff, PurpleNight)   { navController.navigate(Screen.IncognitoSettings.route) }
-                    SettingsDivider()
                     SettingsRow("Security",          "Password, biometric app lock and sessions",       Icons.Filled.Lock,          BlueInfo)      { navController.navigate(Screen.SecuritySettings.route) }
                 }
                 Spacer(Modifier.height(10.dp))
