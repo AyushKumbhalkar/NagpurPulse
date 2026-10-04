@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -55,13 +54,12 @@ fun OnboardingScreen(
         // Capture BoxWithConstraints dimensions before entering nested layout scopes.
         val screenWidth = maxWidth
         val screenHeight = maxHeight
-        val artworkHeight = (screenHeight * 0.55f).coerceIn(310.dp, 480.dp)
+        val artworkHeight = (screenHeight * 0.49f).coerceIn(280.dp, 430.dp)
         val headlineSize = if (screenWidth < 360.dp) 29.sp else 35.sp
         val horizontalPadding = if (screenWidth < 360.dp) 16.dp else 24.dp
 
-        // The source artwork includes empty space below the illustration.
-        // Render it at its natural aspect ratio and clip only that blank lower
-        // area. This preserves the logo/avatars without stretching the image.
+        // The supplied logo + community illustration is square. Keep its
+        // native 1:1 aspect ratio and clip only the overflow of the artwork area.
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -78,9 +76,8 @@ fun OnboardingScreen(
                     painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
                     contentDescription = "NagpurPulse logo and community network illustration",
                     modifier = Modifier
-                        .width(screenWidth * 1.14f)
-                        .height((screenWidth * 1.14f) / 0.452f)
-                        .graphicsLayer { scaleX = 1.02f; scaleY = 1.02f }
+                        .width(screenWidth)
+                        .height(screenWidth)
                         .align(Alignment.TopCenter),
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.TopCenter
@@ -151,6 +148,31 @@ fun OnboardingScreen(
                             color = Color.White,
                             fontSize = 30.sp,
                             lineHeight = 30.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Static onboarding page indicators matching the supplied reference.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .width(38.dp)
+                            .height(12.dp)
+                            .clip(CircleShape)
+                            .background(OnboardingOrange)
+                    )
+                    repeat(2) {
+                        Box(
+                            Modifier
+                                .width(12.dp)
+                                .height(12.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFD8D5D1))
                         )
                     }
                 }
