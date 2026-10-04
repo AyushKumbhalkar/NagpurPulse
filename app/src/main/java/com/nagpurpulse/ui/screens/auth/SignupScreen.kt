@@ -108,19 +108,9 @@ fun SignupScreen(
                 .padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(8.dp))
-            PremiumLogo("Same City, More Stories")
-            Text(
-                text = "People  •  Places  •  Discussions",
-                color = SignupInk,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFFFFF0E1).copy(alpha = 0.94f))
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
-            )
-            Spacer(Modifier.height(20.dp))
+            // The background artwork includes its own wordmark and tagline.
+            // Reserve the illustrated header area before the form card begins.
+            Spacer(Modifier.height(246.dp))
 
             AnimatedVisibility(
                 visible = contentReady,
