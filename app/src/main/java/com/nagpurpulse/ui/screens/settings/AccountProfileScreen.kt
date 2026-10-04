@@ -1230,7 +1230,7 @@ private fun AvatarManagementCard(
 
 
                     val previewAvatar = when {
-                        localAvatarUri != null -> localAvatarUri
+                        localAvatarUri != null -> localAvatarUri.toString()
                         pendingAvatarUrl != null -> pendingAvatarUrl
                         else -> avatarUrl
                     }
