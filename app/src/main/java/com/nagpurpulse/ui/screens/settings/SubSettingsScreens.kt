@@ -286,7 +286,7 @@ fun SecuritySettingsScreen(
             onDismissRequest = { if (!state.isSigningOutEverywhere) showSignOutEverywhereDialog = false },
             title = { Text("Sign out everywhere?", color = PrimaryText) },
             text = { Text("This revokes your sign-in sessions on other devices too. You may need to sign in again on this device.", color = SecondaryText) },
-            confirmButton = { TextButton(enabled = !state.isSigningOutEverywhere, onClick = { vm.signOutEverywhere { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Login.route) { popUpTo(0) } }; showSignOutEverywhereDialog = false }) { Text(if (state.isSigningOutEverywhere) "Signing out…" else "Sign out everywhere", color = RedAlert) } },
+            confirmButton = { TextButton(enabled = !state.isSigningOutEverywhere, onClick = { vm.signOutEverywhere { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Login.route) { popUpTo(com.nagpurpulse.ui.navigation.Screen.SecuritySettings.route) { inclusive = true } } }; showSignOutEverywhereDialog = false }) { Text(if (state.isSigningOutEverywhere) "Signing out…" else "Sign out everywhere", color = RedAlert) } },
             dismissButton = { TextButton(onClick = { showSignOutEverywhereDialog = false }) { Text("Cancel", color = SecondaryText) } },
             containerColor = Surface
         )
