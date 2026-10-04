@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -54,9 +55,9 @@ fun OnboardingScreen(
         // Capture BoxWithConstraints dimensions before entering nested layout scopes.
         val screenWidth = maxWidth
         val screenHeight = maxHeight
-        val artworkHeight = (screenHeight * 0.53f).coerceIn(300.dp, 470.dp)
+        val artworkHeight = (screenHeight * 0.55f).coerceIn(310.dp, 480.dp)
         val headlineSize = if (screenWidth < 360.dp) 29.sp else 35.sp
-        val horizontalPadding = if (screenWidth < 360.dp) 20.dp else 28.dp
+        val horizontalPadding = if (screenWidth < 360.dp) 16.dp else 24.dp
 
         // The source artwork includes empty space below the illustration.
         // Render it at its natural aspect ratio and clip only that blank lower
@@ -77,8 +78,9 @@ fun OnboardingScreen(
                     painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
                     contentDescription = "NagpurPulse logo and community network illustration",
                     modifier = Modifier
-                        .width(screenWidth)
-                        .height(screenWidth / 0.452f)
+                        .width(screenWidth * 1.14f)
+                        .height((screenWidth * 1.14f) / 0.452f)
+                        .graphicsLayer { scaleX = 1.02f; scaleY = 1.02f }
                         .align(Alignment.TopCenter),
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.TopCenter
@@ -105,13 +107,13 @@ fun OnboardingScreen(
                     lineHeight = headlineSize * 1.16f,
                     fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center,
-                    maxLines = 1
+                    maxLines = if (screenWidth < 380.dp) 2 else 1
                 )
 
                 Spacer(Modifier.height(14.dp))
 
                 Text(
-                    text = "Ask questions, share finds and discover\nwhat’s happening around you in Nagpur.",
+                    text = "Ask questions, share finds and discover what’s happening around you in Nagpur.",
                     color = Color(0xFF737373),
                     fontSize = if (screenWidth < 360.dp) 16.sp else 18.sp,
                     lineHeight = if (screenWidth < 360.dp) 22.sp else 25.sp,
