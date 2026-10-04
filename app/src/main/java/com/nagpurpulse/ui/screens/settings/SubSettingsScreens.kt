@@ -214,6 +214,11 @@ fun SecuritySettingsScreen(
 
     if (showPasswordDialog) {
         AlertDialog(
+            modifier = Modifier.border(
+                1.dp,
+                Color(0xFFFF6848).copy(alpha = 0.88f),
+                RoundedCornerShape(28.dp)
+            ),
             onDismissRequest = { if (!state.isSendingReset) showPasswordDialog = false },
             title = { Text("Reset password", color = PrimaryText) },
             text = {
@@ -258,6 +263,11 @@ fun SecuritySettingsScreen(
 
     if (showCurrentPasswordDialog) {
         AlertDialog(
+            modifier = Modifier.border(
+                1.dp,
+                Color(0xFFFF6848).copy(alpha = 0.88f),
+                RoundedCornerShape(28.dp)
+            ),
             onDismissRequest = { if (!state.isChangingPassword) showCurrentPasswordDialog = false },
             title = { Text("Change password", color = PrimaryText) },
             text = {
@@ -277,6 +287,11 @@ fun SecuritySettingsScreen(
     }
     if (showSignOutEverywhereDialog) {
         AlertDialog(
+            modifier = Modifier.border(
+                1.dp,
+                Color(0xFFFF6848).copy(alpha = 0.88f),
+                RoundedCornerShape(28.dp)
+            ),
             onDismissRequest = { if (!state.isSigningOutEverywhere) showSignOutEverywhereDialog = false },
             title = { Text("Sign out everywhere?", color = PrimaryText) },
             text = { Text("This revokes your sign-in sessions on other devices too. You may need to sign in again on this device.", color = SecondaryText) },
@@ -290,6 +305,11 @@ fun SecuritySettingsScreen(
 
     infoMessage?.let { message ->
         AlertDialog(
+            modifier = Modifier.border(
+                1.dp,
+                Color(0xFFFF6848).copy(alpha = 0.88f),
+                RoundedCornerShape(28.dp)
+            ),
             onDismissRequest = { infoMessage = null },
             title = { Text("Not available yet", color = PrimaryText) },
             text = { Text(message, color = SecondaryText) },
