@@ -4,6 +4,7 @@
 
 package com.nagpurpulse.ui.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,8 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.nagpurpulse.ui.screens.admin.AdminPanelScreen          // NEW
 import com.nagpurpulse.ui.screens.explore.CategoryPostsScreen
 import kotlinx.coroutines.CoroutineScope
@@ -689,11 +694,51 @@ fun NagpurPulseNavGraph(
             Screen.UserProfile.route,
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { back ->
-            PublicProfileScreen(
-                userId = back.arguments?.getString("userId") ?: "",
-                onBack = { navController.popBackStack() },
-                onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) }
-            )
+            if (authRepository.isGuest) {
+                AlertDialog(
+                    onDismissRequest = { navController.popBackStack() },
+                    containerColor = Color(0xFF171318),
+                    titleContentColor = Color(0xFFF7F3F5),
+                    textContentColor = Color(0xFFC7C0CA),
+                    shape = RoundedCornerShape(28.dp),
+                    icon = {
+                        androidx.compose.foundation.layout.Box(
+                            Modifier
+                                .size(54.dp)
+                                .background(Color(0xFFFF7A24).copy(alpha = 0.12f), androidx.compose.foundation.shape.CircleShape)
+                                .border(1.dp, Color(0xFFFF7A24).copy(alpha = 0.45f), androidx.compose.foundation.shape.CircleShape),
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.Lock, contentDescription = null, tint = Color(0xFFFF7A24))
+                        }
+                    },
+                    title = { Text("Create an account to view profiles", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                    text = { Text("You're browsing NagpurPulse as a guest. Sign in or create an account to open member profiles and connect with the community.") },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(Screen.Home.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7A24))
+                        ) { Text("Sign in", color = Color.White) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { navController.popBackStack() }) {
+                            Text("Keep browsing", color = Color(0xFFC7C0CA))
+                        }
+                    }
+                )
+            } else {
+                PublicProfileScreen(
+                    userId = back.arguments?.getString("userId") ?: "",
+                    onBack = { navController.popBackStack() },
+                    onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) }
+                )
+            }
         }
 
         // Chat
