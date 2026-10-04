@@ -369,7 +369,7 @@ fun ConversationRow(
     var showMenu by remember(conv.id) { mutableStateOf(false) }
     var confirmDeleteBoth by remember(conv.id) { mutableStateOf(false) }
     if (confirmDeleteBoth) {
-        AlertDialog(onDismissRequest = { confirmDeleteBoth = false }, title = { Text("Delete chat for both?") }, text = { Text("This deletes the shared conversation and its messages for both participants.") }, confirmButton = { TextButton(onClick = { confirmDeleteBoth = false; onDeleteForBoth() }) { Text("Delete for both", color = RedAlert) } }, dismissButton = { TextButton(onClick = { confirmDeleteBoth = false }) { Text("Cancel") } })
+        AlertDialog(onDismissRequest = { confirmDeleteBoth = false }, containerColor = Color(0xFF171318), titleContentColor = Color(0xFFF7F3F5), textContentColor = Color(0xFFC7C0CA), shape = RoundedCornerShape(28.dp), title = { Text("Delete chat for both?") }, text = { Text("This deletes the shared conversation and its messages for both participants.") }, confirmButton = { TextButton(onClick = { confirmDeleteBoth = false; onDeleteForBoth() }) { Text("Delete for both", color = RedAlert) } }, dismissButton = { TextButton(onClick = { confirmDeleteBoth = false }) { Text("Cancel") } })
     }
 
     Box(modifier = Modifier.fillMaxWidth()) {
