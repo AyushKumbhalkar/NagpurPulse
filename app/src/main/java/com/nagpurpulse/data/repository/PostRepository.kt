@@ -68,8 +68,11 @@ class PostRepository @Inject constructor(
                 range(from, to)
             }
             val posts = response.decodeList<Post>()
-            // Enrich with usernames
-            Result.success(enrichPostsWithUsernames(posts))
+            // Respect profile visibility in every feed page, not only search results.
+            // This is a client-side UX guard; Supabase RLS is still required for
+            // security because clients can bypass repository filtering.
+            val visiblePosts = filterVisiblePosts(posts, forSearch = false)
+            Result.success(enrichPostsWithUsernames(visiblePosts))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -182,7 +185,9 @@ class PostRepository @Inject constructor(
                     posts.addAll(batch)
                 } catch (_: Exception) {}
             }
-            Result.success(enrichPostsWithUsernames(posts))
+            // Saved-post lists must follow the same visibility rules as the home feed.
+            val visiblePosts = filterVisiblePosts(posts, forSearch = false)
+            Result.success(enrichPostsWithUsernames(visiblePosts))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -518,6 +523,15 @@ class PostRepository @Inject constructor(
 
     suspend fun getCommentsByUser(userId: String): Result<List<Comment>> {
         return try {
+            val isOwnProfile = authRepository.currentUserId == userId
+            if (!isOwnProfile) {
+                val profile = fetchUserProfiles(listOf(userId))[userId]
+                // Fail closed if the profile can't be checked; never leak activity
+                // when the user hides their profile or comment history.
+                if (profile == null || profile.hideProfile || profile.hideComments) {
+                    return Result.success(emptyList())
+                }
+            }
             val comments = client.postgrest["comments"].select {
                 filter { eq("user_id", userId) }
                 order("created_at", Order.DESCENDING)
