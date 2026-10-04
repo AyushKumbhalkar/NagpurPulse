@@ -1067,7 +1067,10 @@ fun ThreadDetailScreen(
 
                                 DropdownMenu(
                                     expanded = menuExpanded,
-                                    onDismissRequest = { menuExpanded = false }
+                                    onDismissRequest = { menuExpanded = false },
+                                    containerColor = Color(0xFF171318),
+                                    shape = RoundedCornerShape(16.dp),
+                                    tonalElevation = 8.dp
                                 ) {
 
                                     DropdownMenuItem(
