@@ -343,7 +343,7 @@ fun ProfileScreen(
                     guestUsername = guestUsername,
                     badges = uiState.badges,
                     postCount = uiState.posts.size,
-                    savedCount = uiState.savedPosts.size,
+                    savedCount = uiState.savedCount,
                     onEditProfile = {
                         navController.navigate(Screen.AccountProfile.route)
                     }
