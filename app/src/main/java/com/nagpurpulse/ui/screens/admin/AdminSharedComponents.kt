@@ -190,37 +190,49 @@ fun ReasonDialog(title: String, onDismiss: () -> Unit, onConfirm: (String) -> Un
     var reason by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor   = SurfaceAlt,
-        title = { Text(title, color = PrimaryText, fontWeight = FontWeight.Bold) },
-        text  = {
+        containerColor = Color(0xFF171318),
+        titleContentColor = Color(0xFFF7F3F5),
+        textContentColor = Color(0xFFC7C0CA),
+        shape = RoundedCornerShape(28.dp),
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(title, color = Color(0xFFF7F3F5), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("Help keep NagpurPulse safe for everyone.", color = Color(0xFFC7C0CA), fontSize = 13.sp)
+            }
+        },
+        text = {
             Column {
-                Text("Select a reason:", color = SecondaryText, fontSize = 13.sp)
+                Text("Choose the closest reason", color = SecondaryText, fontSize = 13.sp)
                 Spacer(Modifier.height(10.dp))
                 listOf("Spam", "Harassment", "Misinformation", "Inappropriate content", "Other").forEach { opt ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (reason == opt) OrangePrimary.copy(alpha = 0.10f) else Color.Transparent)
+                            .border(1.dp, if (reason == opt) OrangePrimary.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.07f), RoundedCornerShape(12.dp))
                             .pressScale(onClick = { reason = opt })
-                            .padding(vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = reason == opt,
-                            onClick  = { reason = opt },
-                            colors   = RadioButtonDefaults.colors(selectedColor = OrangePrimary)
+                            onClick = { reason = opt },
+                            colors = RadioButtonDefaults.colors(selectedColor = OrangePrimary, unselectedColor = TertiaryText)
                         )
-                        Text(opt, color = if (reason == opt) PrimaryText else SecondaryText, fontSize = 14.sp)
+                        Text(opt, color = if (reason == opt) Color.White else SecondaryText, fontSize = 14.sp)
                     }
+                    Spacer(Modifier.height(5.dp))
                 }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick  = { if (reason.isNotBlank()) onConfirm(reason) },
-                enabled  = reason.isNotBlank()
-            ) {
-                Text("Confirm", color = if (reason.isNotBlank()) RedAlert else TertiaryText, fontWeight = FontWeight.SemiBold)
-            }
+            Button(
+                onClick = { if (reason.isNotBlank()) onConfirm(reason) },
+                enabled = reason.isNotBlank(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, disabledContainerColor = SurfaceAlt)
+            ) { Text("Submit report", color = if (reason.isNotBlank()) Color.White else TertiaryText, fontWeight = FontWeight.SemiBold) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel", color = SecondaryText) }
