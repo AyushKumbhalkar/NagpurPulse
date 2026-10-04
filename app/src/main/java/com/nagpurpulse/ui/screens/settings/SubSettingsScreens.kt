@@ -11,6 +11,10 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.biometric.BiometricManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -139,6 +143,8 @@ fun IncognitoSettingsScreen(
 
 data class SecurityUiState(
     val isSendingReset: Boolean = false,
+    val isChangingPassword: Boolean = false,
+    val isSigningOutEverywhere: Boolean = false,
     val message: String? = null,
     val error: String? = null
 )
@@ -151,6 +157,34 @@ class SecuritySettingsViewModel @Inject constructor(
     val state: StateFlow<SecurityUiState> = _state
 
     fun dismissMessage() { _state.value = _state.value.copy(message = null, error = null) }
+
+    fun changePassword(current: String, newPassword: String, confirm: String) {
+        if (newPassword.length < 8) {
+            _state.value = _state.value.copy(error = "New password must be at least 8 characters.")
+            return
+        }
+        if (newPassword != confirm) {
+            _state.value = _state.value.copy(error = "New passwords do not match.")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isChangingPassword = true, message = null, error = null)
+            authRepository.changePasswordWithCurrentPassword(current, newPassword).fold(
+                onSuccess = { _state.value = _state.value.copy(isChangingPassword = false, message = "Password changed successfully.") },
+                onFailure = { _state.value = _state.value.copy(isChangingPassword = false, error = it.message ?: "Password change failed.") }
+            )
+        }
+    }
+
+    fun signOutEverywhere(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSigningOutEverywhere = true, message = null, error = null)
+            authRepository.signOutEverywhere().fold(
+                onSuccess = { _state.value = _state.value.copy(isSigningOutEverywhere = false, message = "Signed out on all devices."); onSuccess() },
+                onFailure = { _state.value = _state.value.copy(isSigningOutEverywhere = false, error = "Couldn't revoke sessions. Check your connection and try again.") }
+            )
+        }
+    }
 
     fun sendPasswordReset(email: String) {
         val normalized = email.trim()
@@ -175,8 +209,22 @@ fun SecuritySettingsScreen(
 ) {
     val state by vm.state.collectAsState()
     var showPasswordDialog by remember { mutableStateOf(false) }
+    var showCurrentPasswordDialog by remember { mutableStateOf(false) }
+    var showSignOutEverywhereDialog by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var showCurrentPassword by remember { mutableStateOf(false) }
+    var showNewPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
     var infoMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val securityPrefs = remember { context.getSharedPreferences("security", android.content.Context.MODE_PRIVATE) }
+    var biometricEnabled by remember { mutableStateOf(securityPrefs.getBoolean("biometric_enabled", false)) }
+    val biometricAvailable = remember {
+        BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+    }
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(state.message, state.error) {
@@ -212,6 +260,34 @@ fun SecuritySettingsScreen(
                 ) { Text(if (state.isSendingReset) "Sending…" else "Send reset email", color = OrangePrimary) }
             },
             dismissButton = { TextButton(onClick = { showPasswordDialog = false }) { Text("Cancel", color = SecondaryText) } },
+            containerColor = Surface
+        )
+    }
+
+    if (showCurrentPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!state.isChangingPassword) showCurrentPasswordDialog = false },
+            title = { Text("Change password", color = PrimaryText) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Confirm your current password, then choose a new one.", color = SecondaryText)
+                    OutlinedTextField(currentPassword, { currentPassword = it }, label = { Text("Current password") }, singleLine = true, visualTransformation = if (showCurrentPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showCurrentPassword = !showCurrentPassword }) { Icon(if (showCurrentPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null) } })
+                    OutlinedTextField(newPassword, { newPassword = it }, label = { Text("New password (8+ characters)") }, singleLine = true, visualTransformation = if (showNewPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showNewPassword = !showNewPassword }) { Icon(if (showNewPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null) } })
+                    OutlinedTextField(confirmPassword, { confirmPassword = it }, label = { Text("Confirm new password") }, singleLine = true, visualTransformation = if (showConfirmPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) { Icon(if (showConfirmPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null) } })
+                }
+            },
+            confirmButton = { TextButton(enabled = !state.isChangingPassword, onClick = { vm.changePassword(currentPassword, newPassword, confirmPassword); showCurrentPasswordDialog = false; currentPassword = ""; newPassword = ""; confirmPassword = "" }) { Text(if (state.isChangingPassword) "Updating…" else "Change password", color = OrangePrimary) } },
+            dismissButton = { TextButton(onClick = { showCurrentPasswordDialog = false }) { Text("Cancel", color = SecondaryText) } },
+            containerColor = Surface
+        )
+    }
+    if (showSignOutEverywhereDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!state.isSigningOutEverywhere) showSignOutEverywhereDialog = false },
+            title = { Text("Sign out everywhere?", color = PrimaryText) },
+            text = { Text("This revokes your sign-in sessions on other devices too. You may need to sign in again on this device.", color = SecondaryText) },
+            confirmButton = { TextButton(enabled = !state.isSigningOutEverywhere, onClick = { vm.signOutEverywhere { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Login.route) { popUpTo(0) } }; showSignOutEverywhereDialog = false }) { Text(if (state.isSigningOutEverywhere) "Signing out…" else "Sign out everywhere", color = RedAlert) } },
+            dismissButton = { TextButton(onClick = { showSignOutEverywhereDialog = false }) { Text("Cancel", color = SecondaryText) } },
             containerColor = Surface
         )
     }
@@ -252,29 +328,73 @@ fun SecuritySettingsScreen(
             item { SectionHeader("ACCOUNT SECURITY") }
             item {
                 SettingsGroup {
-                    SettingsRow("Reset Password", "Email yourself a secure password-reset link", Icons.Filled.Lock, OrangePrimary) {
+                    SettingsRow("Change Password", "Use your current password to choose a new one", Icons.Filled.Lock, OrangePrimary) {
+                        showCurrentPasswordDialog = true
+                    }
+                    SettingsDivider()
+                    SettingsRow("Reset via Email", "Send a secure password-reset link to your inbox", Icons.Filled.Email, BlueInfo) {
                         email = ""
                         showPasswordDialog = true
                     }
                     SettingsDivider()
-                    SettingsRow("Biometric Login", "Requires device biometric integration and login-gate enforcement", Icons.Filled.Fingerprint, BlueInfo) {
-                        infoMessage = "Biometric login is not enabled in the authentication flow yet. This screen will not save a pretend enabled state."
-                    }
+                    SettingsRowToggle(
+                        "Biometric App Lock",
+                        if (biometricAvailable) "Require fingerprint or face unlock when opening NagpurPulse" else "Set up device biometrics or screen lock to enable",
+                        Icons.Filled.Fingerprint,
+                        BlueInfo,
+                        biometricEnabled,
+                        onCheckedChange = { enabled ->
+                            if (!biometricAvailable && enabled) {
+                                infoMessage = "Biometric authentication is unavailable. Set up a supported biometric or device screen lock first."
+                            } else if (enabled) {
+                                // Enable only after an explicit successful biometric verification.
+                                val activity = context as? androidx.fragment.app.FragmentActivity
+                                if (activity == null) {
+                                    infoMessage = "Biometric verification could not be started on this screen."
+                                } else {
+                                    val prompt = androidx.biometric.BiometricPrompt(
+                                        activity,
+                                        androidx.core.content.ContextCompat.getMainExecutor(context),
+                                        object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                                            override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                                                securityPrefs.edit().putBoolean("biometric_enabled", true).apply()
+                                                biometricEnabled = true
+                                            }
+                                            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                                infoMessage = "Biometric lock was not enabled."
+                                            }
+                                        }
+                                    )
+                                    prompt.authenticate(androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                                        .setTitle("Enable NagpurPulse app lock")
+                                        .setSubtitle("Verify your identity to enable biometric app lock")
+                                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                                        .setNegativeButtonText("Cancel")
+                                        .build())
+                                }
+                            } else {
+                                securityPrefs.edit().putBoolean("biometric_enabled", false).apply()
+                                biometricEnabled = false
+                            }
+                        }
+                    )
+                    // Two-factor authentication is intentionally hidden until server-side MFA is configured.
+                    /*
                     SettingsDivider()
-                    SettingsRow("Two-Factor Authentication", "Requires a configured server-side second factor", Icons.Filled.Security, GreenSuccess) {
-                        infoMessage = "Two-factor authentication is not configured in the current backend flow, so it cannot safely be enabled from this switch."
-                    }
+                    SettingsRow("Two-Factor Authentication", "Server-side MFA (not implemented yet)", Icons.Filled.Security, GreenSuccess) { }
+                    */
                 }
             }
             item { SectionHeader("SESSIONS") }
             item {
                 SettingsGroup {
-                    SettingsRow("Active Devices", "Device-session management is not connected yet", Icons.Filled.Devices, PurpleNight) {
-                        infoMessage = "The app does not yet have a verified session-management API to list and revoke all sessions."
-                    }
+                    // Active Devices is intentionally hidden until a trusted session inventory API exists.
+                    /*
+                    SettingsRow("Active Devices", "Manage signed-in devices", Icons.Filled.Devices, PurpleNight) { }
                     SettingsDivider()
-                    SettingsRow("Sign Out Everywhere", "Revoke sessions on all devices", Icons.Filled.Logout, RedAlert) {
-                        infoMessage = "Signing out everywhere requires a trusted server-side session-revocation endpoint. Only local sign-out is currently available."
+                    */
+                    SettingsRow("Sign Out Everywhere", "Revoke sign-in sessions on all devices", Icons.Filled.Logout, RedAlert) {
+                        showSignOutEverywhereDialog = true
                     }
                 }
             }
