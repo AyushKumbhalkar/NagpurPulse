@@ -17,6 +17,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -63,6 +70,7 @@ data class ProfileUiState(
     val commentCount: Int = 0,
     val unreadNotifCount: Int = 0,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val activeTab: Int = 0
 )
 
@@ -83,48 +91,58 @@ class ProfileViewModel @Inject constructor(
     val guestUsername: String?
         get() = authRepository.guestUsername
 
-    init {
-        loadAll()
-    }
+    init { refresh(showLoading = true) }
 
-    private fun loadAll() {
+    /**
+     * Load only the data needed for the current profile tab. Comments and saved posts
+     * are fetched on demand instead of blocking every profile opening.
+     */
+    fun refresh(showLoading: Boolean = false) {
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            profileRepository.getProfile(userId).fold(
-                onSuccess = { p -> _uiState.value = _uiState.value.copy(profile = p) },
-                onFailure = {})
-            postRepository.getPostsByUser(userId).fold(
-                onSuccess = { posts -> _uiState.value = _uiState.value.copy(posts = posts) },
-                onFailure = {})
-            profileRepository.getBadges(userId).fold(
-                onSuccess = { b -> _uiState.value = _uiState.value.copy(badges = b) },
-                onFailure = {})
-            savedPostsRepository.getSavedPostIds(userId).fold(onSuccess = { ids ->
-                postRepository.getSavedPosts(ids).fold(
-                    onSuccess = { p -> _uiState.value = _uiState.value.copy(savedPosts = p) },
-                    onFailure = {})
-            }, onFailure = {})
-            postRepository.getCommentsByUser(userId).fold(
-                onSuccess = { c -> _uiState.value = _uiState.value.copy(comments = c) },
-                onFailure = {})
-            notificationRepository.getUnreadCount(userId).fold(onSuccess = { count ->
-                _uiState.value = _uiState.value.copy(unreadNotifCount = count)
-            }, onFailure = {})
-            _uiState.value = _uiState.value.copy(isLoading = false)
+            _uiState.value = _uiState.value.copy(
+                isLoading = showLoading && _uiState.value.profile == null,
+                isRefreshing = !showLoading
+            )
+            try {
+                val profileJob = async { profileRepository.getProfile(userId) }
+                val postsJob = async { postRepository.getPostsByUser(userId) }
+                val badgesJob = async { profileRepository.getBadges(userId) }
+                val notifJob = async { notificationRepository.getUnreadCount(userId) }
+                profileJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(profile = p) }
+                postsJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(posts = p) }
+                badgesJob.await().onSuccess { b -> _uiState.value = _uiState.value.copy(badges = b) }
+                notifJob.await().onSuccess { count -> _uiState.value = _uiState.value.copy(unreadNotifCount = count) }
+                if (_uiState.value.activeTab == 1) loadComments(userId)
+                if (_uiState.value.activeTab == 2) loadSavedPosts(userId)
+            } finally {
+                _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
+            }
+        }
+    }
+
+    private suspend fun loadComments(userId: String) {
+        postRepository.getCommentsByUser(userId).onSuccess { comments ->
+            _uiState.value = _uiState.value.copy(comments = comments)
+        }
+    }
+
+    private suspend fun loadSavedPosts(userId: String) {
+        savedPostsRepository.getSavedPostIds(userId).onSuccess { ids ->
+            postRepository.getSavedPosts(ids).onSuccess { posts ->
+                _uiState.value = _uiState.value.copy(savedPosts = posts)
+            }
         }
     }
 
     fun setActiveTab(tab: Int) {
+        if (_uiState.value.activeTab == tab) return
         _uiState.value = _uiState.value.copy(activeTab = tab)
-        if (tab == 2 && _uiState.value.savedPosts.isEmpty()) {
-            val userId = authRepository.currentUserId ?: return
-            viewModelScope.launch {
-                savedPostsRepository.getSavedPostIds(userId).fold(onSuccess = { ids ->
-                    postRepository.getSavedPosts(ids).fold(onSuccess = { p ->
-                        _uiState.value = _uiState.value.copy(savedPosts = p)
-                    }, onFailure = {})
-                }, onFailure = {})
+        val userId = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            when (tab) {
+                1 -> loadComments(userId)
+                2 -> loadSavedPosts(userId)
             }
         }
     }
@@ -166,6 +184,15 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh(showLoading = false)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        kotlinx.coroutines.awaitCancellation()
+        lifecycleOwner.lifecycle.removeObserver(observer)
+    }
 
     val guestAvatarUrl = viewModel.guestAvatarUrl
     val guestUsername = viewModel.guestUsername
@@ -292,6 +319,11 @@ fun ProfileScreen(
             return@Scaffold
         }
 
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(uiState.isRefreshing),
+            onRefresh = { viewModel.refresh(showLoading = false) },
+            indicator = { state, trigger -> com.google.accompanist.swiperefresh.SwipeRefreshIndicator(state, trigger, contentColor = OrangePrimary) }
+        ) {
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             // ── Header ──────────────────────────────────────────────────────
             item {
@@ -464,6 +496,7 @@ fun ProfileScreen(
 
             item { Spacer(Modifier.height(16.dp)) }
         }
+        }
     }
 }
 
@@ -484,10 +517,6 @@ private fun ProfileHeader(
             ?: guestUsername?.takeIf { it.isNotBlank() }
             ?: "NagpurUser"
 
-    android.util.Log.d(
-        "PROFILE_HEADER",
-        "displayName=${profile?.displayName}, username=${profile?.username}"
-    )
 
     val avatarUrl =
         profile?.avatarUrl
@@ -496,7 +525,6 @@ private fun ProfileHeader(
 
     // val bannerUrl = profile?.coverUrl
 
-    android.util.Log.d("PROFILE_UI", "avatar=$avatarUrl")
     // android.util.Log.d("PROFILE_UI", "banner=$bannerUrl")
 
 
