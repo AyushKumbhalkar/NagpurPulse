@@ -65,7 +65,7 @@ data class SettingsUiState(
     val isLoading: Boolean = false,
     val offlineMode: Boolean = false,
     val isDarkTheme: Boolean = true,
-    val cacheSize: String = "0 MB",
+    val cacheSize: String = "Clear",
     val isAdmin: Boolean = false,          // NEW
     val adminRole: String = "",            // NEW  e.g. "super_admin" | "admin" | "moderator"
     val postCount: Int = 0,                // REAL — fetched from Supabase
@@ -170,7 +170,7 @@ class SettingsViewModel @Inject constructor(
 
     fun clearCache(context: Context) {
         authRepository.clearLocalCache(context)
-        _uiState.value = _uiState.value.copy(cacheSize = "0 MB")
+        _uiState.value = _uiState.value.copy(cacheSize = "Cleared")
     }
 
     fun logout(onDone: () -> Unit) {
