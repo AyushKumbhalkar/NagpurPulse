@@ -94,6 +94,10 @@ private fun ReportPostDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color(0xFF171318),
+        titleContentColor = Color(0xFFF7F3F5),
+        textContentColor = Color(0xFFC7C0CA),
+        shape = RoundedCornerShape(28.dp),
         title = { Text("Report Post") },
         text = {
             Column {
