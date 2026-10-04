@@ -411,25 +411,19 @@ class AccountProfileViewModel @Inject constructor(
         }
     }
 
-    fun deleteAccount(
-        onSuccess: () -> Unit
-    ) {
-
+    fun deleteAccount(onComplete: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-
-            authRepository.deleteAccount()
-                .fold(
-
-                    onSuccess = {
-                        onSuccess()
-                    },
-
-                    onFailure = {
-                        _s.value = _s.value.copy(
-                            error = it.message
-                        )
-                    }
-                )
+            authRepository.deleteAccount().fold(
+                onSuccess = {
+                    onComplete(true, "Your account has been permanently deleted.")
+                },
+                onFailure = { error ->
+                    onComplete(
+                        false,
+                        error.message ?: "Unable to delete your account. Please try again."
+                    )
+                }
+            )
         }
     }
 }
@@ -1137,11 +1131,15 @@ fun AccountProfileScreen(
                                 .pressScale {
                                     if (!accountActionBusy) {
                                         accountActionBusy = true
-                                        vm.deleteAccount {
+                                        vm.deleteAccount { success, message ->
                                             accountActionBusy = false
-                                            showDeleteDialog = false
-                                            navController.navigate("login") {
-                                                popUpTo(0)
+                                            if (success) {
+                                                showDeleteDialog = false
+                                                navController.navigate("login") {
+                                                    popUpTo(0)
+                                                }
+                                            } else {
+                                                accountActionError = message
                                             }
                                         }
                                     }
