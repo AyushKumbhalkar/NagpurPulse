@@ -114,7 +114,7 @@ class MainActivity : FragmentActivity() {
                 FeedLayoutManager.feedStyle = userPreferencesRepository.getFeedStyle()
 
                 // Restore saved theme
-                val amoledMode = userPreferencesRepository.getAmoledMode()
+                val amoledMode = userPreferencesRepository.getAmoledMode(applicationContext)
                 ThemeManager.isLightTheme = !amoledMode
 
                 // Sync notification prefs to SharedPrefs (so FCM service reads correct values)
