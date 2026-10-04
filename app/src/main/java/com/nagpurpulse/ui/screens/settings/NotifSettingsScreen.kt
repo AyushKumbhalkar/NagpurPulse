@@ -47,6 +47,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -79,114 +80,126 @@ class NotifSettingsViewModel @Inject constructor(
 
     init { loadSettings() }
 
+    private var lastPersistedState: NotifSettingsState? = null
+    private val saveMutex = kotlinx.coroutines.sync.Mutex()
+
     private fun loadSettings() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
+            _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             val prefs = userPreferencesRepository.loadAndSyncNotifPrefs(appContext)
-            _state.value = if (prefs != null) {
+            val loaded = if (prefs != null) {
                 NotifSettingsState(
-                    pushEnabled    = prefs.notifPush,
-                    notifReplies   = prefs.notifReplies,
-                    notifMentions  = prefs.notifMentions,
-                    notifMessages  = prefs.notifMessages,
-                    notifUpvotes   = prefs.notifUpvotes,
-                    notifDigest    = prefs.notifDigest,
-                    notifTrending  = prefs.notifTrending,
+                    pushEnabled = prefs.notifPush,
+                    notifReplies = prefs.notifReplies,
+                    notifMentions = prefs.notifMentions,
+                    notifMessages = prefs.notifMessages,
+                    notifUpvotes = prefs.notifUpvotes,
+                    notifDigest = prefs.notifDigest,
+                    notifTrending = prefs.notifTrending,
                     notifCommunity = prefs.notifCommunity,
-                    notifAlerts    = prefs.notifAlertsSummary,
-                    isLoading      = false
+                    notifAlerts = prefs.notifAlertsSummary,
+                    isLoading = false
                 )
             } else {
-                // Fall back to SharedPreferences (works offline)
                 NotifSettingsState(
-                    pushEnabled    = NotifPrefsHelper.isPushEnabled(appContext),
-                    notifReplies   = NotifPrefsHelper.isRepliesEnabled(appContext),
-                    notifMentions  = NotifPrefsHelper.isMentionsEnabled(appContext),
-                    notifMessages  = NotifPrefsHelper.isMessagesEnabled(appContext),
-                    notifUpvotes   = NotifPrefsHelper.isUpvotesEnabled(appContext),
-                    notifDigest    = NotifPrefsHelper.isDigestEnabled(appContext),
-                    notifTrending  = NotifPrefsHelper.isTrendingEnabled(appContext),
+                    pushEnabled = NotifPrefsHelper.isPushEnabled(appContext),
+                    notifReplies = NotifPrefsHelper.isRepliesEnabled(appContext),
+                    notifMentions = NotifPrefsHelper.isMentionsEnabled(appContext),
+                    notifMessages = NotifPrefsHelper.isMessagesEnabled(appContext),
+                    notifUpvotes = NotifPrefsHelper.isUpvotesEnabled(appContext),
+                    notifDigest = NotifPrefsHelper.isDigestEnabled(appContext),
+                    notifTrending = NotifPrefsHelper.isTrendingEnabled(appContext),
                     notifCommunity = NotifPrefsHelper.isCommunityEnabled(appContext),
-                    notifAlerts    = NotifPrefsHelper.isAlertsSummaryEnabled(appContext),
-                    isLoading      = false
+                    notifAlerts = NotifPrefsHelper.isAlertsSummaryEnabled(appContext),
+                    isLoading = false
                 )
+            }
+            _state.value = loaded
+            lastPersistedState = loaded
+        }
+    }
+
+    private fun fieldValue(state: NotifSettingsState, field: String): Boolean? = when (field) {
+        "notif_push" -> state.pushEnabled
+        "notif_replies" -> state.notifReplies
+        "notif_mentions" -> state.notifMentions
+        "notif_messages" -> state.notifMessages
+        "notif_upvotes" -> state.notifUpvotes
+        "notif_digest" -> state.notifDigest
+        "notif_trending" -> state.notifTrending
+        "notif_community" -> state.notifCommunity
+        "notif_alerts_summary" -> state.notifAlerts
+        else -> null
+    }
+
+    private fun withField(
+        state: NotifSettingsState,
+        field: String,
+        value: Boolean,
+        errorMessage: String? = state.errorMessage
+    ): NotifSettingsState = when (field) {
+        "notif_push" -> state.copy(pushEnabled = value, errorMessage = errorMessage)
+        "notif_replies" -> state.copy(notifReplies = value, errorMessage = errorMessage)
+        "notif_mentions" -> state.copy(notifMentions = value, errorMessage = errorMessage)
+        "notif_messages" -> state.copy(notifMessages = value, errorMessage = errorMessage)
+        "notif_upvotes" -> state.copy(notifUpvotes = value, errorMessage = errorMessage)
+        "notif_digest" -> state.copy(notifDigest = value, errorMessage = errorMessage)
+        "notif_trending" -> state.copy(notifTrending = value, errorMessage = errorMessage)
+        "notif_community" -> state.copy(notifCommunity = value, errorMessage = errorMessage)
+        "notif_alerts_summary" -> state.copy(notifAlerts = value, errorMessage = errorMessage)
+        else -> state
+    }
+
+    fun toggle(field: String, value: Boolean) {
+        val previous = _state.value
+        val previousValue = fieldValue(previous, field) ?: return
+        _state.value = withField(previous, field, value, errorMessage = null)
+
+        viewModelScope.launch {
+            saveMutex.withLock {
+                val saveResult = userPreferencesRepository.saveNotifPref(appContext, field, value)
+                if (saveResult.isFailure) {
+                    val current = _state.value
+                    val persisted = lastPersistedState ?: previous
+                    _state.value = if (fieldValue(current, field) == value) {
+                        withField(
+                            current,
+                            field,
+                            fieldValue(persisted, field) ?: previousValue,
+                            errorMessage = "Couldn't save notification settings. Your last saved value was restored."
+                        )
+                    } else {
+                        current.copy(errorMessage = "A notification change couldn't be saved. Please try again.")
+                    }
+                    if (field in SCHEDULED_FIELDS) ScheduledPushManager.reschedule(appContext)
+                    return@withLock
+                }
+
+                lastPersistedState = withField(lastPersistedState ?: previous, field, value, errorMessage = null)
+                if (field in SCHEDULED_FIELDS) ScheduledPushManager.reschedule(appContext)
+
+                if (!value) {
+                    val notificationType = when (field) {
+                        "notif_replies" -> "reply"
+                        "notif_mentions" -> "mention"
+                        "notif_messages" -> "message"
+                        "notif_upvotes" -> "upvote"
+                        "notif_digest" -> "digest"
+                        "notif_trending" -> "trending"
+                        "notif_community" -> "community"
+                        "notif_alerts_summary" -> "alert"
+                        else -> "all"
+                    }
+                    notificationRepository.trackAnalytics("push_opt_out", notificationType)
+                }
             }
         }
     }
 
-    fun toggle(field: String, value: Boolean) {
-        // Update UI immediately (snappy)
-        _state.value = when (field) {
-            "notif_push"           -> _state.value.copy(pushEnabled    = value)
-            "notif_replies"        -> _state.value.copy(notifReplies   = value)
-            "notif_mentions"       -> _state.value.copy(notifMentions  = value)
-            "notif_messages"       -> _state.value.copy(notifMessages  = value)
-            "notif_upvotes"        -> _state.value.copy(notifUpvotes   = value)
-            "notif_digest"         -> _state.value.copy(notifDigest    = value)
-            "notif_trending"       -> _state.value.copy(notifTrending  = value)
-            "notif_community"      -> _state.value.copy(notifCommunity = value)
-            "notif_alerts_summary" -> _state.value.copy(notifAlerts    = value)
-            else                   -> _state.value
-        }
-        // Reschedule workers when push master or any scheduled pref changes
-        if (field in listOf("notif_push", "notif_digest", "notif_trending",
-                "notif_community", "notif_alerts_summary")) {
-            ScheduledPushManager.reschedule(appContext)
-        }
-        // Persist to Supabase + SharedPreferences. Restore the prior value if
-        // the remote write fails, so the UI does not claim a setting was saved.
-        val previousValue = when (field) {
-            "notif_push" -> !_state.value.pushEnabled
-            "notif_replies" -> !_state.value.notifReplies
-            "notif_mentions" -> !_state.value.notifMentions
-            "notif_messages" -> !_state.value.notifMessages
-            "notif_upvotes" -> !_state.value.notifUpvotes
-            "notif_digest" -> !_state.value.notifDigest
-            "notif_trending" -> !_state.value.notifTrending
-            "notif_community" -> !_state.value.notifCommunity
-            "notif_alerts_summary" -> !_state.value.notifAlerts
-            else -> value
-        }
-        viewModelScope.launch {
-            val saveResult = userPreferencesRepository.saveNotifPref(appContext, field, value)
-            if (saveResult.isFailure) {
-                // Revert only this field; keep the rest of the settings state intact.
-                _state.value = when (field) {
-                    "notif_push" -> _state.value.copy(pushEnabled = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_replies" -> _state.value.copy(notifReplies = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_mentions" -> _state.value.copy(notifMentions = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_messages" -> _state.value.copy(notifMessages = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_upvotes" -> _state.value.copy(notifUpvotes = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_digest" -> _state.value.copy(notifDigest = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_trending" -> _state.value.copy(notifTrending = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_community" -> _state.value.copy(notifCommunity = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    "notif_alerts_summary" -> _state.value.copy(notifAlerts = previousValue, errorMessage = "Couldn't save notification settings. Please try again.")
-                    else -> _state.value.copy(errorMessage = "Couldn't save notification settings. Please try again.")
-                }
-                // A scheduled toggle may have cancelled or recreated workers before the
-                // remote save failed. Reconcile WorkManager against the restored
-                // SharedPreferences value so the UI and actual schedule agree.
-                if (field in listOf("notif_push", "notif_digest", "notif_trending",
-                        "notif_community", "notif_alerts_summary")) {
-                    ScheduledPushManager.reschedule(appContext)
-                }
-                return@launch
-            }
-            if (!value) {
-                val notificationType = when (field) {
-                    "notif_replies" -> "reply"
-                    "notif_mentions" -> "mention"
-                    "notif_messages" -> "message"
-                    "notif_upvotes" -> "upvote"
-                    "notif_digest" -> "digest"
-                    "notif_trending" -> "trending"
-                    "notif_community" -> "community"
-                    "notif_alerts_summary" -> "alert"
-                    else -> "all"
-                }
-                notificationRepository.trackAnalytics("push_opt_out", notificationType)
-            }
-        }
+    private companion object {
+        val SCHEDULED_FIELDS = setOf(
+            "notif_push", "notif_digest", "notif_trending", "notif_community", "notif_alerts_summary"
+        )
     }
 }
 
