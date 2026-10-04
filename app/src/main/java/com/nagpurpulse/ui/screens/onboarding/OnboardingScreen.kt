@@ -54,7 +54,7 @@ fun OnboardingScreen(
         // Capture BoxWithConstraints dimensions before entering nested layout scopes.
         val screenWidth = maxWidth
         val screenHeight = maxHeight
-        val artworkHeight = (screenHeight * 0.49f).coerceIn(280.dp, 430.dp)
+        val artworkHeight = (screenWidth * 0.98f).coerceIn(300.dp, 620.dp)
         val headlineSize = if (screenWidth < 360.dp) 29.sp else 35.sp
         val horizontalPadding = if (screenWidth < 360.dp) 16.dp else 24.dp
 
@@ -73,7 +73,7 @@ fun OnboardingScreen(
                     .clipToBounds()
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
+                    painter = painterResource(id = R.drawable.onboarding_logo),
                     contentDescription = "NagpurPulse logo and community network illustration",
                     modifier = Modifier
                         .width(screenWidth)
