@@ -86,12 +86,20 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun getTextSize(): String = try {
-        getPreferences().getOrNull()?.textSize ?: "medium"
-    } catch (_: Exception) { "medium" }
+        getPreferences().getOrNull()?.textSize
+            ?.takeIf { it in setOf("small", "medium", "large", "extra_large") }
+            ?: PreferenceManager.textSize
+    } catch (_: Exception) {
+        PreferenceManager.textSize
+    }
 
     suspend fun getDisplayDensity(): String = try {
-        getPreferences().getOrNull()?.displayDensity ?: "comfortable"
-    } catch (_: Exception) { "comfortable" }
+        getPreferences().getOrNull()?.displayDensity
+            ?.takeIf { it in setOf("compact", "comfortable", "spacious") }
+            ?: DensityManager.density
+    } catch (_: Exception) {
+        DensityManager.density
+    }
 
     suspend fun getFeedStyle(): String = try {
         // Keep the default consistent with FeedLayoutManager and the intended
@@ -99,9 +107,9 @@ class UserPreferencesRepository @Inject constructor(
         // post text to compact mode when the Settings ViewModel loads.
         getPreferences().getOrNull()?.feedStyle
             ?.takeIf { it == "compact" || it == "expanded" }
-            ?: "expanded"
+            ?: FeedLayoutManager.feedStyle
     } catch (_: Exception) {
-        "expanded"
+        FeedLayoutManager.feedStyle
     }
 
     // ── Notification preferences ──────────────────────────────────────────────
