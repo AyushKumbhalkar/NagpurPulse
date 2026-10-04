@@ -8,6 +8,9 @@ import com.nagpurpulse.ui.screens.profile.RandomImages
 import com.nagpurpulse.ui.preferences.DensityManager
 import androidx.compose.material.icons.automirrored.filled.Message
 import android.net.Uri
+import android.location.Geocoder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -448,6 +451,7 @@ fun AccountProfileScreen(
     var accountActionBusy by remember { mutableStateOf(false) }
     var accountActionMessage by remember { mutableStateOf<String?>(null) }
     var accountActionError by remember { mutableStateOf<String?>(null) }
+    var showDeactivateDialog by remember { mutableStateOf(false) }
     val pickAvatar =
         rememberLauncherForActivityResult(
             ActivityResultContracts.PickVisualMedia()
@@ -693,7 +697,7 @@ fun AccountProfileScreen(
 
                     ProfileEditRow("Bio",           s.bio,         Icons.Filled.Edit,         PurpleNight)    { vm.setBio(it) }
                     SettingsDivider()
-                    ProfileEditRow("Location",      s.location,    Icons.Filled.LocationOn,   GreenSuccess)   { vm.setLocation(it) }
+                    LocationPickerRow(value = s.location, onValueChange = vm::setLocation, context = context)
                     SettingsDivider()
 
 /*
@@ -781,7 +785,7 @@ fun AccountProfileScreen(
                 SettingsGroup {
                     SettingsRow("Change Email",       "Update your email address",            Icons.Filled.Email,  BlueInfo)   { showChangeEmailDialog = true; accountActionMessage = null; accountActionError = null }
                     SettingsDivider()
-                    SettingsRow("Deactivate Account", "Temporarily disable your account",     Icons.Filled.PauseCircle, SecondaryText) {}
+                    SettingsRow("Deactivate Account", "Temporarily disable your account",     Icons.Filled.PauseCircle, SecondaryText) { showDeactivateDialog = true }
                     SettingsDivider()
                     SettingsRow(
                         "Delete Account",
@@ -797,6 +801,22 @@ fun AccountProfileScreen(
         }
     }
 
+
+    if (showDeactivateDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!accountActionBusy) showDeactivateDialog = false },
+            title = { Text("Deactivate account?") },
+            text = {
+                Text("Account deactivation is not yet supported by the deployed backend. No changes have been made to your account. Please keep this account active until secure deactivation and reactivation are available.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showDeactivateDialog = false }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeactivateDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     if (accountActionMessage != null || accountActionError != null) {
         AlertDialog(
@@ -956,6 +976,75 @@ fun AccountProfileScreen(
     }
 }
 
+
+@Composable
+private fun LocationPickerRow(
+    value: String,
+    onValueChange: (String) -> Unit,
+    context: android.content.Context
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
+    var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var lookupError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun loadAreas() {
+        if (loading) return
+        loading = true
+        lookupError = null
+        scope.launch {
+            val results = withContext(Dispatchers.IO) {
+                try {
+                    if (!Geocoder.isPresent()) emptyList()
+                    else {
+                        @Suppress("DEPRECATION")
+                        Geocoder(context, java.util.Locale.getDefault())
+                            .getFromLocationName("Nagpur, Maharashtra, India", 25)
+                            .orEmpty()
+                            .mapNotNull { address ->
+                                listOfNotNull(address.subLocality, address.locality, address.subAdminArea)
+                                    .firstOrNull { it.isNotBlank() }
+                                    ?.let { "$it, Nagpur" }
+                            }
+                            .distinct()
+                    }
+                } catch (_: Exception) { emptyList() }
+            }
+            suggestions = results
+            loading = false
+            if (results.isEmpty()) lookupError = "Couldn't load area suggestions. Try again later."
+        }
+    }
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clip(CircleShape).background(GreenSuccess.copy(0.12f)), Alignment.Center) {
+                Icon(Icons.Filled.LocationOn, null, tint = GreenSuccess, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Location", color = SecondaryText, fontSize = 11.sp)
+                Text(value.ifBlank { "Choose an area in Nagpur" }, color = PrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            }
+            IconButton(onClick = { expanded = true; if (suggestions.isEmpty()) loadAreas() }) {
+                Icon(Icons.Filled.ArrowDropDown, "Choose Nagpur location", tint = OrangePrimary)
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            when {
+                loading -> DropdownMenuItem(text = { Text("Loading Nagpur areas…") }, onClick = {}, enabled = false)
+                suggestions.isEmpty() -> {
+                    DropdownMenuItem(text = { Text(lookupError ?: "No locations found") }, onClick = {}, enabled = false)
+                    DropdownMenuItem(text = { Text("Retry") }, onClick = { loadAreas() })
+                }
+                else -> suggestions.forEach { area ->
+                    DropdownMenuItem(text = { Text(area) }, onClick = { onValueChange(area); expanded = false })
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun ProfileEditRow(
