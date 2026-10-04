@@ -1,19 +1,7 @@
-
-// this is the SignupScreen.kt file
-//java/com/nagpurpulse/ui/screens/auth/SignupScreen.kt
-
-
 package com.nagpurpulse.ui.screens.auth
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.LocationCity
-import com.nagpurpulse.ui.preferences.DensityManager
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,6 +9,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,16 +25,17 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +63,11 @@ import com.nagpurpulse.ui.theme.OrangePrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private val SignupInk = Color(0xFF111827)
+private val SignupMuted = Color(0xFF64748B)
+private val SignupBorder = Color(0xFFE5E7EB)
+private val SignupOrange = Color(0xFFFF7518)
+
 @Composable
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
@@ -77,20 +75,24 @@ fun SignupScreen(
     onGuestContinue: () -> Unit = onSignupSuccess,
     onExistingGoogleUser: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
-)
-
-{
-    val uiState   by viewModel.uiState.collectAsState()
-    var email     by remember { mutableStateOf("") }
-    var password  by remember { mutableStateOf("") }
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    val emailLooksValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
-    var pwVisible by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+    val emailLooksValid = email.isNotBlank() &&
+        android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
     var contentReady by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(60); contentReady = true }
+    LaunchedEffect(Unit) {
+        delay(60)
+        contentReady = true
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         CinematicBackground(isLogin = false)
@@ -100,248 +102,338 @@ fun SignupScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .imePadding(),
+                .imePadding()
+                .verticalScroll(scrollState)
+                .padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            PremiumLogo("Join Nagpur's best community")
             Spacer(Modifier.height(8.dp))
+            PremiumLogo("Same City, More Stories")
+            Text(
+                text = "People  •  Places  •  Discussions",
+                color = SignupInk,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFFFF0E1).copy(alpha = 0.94f))
+                    .padding(horizontal = 18.dp, vertical = 8.dp)
+            )
+            Spacer(Modifier.height(20.dp))
 
-            // ── Form card ───────────────────────────────────────────────
             AnimatedVisibility(
                 visible = contentReady,
-                enter = fadeIn(
-                    animationSpec = tween(
-                        durationMillis = 500,
-                        delayMillis = 100
-                    )
-                ) + slideInVertically(
-                    initialOffsetY = { 40 },
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
+                enter = fadeIn(tween(450)) + slideInVertically(
+                    initialOffsetY = { it / 12 },
+                    animationSpec = tween(450)
                 )
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .border(
-                            1.dp,
-                            OrangePrimary.copy(0.30f),
-                            RoundedCornerShape(24.dp)
-                        )
-                        .padding(DensityManager.cardPadding.dp)
+                        .padding(horizontal = 18.dp)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(Color.White.copy(alpha = 0.97f))
+                        .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
+                        .padding(horizontal = 22.dp, vertical = 24.dp)
                 ) {
-                    PremiumInputField(
-                        value = email, onValueChange = { email = it },
-                        placeholder = "Email",
-                        leadingIcon = { Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(18.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        index = 0
+                    Text(
+                        text = "Create your account",
+                        color = SignupInk,
+                        fontSize = 27.sp,
+                        lineHeight = 32.sp,
+                        fontWeight = FontWeight.ExtraBold
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Join NagpurPulse and be part of a growing community of Nagpurians.",
+                        color = SignupMuted,
+                        fontSize = 15.sp,
+                        lineHeight = 21.sp
+                    )
+                    Spacer(Modifier.height(20.dp))
+
+                    SignupFieldContainer {
+                        PremiumInputField(
+                            value = email,
+                            onValueChange = { email = it },
+                            placeholder = "Email address",
+                            leadingIcon = {
+                                Icon(Icons.Filled.Email, null, tint = SignupMuted, modifier = Modifier.size(21.dp))
+                            },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = KeyboardType.Email
+                            ),
+                            index = 0
+                        )
+                    }
                     if (email.isNotBlank() && !emailLooksValid) {
                         Text(
                             text = "Enter a valid email address",
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(start = 10.dp, top = 4.dp)
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
 
-                    PremiumInputField(
-                        value = password, onValueChange = { password = it },
-                        placeholder = "Password",
-                        leadingIcon = { Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(18.dp)) },
-                        trailingIcon = {
-                            IconButton(onClick = { pwVisible = !pwVisible }) {
-                                AnimatedContent(pwVisible, transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(150)) }, label = "eye") { v ->
-                                    Icon(if (v) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    SignupFieldContainer {
+                        PremiumInputField(
+                            value = password,
+                            onValueChange = { password = it },
+                            placeholder = "Password",
+                            leadingIcon = {
+                                Icon(Icons.Filled.Lock, null, tint = SignupMuted, modifier = Modifier.size(21.dp))
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    AnimatedContent(
+                                        targetState = passwordVisible,
+                                        transitionSpec = { fadeIn(tween(130)) togetherWith fadeOut(tween(130)) },
+                                        label = "password-visibility"
+                                    ) { visible ->
+                                        Icon(
+                                            if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                            contentDescription = if (visible) "Hide password" else "Show password",
+                                            tint = SignupMuted
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        index = 2
-                    )
+                            },
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            index = 1
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
 
-                    Spacer(Modifier.height(4.dp))
+                    SignupFieldContainer {
+                        PremiumInputField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            placeholder = "Confirm password",
+                            leadingIcon = {
+                                Icon(Icons.Filled.Lock, null, tint = SignupMuted, modifier = Modifier.size(21.dp))
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                    AnimatedContent(
+                                        targetState = confirmPasswordVisible,
+                                        transitionSpec = { fadeIn(tween(130)) togetherWith fadeOut(tween(130)) },
+                                        label = "confirm-password-visibility"
+                                    ) { visible ->
+                                        Icon(
+                                            if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                            contentDescription = if (visible) "Hide confirm password" else "Show confirm password",
+                                            tint = SignupMuted
+                                        )
+                                    }
+                                }
+                            },
+                            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            index = 2
+                        )
+                    }
 
-
-                    PremiumInputField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        placeholder = "Confirm Password",
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Lock,
-                                null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        visualTransformation =
-                            if (pwVisible) VisualTransformation.None
-                            else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password
-                        ),
-                        index = 1
-                    )
-
-                    Spacer(Modifier.height(8.dp))
+                    if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+                        Text(
+                            text = "Passwords do not match",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 10.dp, top = 7.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
                     AnimatedErrorMessage(uiState.error)
                     uiState.infoMessage?.let { message ->
                         Text(
                             text = message,
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 13.sp,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                    if (
-                        confirmPassword.isNotEmpty() &&
-                        password != confirmPassword
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(40.dp))
+                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
+                            .then(
+                                Modifier.pressScale(
+                                    onClick = {
+                                        if (emailLooksValid && password.isNotBlank() &&
+                                            confirmPassword.isNotBlank() && password == confirmPassword &&
+                                            !uiState.isLoading
+                                        ) {
+                                            viewModel.signUp(email.trim(), password, onSignupSuccess)
+                                        }
+                                    }
+                                )
+                            )
+                            .height(62.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Passwords do not match",
-                            color = Color.Red,
-                            fontSize = 12.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            Text(
+                                text = if (uiState.isLoading) "Creating account…" else "Create Account",
+                                color = Color.White,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.size(12.dp))
+                            Text("→", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
-                    PremiumButton(
-                        text = "Create Account  →",
-                        isLoading = uiState.isLoading,
-                        enabled =
-                            emailLooksValid &&
-                                    password.isNotBlank() &&
-                                    confirmPassword.isNotBlank() &&
-                                    password == confirmPassword,
-                        onClick = { viewModel.signUp(
-                            email,
-                            password,
-                            onSignupSuccess
-                        ) },
-                        delayMs = 460
 
-
-                    )
-
-                    Spacer(Modifier.height(6.dp))
-
+                    Spacer(Modifier.height(20.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(
-                            Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
-                        Text("  or continue with  ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                        HorizontalDivider(
-                            Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
+                        HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
+                        Text("  or continue with  ", color = SignupMuted, fontSize = 12.sp)
+                        HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
                     }
+                    Spacer(Modifier.height(14.dp))
 
-                    Spacer(Modifier.height(8.dp))
-
+                    // Google is connected to the existing authentication flow.
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    )    {
-                        SocialButton(
-                            label = "Google",
-                            onClick = {
-
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White)
+                            .border(1.dp, SignupBorder, RoundedCornerShape(20.dp))
+                            .pressScale(onClick = {
                                 scope.launch {
-
                                     try {
-
-                                        val token =
-                                            GoogleAuthManager(context)
-                                                .getGoogleIdToken()
-
+                                        val token = GoogleAuthManager(context).getGoogleIdToken()
                                         viewModel.signInWithGoogleToken(
                                             idToken = token,
-
-                                            onExistingUser = {
-                                                onExistingGoogleUser()
-                                            },
-
-                                            onNewUser = {
-                                                onSignupSuccess()
-                                            }
+                                            onExistingUser = onExistingGoogleUser,
+                                            onNewUser = onSignupSuccess
                                         )
-
                                     } catch (_: Exception) {
                                         viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
                                     }
                                 }
-                            },
-                            delayMs = 520,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // ── Already have account ────────────────────────────────────
-            var linkVisible by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) { delay(560); linkVisible = true }
-            AnimatedVisibility(linkVisible, enter = fadeIn(tween(400))) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Continue as Guest button
-
-
-                    GuestContinueCard(
-                        onClick = onGuestContinue
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.pressScale(onClick = onNavigateToLogin),
+                            })
+                            .padding(vertical = 14.dp),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Already have an account? ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                        Text("Login", color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text("G", color = Color(0xFF4285F4), fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                        Spacer(Modifier.size(10.dp))
+                        Text("Continue with Google", color = SignupInk, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xFFFFF3E8))
+                            .pressScale(onClick = onGuestContinue)
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Color(0xFFFFE0C2)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.Groups, contentDescription = null, tint = SignupOrange, modifier = Modifier.size(30.dp))
+                        }
+                        Spacer(Modifier.size(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Continue as Guest", color = SignupInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(3.dp))
+                            Text("Explore NagpurPulse without an account", color = SignupMuted, fontSize = 13.sp, lineHeight = 18.sp)
+                        }
+                        Text("→", color = SignupOrange, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
-            // ── Trust badges ────────────────────────────────────────────
-            var trustVisible by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) { delay(650); trustVisible = true }
-            AnimatedVisibility(trustVisible, enter = fadeIn(tween(400))) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    TrustBadge(
-                        Icons.Filled.Shield,
-                        "Secure & private",
-                        Modifier.weight(1f)
-                    )
-                    TrustBadge(
-                        Icons.Filled.LocationCity,
-                        "Be a part of Nagpur",
-                        Modifier.weight(1f)
-                    )
-                }
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White.copy(alpha = 0.82f))
+                    .pressScale(onClick = onNavigateToLogin)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Already have an account? ", color = SignupMuted, fontSize = 14.sp)
+                Text("Log in", color = SignupOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
-            Spacer(Modifier.height(0.dp))
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SignupBenefit(
+                    icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
+                    title = "Secure\n& private",
+                    background = Color(0xFFD9F7E5),
+                    modifier = Modifier.weight(1f)
+                )
+                SignupBenefit(
+                    icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
+                    title = "Be a part\nof Nagpur",
+                    background = Color(0xFFFFE1C8),
+                    modifier = Modifier.weight(1f)
+                )
+                SignupBenefit(
+                    icon = { Text("▮▮▮", color = Color(0xFF2563EB), fontSize = 15.sp, fontWeight = FontWeight.Bold) },
+                    title = "Interesting\ndiscussions",
+                    background = Color(0xFFDCEEFF),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(18.dp))
         }
+    }
+}
+
+@Composable
+private fun SignupFieldContainer(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White)
+            .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(24.dp))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun SignupBenefit(
+    icon: @Composable () -> Unit,
+    title: String,
+    background: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(50))
+                .background(background),
+            contentAlignment = Alignment.Center
+        ) {
+            icon()
+        }
+        Text(title, color = SignupMuted, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
