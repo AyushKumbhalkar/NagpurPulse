@@ -485,8 +485,7 @@ class AuthRepository @Inject constructor(
         context.cacheDir.deleteRecursively()
         // Clear Coil image cache
         try {
-            val imageLoader = coil.ImageLoader.Builder(context).build()
-            imageLoader.memoryCache?.clear()
+            context.imageLoader.memoryCache?.clear()
         } catch (_: Exception) {}
     }
 
