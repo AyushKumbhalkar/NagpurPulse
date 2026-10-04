@@ -865,7 +865,7 @@ fun HomeScreen(
                                         .clip(CircleShape)
                                         .background(OrangePrimary)
                                         .align(Alignment.TopEnd)
-                                        .offset(x = (-1).dp, y = 1.dp),
+                                        .offset(x = (-3).dp, y = 3.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
