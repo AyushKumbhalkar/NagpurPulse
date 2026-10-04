@@ -180,6 +180,9 @@ class NotifSettingsViewModel @Inject constructor(
                 }
 
                 lastPersistedState = withField(lastPersistedState ?: previous, field, value, errorMessage = null)
+                // A later successful save supersedes an earlier failed rapid toggle.
+                // Clear its stale error so the UI reflects the final persisted state.
+                _state.value = _state.value.copy(errorMessage = null)
                 if (field in SCHEDULED_FIELDS) ScheduledPushManager.reschedule(appContext)
 
                 if (!value) {
