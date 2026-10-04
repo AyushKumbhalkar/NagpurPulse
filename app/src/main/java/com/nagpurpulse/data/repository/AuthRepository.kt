@@ -447,6 +447,35 @@ class AuthRepository @Inject constructor(
         } catch (e: Exception) { Result.failure(e) }
     }
 
+    // Change password only after proving knowledge of the current password.
+    suspend fun changePasswordWithCurrentPassword(currentPassword: String, newPassword: String): Result<Unit> {
+        return try {
+            val email = client.auth.currentUserOrNull()?.email
+                ?: return Result.failure(IllegalStateException("Your account email is unavailable. Use the email reset option."))
+            if (currentPassword.isBlank() || newPassword.length < 8) {
+                return Result.failure(IllegalArgumentException("Enter your current password and a new password with at least 8 characters."))
+            }
+            // Re-authentication prevents a stale unlocked session alone from changing credentials.
+            client.auth.signInWith(Email) {
+                this.email = email
+                this.password = currentPassword
+            }
+            client.auth.updateUser { password = newPassword }
+            Result.success(Unit)
+        } catch (_: Exception) {
+            Result.failure(IllegalStateException("Password change failed. Check your current password and try again."))
+        }
+    }
+
+    // Revoke refresh sessions for this user on all devices; callers must still handle failure.
+    suspend fun signOutEverywhere(): Result<Unit> {
+        return try {
+            removeCurrentDeviceToken()
+            client.auth.signOut(io.github.jan.supabase.auth.SignOutScope.GLOBAL)
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
     // ── Change password ───────────────────────────────────────────────────────
     suspend fun changePassword(newPassword: String): Result<Unit> {
         return try {
