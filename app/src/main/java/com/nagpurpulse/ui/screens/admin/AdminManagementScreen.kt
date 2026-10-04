@@ -244,10 +244,7 @@ fun AdminPostsContent(
 
                     DropdownMenu(
                         expanded = showLimitMenu,
-                        onDismissRequest = { showLimitMenu = false },
-                        containerColor = Color(0xFF171318),
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 8.dp
+                        onDismissRequest = { showLimitMenu = false }
                     ) {
                         listOf(20, 50, 100, 200, 500).forEach { count ->
                             DropdownMenuItem(
