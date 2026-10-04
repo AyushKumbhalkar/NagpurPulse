@@ -46,6 +46,8 @@ fun TextSizeScreen(
         )
     }
 
+    LaunchedEffect(uiState.textSize) { selected = uiState.textSize }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
