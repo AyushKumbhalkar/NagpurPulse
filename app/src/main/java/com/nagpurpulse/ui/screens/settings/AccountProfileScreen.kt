@@ -485,8 +485,8 @@ fun AccountProfileScreen(
                         Text("Account & Profile", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("Manage your identity and public profile", color = SecondaryText, fontSize = 12.sp)
                     }
-                    Box(
-                        modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(OrangePrimary)
+                    Row(
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(OrangePrimary)
                             .pressScale {
 
                                 when {
@@ -511,10 +511,13 @@ fun AccountProfileScreen(
 
                                 avatarUri = null
                                 pendingAvatarUrl = null
-                            }.padding(horizontal = 16.dp, vertical = 8.dp)
+                            }.padding(horizontal = 18.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (s.isSaving) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Text("Save", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        if (s.isSaving) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Filled.Check, contentDescription = "Save profile", tint = Color.White, modifier = Modifier.size(20.dp))
+                        Text(if (s.isSaving) "Saving…" else "Save changes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
                 HorizontalDivider(color = Divider, thickness = 0.5.dp)
@@ -762,29 +765,13 @@ fun AccountProfileScreen(
                 }
             }
 
-            // PRIVACY CONTROLS section
-            item { SectionHeader("PRIVACY CONTROLS") }
-            item {
-                SettingsGroup {
-                    SettingsRowToggle("Hide My Comments",  "Other users won't see your comments on posts", Icons.Filled.VisibilityOff, RedAlert,    s.hideComments,     vm::setHideComments)
-                    SettingsDivider()
-                    SettingsRowToggle("Hide My Posts",     "Make all your posts invisible to other users", Icons.Filled.VisibilityOff, RedAlert,    s.hidePosts,        vm::setHidePosts)
-                    SettingsDivider()
-                    SettingsRowToggle("Hide My Profile",   "Your profile won't be visible in search",      Icons.Filled.VisibilityOff, RedAlert,    s.hideProfile,      vm::setHideProfile)
-                    SettingsDivider()
-                    SettingsRowToggle("Allow Direct Messages","Let others message you",                   Icons.AutoMirrored.Filled.Message,       BlueInfo,    s.allowDms,         vm::setAllowDms)
-                    SettingsDivider()
-                    SettingsRowToggle("Show Online Status","Let others see when you're online",            Icons.Filled.FiberManualRecord, GreenSuccess, s.showOnlineStatus, vm::setShowOnline)
-                }
-            }
+            // Privacy controls live in the dedicated Privacy Settings screen to avoid duplicate controls.
 
             // ACCOUNT section
             item { SectionHeader("ACCOUNT") }
             item {
                 SettingsGroup {
                     SettingsRow("Change Email",       "Update your email address",            Icons.Filled.Email,  BlueInfo)   { showChangeEmailDialog = true; accountActionMessage = null; accountActionError = null }
-                    SettingsDivider()
-                    SettingsRow("Change Password",    "Update your account password",         Icons.Filled.Lock,   OrangePrimary) { showChangePasswordDialog = true; accountActionMessage = null; accountActionError = null }
                     SettingsDivider()
                     SettingsRow("Deactivate Account", "Temporarily disable your account",     Icons.Filled.PauseCircle, SecondaryText) {}
                     SettingsDivider()
