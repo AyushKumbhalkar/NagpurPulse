@@ -32,6 +32,7 @@ data class Profile(
     @SerialName("show_online_status") val showOnlineStatus: Boolean = true,
     @SerialName("incognito_mode")     val incognitoMode: Boolean = false,
     @SerialName("hide_from_search")   val hideFromSearch: Boolean = false,
+    @SerialName("is_deactivated")     val isDeactivated: Boolean = false,
     @SerialName("created_at") val createdAt: String = ""
 )
 
