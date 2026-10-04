@@ -191,6 +191,7 @@ fun SettingsScreen(
 ) {
     val uiState    = viewModel.uiState.collectAsState().value
     val context    = LocalContext.current
+    val scope      = rememberCoroutineScope()
     val profile    = uiState.profile
     var showLogout by remember { mutableStateOf(false) }
     var unavailableMessage by remember { mutableStateOf<String?>(null) }
@@ -334,10 +335,10 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-                            Text("Incognito User", color = SecondaryText, fontSize = 12.sp)
+                            Text(profile?.displayName?.takeIf { it.isNotBlank() } ?: "NagpurPulse member", color = SecondaryText, fontSize = 12.sp)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.LocationOn, null, tint = TertiaryText, modifier = Modifier.size(11.dp))
-                                Text(" ${profile?.areas?.firstOrNull() ?: "Nagpur"}, Maharashtra", color = TertiaryText, fontSize = 12.sp)
+                                Text(" ${profile?.areas?.firstOrNull() ?: profile?.location?.takeIf { it.isNotBlank() } ?: "Location not set"}", color = TertiaryText, fontSize = 12.sp)
                             }
                             Spacer(Modifier.height(8.dp))
                             Box(
@@ -404,7 +405,7 @@ fun SettingsScreen(
                         iconTint      = PurpleNight,
                         checked       = ThemeManager.isLightTheme,
                         onCheckedChange = { enabled ->
-                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                            scope.launch {
                                 delay(180)
                                 ThemeManager.toggleTheme(enabled)
                             }
