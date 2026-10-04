@@ -83,7 +83,10 @@ class PostRepository @Inject constructor(
             val post = client.postgrest["posts"]
                 .select { filter { eq("id", id) } }
                 .decodeSingle<Post>()
-            // Increment view count
+            if (!isPostVisible(post)) {
+                return Result.failure(IllegalStateException("This post is no longer available."))
+            }
+            // Increment view count only after visibility has been checked.
             try {
                 client.postgrest["posts"].update(
                     mapOf("view_count" to post.viewCount + 1)
@@ -103,10 +106,23 @@ class PostRepository @Inject constructor(
             val post = client.postgrest["posts"]
                 .select { filter { eq("id", id) } }
                 .decodeSingle<Post>()
+            if (!isPostVisible(post)) {
+                return Result.failure(IllegalStateException("This post is no longer available."))
+            }
             Result.success(enrichPostWithUsername(post))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Re-check visibility for direct links and notification previews, which do not
+     * pass through the home-feed/search filtering path.
+     */
+    private suspend fun isPostVisible(post: Post): Boolean {
+        if (post.isAnonymous || authRepository.currentUserId == post.userId) return true
+        val profile = fetchUserProfiles(listOf(post.userId))[post.userId] ?: return false
+        return !profile.hideProfile && !profile.hidePosts
     }
 
     suspend fun searchPosts(query: String): Result<List<Post>> {
