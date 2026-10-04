@@ -7,6 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.nagpurpulse.R
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -86,83 +90,16 @@ fun SplashScreen(onFinished: () -> Unit) {
             modifier = Modifier.graphicsLayer { alpha = exitAlpha },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo
-            Box(modifier = Modifier.size(logoSize).offset(y = (floatY * if (compactHeight) 0.6f else 1f).dp).scale(logoScale), contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .size(logoSize * 0.97f)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    OrangePrimary.copy(
-                                        alpha = if (LocalIsDarkTheme.current)
-                                            glowAlpha * 0.12f
-                                        else
-                                            glowAlpha * 0.18f
-                                    ),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-                Box(modifier = Modifier.size(logoSize * 0.79f).graphicsLayer { rotationZ = ringRotation }.border(
-                    1.5.dp,
-                    Brush.sweepGradient(
-                        listOf(
-                            Color.Transparent,
-                            OrangePrimary.copy(
-                                alpha = if (LocalIsDarkTheme.current)
-                                    glowAlpha * 0.6f
-                                else
-                                    glowAlpha * 0.85f
-                            ),
-                            OrangePrimary.copy(
-                                alpha = if (LocalIsDarkTheme.current)
-                                    glowAlpha
-                                else
-                                    1f
-                            ),
-                            OrangePrimary.copy(
-                                alpha = if (LocalIsDarkTheme.current)
-                                    glowAlpha * 0.6f
-                                else
-                                    glowAlpha * 0.85f
-                            ),
-                            Color.Transparent
-                        )
-                    ),
-                    CircleShape
-                ))
-                Box(
-                    modifier = Modifier
-                        .size(logoSize * 0.63f)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                if (LocalIsDarkTheme.current) {
-                                    listOf(
-                                        Color(0xFF1A0D00),
-                                        Color(0xFF0A0600)
-                                    )
-                                } else {
-                                    listOf(
-                                        OrangePrimary.copy(alpha = 0.12f),
-                                        OrangePrimary.copy(alpha = 0.05f)
-                                    )
-                                }
-                            )
-                        )
-                        .border(
-                            1.dp,
-                            OrangePrimary.copy(alpha = 0.6f),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("∿", color = OrangePrimary, fontSize = if (compactHeight) 32.sp else 38.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+            // Official NagpurPulse logo artwork
+            Image(
+                painter = painterResource(id = R.drawable.nagpurpulse_app_icon),
+                contentDescription = "NagpurPulse logo",
+                modifier = Modifier
+                    .size(logoSize)
+                    .offset(y = (floatY * if (compactHeight) 0.6f else 1f).dp)
+                    .scale(logoScale),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(Modifier.height(if (compactHeight) 16.dp else 28.dp))
 
