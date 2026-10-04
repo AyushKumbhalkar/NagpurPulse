@@ -401,6 +401,15 @@ class AccountProfileViewModel @Inject constructor(
         }
     }
 
+    fun deactivateAccount(onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            authRepository.deactivateAccount().fold(
+                onSuccess = { onComplete(true, "Your account has been deactivated. Sign in again whenever you're ready to reactivate it.") },
+                onFailure = { onComplete(false, it.message ?: "Unable to deactivate account. Please try again.") }
+            )
+        }
+    }
+
     fun deleteAccount(
         onSuccess: () -> Unit
     ) {
@@ -805,15 +814,29 @@ fun AccountProfileScreen(
     if (showDeactivateDialog) {
         AlertDialog(
             onDismissRequest = { if (!accountActionBusy) showDeactivateDialog = false },
-            title = { Text("Deactivate account?") },
+            title = { Text("Temporarily deactivate account?") },
             text = {
-                Text("Account deactivation is not yet supported by the deployed backend. No changes have been made to your account. Please keep this account active until secure deactivation and reactivation are available.")
+                Text("Your account will be marked deactivated and you'll be signed out on this device. Signing in again with your credentials reactivates it. Your content is not deleted.")
             },
             confirmButton = {
-                TextButton(onClick = { showDeactivateDialog = false }) { Text("OK") }
+                Button(
+                    enabled = !accountActionBusy,
+                    onClick = {
+                        accountActionBusy = true
+                        vm.deactivateAccount { success, message ->
+                            accountActionBusy = false
+                            showDeactivateDialog = false
+                            if (success) {
+                                navController.navigate("login") { popUpTo(0) }
+                            } else {
+                                accountActionError = message
+                            }
+                        }
+                    }
+                ) { Text(if (accountActionBusy) "Deactivating…" else "Deactivate") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeactivateDialog = false }) { Text("Cancel") }
+                TextButton(enabled = !accountActionBusy, onClick = { showDeactivateDialog = false }) { Text("Cancel") }
             }
         )
     }
