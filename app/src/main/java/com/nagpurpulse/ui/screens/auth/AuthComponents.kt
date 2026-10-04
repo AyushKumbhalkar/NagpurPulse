@@ -98,34 +98,40 @@ import kotlinx.coroutines.delay
 // ─── Cinematic city background ────────────────────────────────────────────────
 @Composable
 fun CinematicBackground(isLogin: Boolean) {
-    val t = rememberInfiniteTransition(label = "bg")
-    val glow1 by t.animateFloat(
-        0f,
-        1f,
-        infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "g1"
-    )
-    val glow2 by t.animateFloat(
-        0f,
-        1f,
-        infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "g2"
-    )
-    val waveY by t.animateFloat(
-        0f,
-        12f,
-        infiniteRepeatable(tween(3500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "wy"
-    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        if (!isLogin) {
+            // The signup illustration already contains the NagpurPulse wordmark,
+            // landmarks, decorative slogans and green footer area.
+            Image(
+                painter = painterResource(id = R.drawable.nagpurpulse_signup_background),
+                contentDescription = "NagpurPulse illustrated cityscape with railway station and metro",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            val t = rememberInfiniteTransition(label = "bg")
+            val glow1 by t.animateFloat(
+                0f, 1f,
+                infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "g1"
+            )
+            val glow2 by t.animateFloat(
+                0f, 1f,
+                infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "g2"
+            )
+            val waveY by t.animateFloat(
+                0f, 12f,
+                infiniteRepeatable(tween(3500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "wy"
+            )
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)) {
-        // Deep city silhouette gradient
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
+            Box(
+                modifier = Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
                         listOf(
                             MaterialTheme.colorScheme.background,
@@ -135,98 +141,53 @@ fun CinematicBackground(isLogin: Boolean) {
                         )
                     )
                 )
-        )
-
-
-        // Main warm orange radial — top centre (the "light source" behind logo)
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .align(Alignment.TopCenter)
-                .offset(y = (-80 + waveY * 0.5f).dp)
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            OrangePrimary.copy(alpha = 0.10f + glow1 * 0.04f),
-                            Color(0xFFFF8A00).copy(alpha = 0.05f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
-        // Right building silhouette amber glow
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 40.dp, y = (60 + waveY).dp)
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            Color(0xFFFF6000).copy(alpha = 0.08f + glow2 * 0.03f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
-        // Bottom-left subtle warm glow
-        Box(
-            modifier = Modifier
-                .size(250.dp)
-                .align(Alignment.BottomStart)
-                .offset(x = (-40).dp, y = 40.dp)
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            Color(0xFFFF8C00).copy(alpha = 0.06f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
-        // Horizontal light arc (like in the login screenshot)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .align(Alignment.TopCenter)
-                .offset(y = 280.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            OrangePrimary.copy(0.15f),
-                            OrangePrimary.copy(0.30f),
-                            OrangePrimary.copy(0.15f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
-        // Bottom wave lines (ambient)
-        repeat(3) { i ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .align(Alignment.BottomCenter)
-                    .offset(y = (-40 - i * 18 + waveY * (i + 1) * 0.3f).dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color.Transparent,
-                                OrangePrimary.copy(alpha = (0.08f - i * 0.02f)),
-                                OrangePrimary.copy(alpha = (0.12f - i * 0.03f)),
-                                OrangePrimary.copy(alpha = (0.08f - i * 0.02f)),
-                                Color.Transparent
-                            )
-                        )
-                    )
             )
+            Box(
+                modifier = Modifier.size(400.dp).align(Alignment.TopCenter)
+                    .offset(y = (-80 + waveY * 0.5f).dp)
+                    .background(Brush.radialGradient(listOf(
+                        OrangePrimary.copy(alpha = 0.10f + glow1 * 0.04f),
+                        Color(0xFFFF8A00).copy(alpha = 0.05f),
+                        Color.Transparent
+                    )))
+            )
+            Box(
+                modifier = Modifier.size(300.dp).align(Alignment.TopEnd)
+                    .offset(x = 40.dp, y = (60 + waveY).dp)
+                    .background(Brush.radialGradient(listOf(
+                        Color(0xFFFF6000).copy(alpha = 0.08f + glow2 * 0.03f),
+                        Color.Transparent
+                    )))
+            )
+            Box(
+                modifier = Modifier.size(250.dp).align(Alignment.BottomStart)
+                    .offset(x = (-40).dp, y = 40.dp)
+                    .background(Brush.radialGradient(listOf(Color(0xFFFF8C00).copy(alpha = 0.06f), Color.Transparent)))
+            )
+            Box(
+                modifier = Modifier.fillMaxWidth().height(2.dp).align(Alignment.TopCenter)
+                    .offset(y = 280.dp)
+                    .background(Brush.horizontalGradient(listOf(
+                        Color.Transparent,
+                        OrangePrimary.copy(0.15f),
+                        OrangePrimary.copy(0.30f),
+                        OrangePrimary.copy(0.15f),
+                        Color.Transparent
+                    )))
+            )
+            repeat(3) { i ->
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(1.dp).align(Alignment.BottomCenter)
+                        .offset(y = (-40 - i * 18 + waveY * (i + 1) * 0.3f).dp)
+                        .background(Brush.horizontalGradient(listOf(
+                            Color.Transparent,
+                            OrangePrimary.copy(alpha = (0.08f - i * 0.02f)),
+                            OrangePrimary.copy(alpha = (0.12f - i * 0.03f)),
+                            OrangePrimary.copy(alpha = (0.08f - i * 0.02f)),
+                            Color.Transparent
+                        )))
+                )
+            }
         }
     }
 }
