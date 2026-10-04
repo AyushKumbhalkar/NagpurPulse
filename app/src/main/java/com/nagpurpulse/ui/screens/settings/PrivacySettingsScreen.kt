@@ -1,19 +1,19 @@
-// This is the PrivacySettingsScreen.kt file
-
-// java/com/nagpurpulse/ui/screens/settings/PrivacySettingsScreen.kt
-
 package com.nagpurpulse.ui.screens.settings
 
-import com.nagpurpulse.ui.preferences.DensityManager
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,315 +34,249 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 data class PrivacyUiState(
     val showProfile: Boolean = true,
-    val showOnlineStatus: Boolean = false,
-    val showLastActive: Boolean = false,
+    val showOnlineStatus: Boolean = true,
     val allowDms: Boolean = true,
     val hideComments: Boolean = false,
     val hidePosts: Boolean = false,
-    val hideUpvotes: Boolean = false,
     val hideFromSearch: Boolean = false,
     val incognitoMode: Boolean = false,
-    val randomAvatar: Boolean = true,
-    val hideLocation: Boolean = true
+    val isLoading: Boolean = true,
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
 class PrivacySettingsViewModel @Inject constructor(
-    val authRepository: AuthRepository
+    private val authRepository: AuthRepository
 ) : ViewModel() {
-    private val _s = MutableStateFlow(PrivacyUiState())
-    val state: StateFlow<PrivacyUiState> = _s
+    private val _state = MutableStateFlow(PrivacyUiState())
+    val state: StateFlow<PrivacyUiState> = _state
+    private val saveMutex = Mutex()
+    private var lastSaved = PrivacyUiState(isLoading = false)
 
-    init {
-        loadSettings()
-    }
+    init { loadSettings() }
+
+    fun dismissError() { _state.value = _state.value.copy(errorMessage = null) }
 
     private fun loadSettings() {
         viewModelScope.launch {
-            authRepository.getCurrentProfile()
-                .onSuccess { profile ->
-                    android.util.Log.d(
-                        "PRIVACY_DEBUG",
-                        """
-    LOAD SETTINGS
-    username=${profile.username}
-    hideProfile=${profile.hideProfile}
-    """.trimIndent()
-                    )
-
-                    _s.value = _s.value.copy(
+            _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+            authRepository.getCurrentProfile().fold(
+                onSuccess = { profile ->
+                    val loaded = PrivacyUiState(
                         showProfile = !profile.hideProfile,
+                        showOnlineStatus = profile.showOnlineStatus,
+                        allowDms = profile.allowDms,
                         hideComments = profile.hideComments,
                         hidePosts = profile.hidePosts,
-                        allowDms = profile.allowDms,
-                        showOnlineStatus = profile.showOnlineStatus,
+                        hideFromSearch = profile.hideFromSearch,
                         incognitoMode = profile.incognitoMode,
-                        hideFromSearch = profile.hideFromSearch
+                        isLoading = false
+                    )
+                    lastSaved = loaded
+                    _state.value = loaded
+                },
+                onFailure = {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        errorMessage = "Privacy settings couldn't be loaded. Check your connection and retry."
                     )
                 }
+            )
         }
     }
+
+    fun retryLoad() = loadSettings()
 
     fun toggle(field: String, value: Boolean) {
-
-        android.util.Log.d(
-            "PRIVACY_DEBUG",
-            "toggle() field=$field value=$value"
-        )
-
-        _s.value = when (field) {
-            "showProfile"      -> _s.value.copy(showProfile = value)
-            "showOnlineStatus" -> _s.value.copy(showOnlineStatus = value)
-            "showLastActive"   -> _s.value.copy(showLastActive = value)
-            "allowDms"         -> _s.value.copy(allowDms = value)
-            "hideComments"     -> _s.value.copy(hideComments = value)
-            "hidePosts"        -> _s.value.copy(hidePosts = value)
-            "hideUpvotes"      -> _s.value.copy(hideUpvotes = value)
-            "hideFromSearch"   -> _s.value.copy(hideFromSearch = value)
-            "incognitoMode"    -> _s.value.copy(incognitoMode = value)
-            "randomAvatar"     -> _s.value.copy(randomAvatar = value)
-            "hideLocation"     -> _s.value.copy(hideLocation = value)
-            else               -> _s.value
+        val updated = when (field) {
+            "showProfile" -> _state.value.copy(showProfile = value, errorMessage = null)
+            "showOnlineStatus" -> _state.value.copy(showOnlineStatus = value, errorMessage = null)
+            "allowDms" -> _state.value.copy(allowDms = value, errorMessage = null)
+            "hideComments" -> _state.value.copy(hideComments = value, errorMessage = null)
+            "hidePosts" -> _state.value.copy(hidePosts = value, errorMessage = null)
+            "hideFromSearch" -> _state.value.copy(hideFromSearch = value, errorMessage = null)
+            "incognitoMode" -> _state.value.copy(incognitoMode = value, errorMessage = null)
+            else -> return
         }
-
-        persist()
+        _state.value = updated
+        persistLatest()
     }
 
-    private fun persist() {
-
-        val uid = authRepository.currentUserId ?: return
-
-        android.util.Log.d(
-            "PRIVACY_DEBUG",
-            "persist() uid=$uid showProfile=${_s.value.showProfile}"
-        )
-
+    private fun persistLatest() {
+        val userId = authRepository.currentUserId ?: run {
+            _state.value = _state.value.copy(errorMessage = "Please sign in again to save privacy settings.")
+            return
+        }
         viewModelScope.launch {
-            authRepository.updatePrivacySettings(
-                userId = uid,
-                hideComments = _s.value.hideComments,
-                hidePosts = _s.value.hidePosts,
-                hideProfile = !_s.value.showProfile,
-                allowDms = _s.value.allowDms,
-                showOnlineStatus = _s.value.showOnlineStatus,
-                incognitoMode = _s.value.incognitoMode,
-                hideFromSearch = _s.value.hideFromSearch
-            )
+            saveMutex.withLock {
+                val attempted = _state.value.copy(isLoading = false, isSaving = true, errorMessage = null)
+                _state.value = _state.value.copy(isSaving = true)
+                val result = authRepository.updatePrivacySettings(
+                    userId = userId,
+                    hideComments = attempted.hideComments,
+                    hidePosts = attempted.hidePosts,
+                    hideProfile = !attempted.showProfile,
+                    allowDms = attempted.allowDms,
+                    showOnlineStatus = attempted.showOnlineStatus,
+                    incognitoMode = attempted.incognitoMode,
+                    hideFromSearch = attempted.hideFromSearch
+                )
+                if (result.isSuccess) {
+                    lastSaved = attempted.copy(isSaving = false)
+                    _state.value = _state.value.copy(isSaving = false)
+                } else {
+                    val current = _state.value
+                    _state.value = if (
+                        current.showProfile == attempted.showProfile &&
+                        current.showOnlineStatus == attempted.showOnlineStatus &&
+                        current.allowDms == attempted.allowDms &&
+                        current.hideComments == attempted.hideComments &&
+                        current.hidePosts == attempted.hidePosts &&
+                        current.hideFromSearch == attempted.hideFromSearch &&
+                        current.incognitoMode == attempted.incognitoMode
+                    ) {
+                        lastSaved.copy(isLoading = false, isSaving = false,
+                            errorMessage = "Couldn't save that change. Your last saved settings were restored.")
+                    } else {
+                        current.copy(isSaving = false,
+                            errorMessage = "A privacy change couldn't be saved. Please try again.")
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun PrivacySettingsScreen(navController: NavController, vm: PrivacySettingsViewModel = hiltViewModel()) {
-    val s = vm.state.collectAsState().value
-
-    Scaffold(
-        containerColor = Background,
-        topBar = {
-            Column(
-                modifier = Modifier
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Surface, Background),
-                            0f,
-                            120f
-                        )
-                    )
-                    .statusBarsPadding()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                            tint = PrimaryText
-                        )
-                    }
-
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = "Privacy & Visibility",
-                            color = PrimaryText,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Text(
-                            text = "Manage who can see your activity",
-                            color = SecondaryText,
-                            fontSize = 12.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                HorizontalDivider(
-                    color = Divider,
-                    thickness = 0.5.dp
-                )
-            }
-        }
-    ) { pad ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(pad),
-            contentPadding = PaddingValues(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Surface)
-                        .padding(
-    DensityManager.cardPadding.dp
-),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Shield,
-                        contentDescription = null,
-                        tint = OrangePrimary,
-                        modifier = Modifier.size(36.dp)
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(
-                        "Control what others can see about you on Nagpur Pulse.",
-                        color = SecondaryText,
-                        fontSize = 13.sp
-                    )
-                }
-            }
-
-            item { SectionHeader("PROFILE VISIBILITY") }
-
-            item {
-                SettingsGroup {
-                    SettingsRowToggle(
-                        "Show Profile to Others",
-                        "Allow others to view your profile",
-                        Icons.Filled.Visibility,
-                        OrangePrimary,
-                        s.showProfile
-                    ) { vm.toggle("showProfile", it) }
-
-                    SettingsDivider()
-
-                    SettingsRowToggle(
-                        "Show Online Status",
-                        "Let others see when you're online",
-                        Icons.Filled.FiberManualRecord,
-                        GreenSuccess,
-                        s.showOnlineStatus
-                    ) { vm.toggle("showOnlineStatus", it) }
-
-                    SettingsDivider()
-
-                    SettingsRowToggle(
-                        "Show Last Active",
-                        "Let others see your last active time",
-                        Icons.Filled.AccessTime,
-                        SecondaryText,
-                        s.showLastActive
-                    ) { vm.toggle("showLastActive", it) }
-
-                    SettingsDivider()
-
-                    SettingsRowToggle(
-                        "Allow Direct Messages",
-                        "Let others message you",
-                        Icons.AutoMirrored.Filled.Message,
-                        BlueInfo,
-                        s.allowDms
-                    ) { vm.toggle("allowDms", it) }
-                }
-            }
-
-            item { SectionHeader("CONTENT VISIBILITY") }
-
-            item {
-                SettingsGroup {
-                    SettingsRowToggle(
-                        "Hide My Comments",
-                        "Hide all my comments from public view",
-                        Icons.Filled.VisibilityOff,
-                        RedAlert,
-                        s.hideComments
-                    ) { vm.toggle("hideComments", it) }
-
-                    SettingsDivider()
-
-                    SettingsRowToggle(
-                        "Hide My Posts",
-                        "Only you can see your posts",
-                        Icons.Filled.VisibilityOff,
-                        RedAlert,
-                        s.hidePosts
-                    ) { vm.toggle("hidePosts", it) }
-
-                    SettingsDivider()
-
-                    SettingsRowToggle(
-                        "Hide Upvotes/Interactions",
-                        "Hide my likes, upvotes and reactions",
-                        Icons.Filled.VisibilityOff,
-                        RedAlert,
-                        s.hideUpvotes
-                    ) { vm.toggle("hideUpvotes", it) }
-
-                    SettingsDivider()
-
-                    SettingsRowToggle(
-                        "Hide from Search Results",
-                        "Don't show my profile in search",
-                        Icons.Filled.SearchOff,
-                        OrangePrimary,
-                        s.hideFromSearch
-                    ) { vm.toggle("hideFromSearch", it) }
-                }
-            }
-
-            item { SectionHeader("BLOCKING & RESTRICTIONS") }
-
-            item {
-                SettingsGroup {
-                    SettingsRow(
-                        "Blocked Users",
-                        "Manage your blocked users",
-                        Icons.Filled.Block,
-                        RedAlert
-                    ) {}
-
-                    SettingsDivider()
-
-                    SettingsRow(
-                        "Muted Users",
-                        "Manage muted users",
-                        Icons.AutoMirrored.Filled.VolumeOff,
-                        SecondaryText
-                    ) {}
-                }
-
-                Spacer(Modifier.height(20.dp))
-            }
+fun PrivacySettingsScreen(
+    navController: NavController,
+    vm: PrivacySettingsViewModel = hiltViewModel()
+) {
+    val s by vm.state.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(s.errorMessage) {
+        s.errorMessage?.let {
+            snackbar.showSnackbar(it)
+            vm.dismissError()
         }
     }
 
+    Scaffold(
+        containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 120f))
+                    .statusBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Privacy & Safety", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("Control what others can see", color = SecondaryText, fontSize = 12.sp)
+                    }
+                    if (s.isSaving) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = OrangePrimary)
+                    }
+                }
+                HorizontalDivider(color = Divider, thickness = 0.5.dp)
+            }
+        }
+    ) { padding ->
+        when {
+            s.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = OrangePrimary)
+            }
+            s.errorMessage != null && s.showProfile && s.isLoading.not() -> {
+                // Keep the settings UI available; the snackbar reports errors and retry is explicit below.
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentPadding = PaddingValues(14.dp)
+                ) {
+                    item {
+                        SettingsGroup {
+                            Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                                Text("Couldn't load privacy settings", color = PrimaryText, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(8.dp))
+                                Text("Your saved settings may not be current. Retry before changing them.", color = SecondaryText)
+                                TextButton(onClick = { vm.retryLoad() }) { Text("Retry", color = OrangePrimary) }
+                            }
+                        }
+                    }
+                }
+            }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                            .background(Surface).padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.PrivacyTip, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Your privacy, your choice", color = PrimaryText, fontWeight = FontWeight.SemiBold)
+                            Text("Only options backed by your account profile are shown here.", color = SecondaryText, fontSize = 12.sp)
+                        }
+                    }
+                }
+                item { SectionHeader("PROFILE VISIBILITY") }
+                item {
+                    SettingsGroup {
+                        SettingsRowToggle("Show Profile to Others", "Allow people to open your profile",
+                            Icons.Filled.Visibility, OrangePrimary, s.showProfile) { vm.toggle("showProfile", it) }
+                        SettingsDivider()
+                        SettingsRowToggle("Show Online Status", "Let others see when you're online",
+                            Icons.Filled.FiberManualRecord, GreenSuccess, s.showOnlineStatus) { vm.toggle("showOnlineStatus", it) }
+                        SettingsDivider()
+                        SettingsRowToggle("Allow Direct Messages", "Allow other users to message you",
+                            Icons.Filled.Message, BlueInfo, s.allowDms) { vm.toggle("allowDms", it) }
+                        SettingsDivider()
+                        SettingsRowToggle("Hide From Search", "Exclude your profile from in-app search",
+                            Icons.Filled.Search, PurpleNight, s.hideFromSearch) { vm.toggle("hideFromSearch", it) }
+                    }
+                }
+                item { SectionHeader("CONTENT VISIBILITY") }
+                item {
+                    SettingsGroup {
+                        SettingsRowToggle("Hide My Posts", "Hide your posts from other users where supported",
+                            Icons.Filled.Article, RedAlert, s.hidePosts) { vm.toggle("hidePosts", it) }
+                        SettingsDivider()
+                        SettingsRowToggle("Hide My Comments", "Hide your comments from other users where supported",
+                            Icons.Filled.Comment, RedAlert, s.hideComments) { vm.toggle("hideComments", it) }
+                    }
+                }
+                item { SectionHeader("INCOGNITO") }
+                item {
+                    SettingsGroup {
+                        SettingsRowToggle("Incognito Mode", "Save this preference to your account",
+                            Icons.Filled.VisibilityOff, PurpleNight, s.incognitoMode) { vm.toggle("incognitoMode", it) }
+                    }
+                }
+                item {
+                    Text(
+                        "Note: these preferences are saved to your profile. Their effect across feeds, search, and public profiles also depends on the app's query and visibility rules.",
+                        color = SecondaryText, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+            }
+        }
+    }
 }
