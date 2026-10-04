@@ -65,6 +65,15 @@ class AuthRepository @Inject constructor(
     suspend fun signIn(email: String, password: String): Result<Unit> {
         return try {
             client.auth.signInWith(Email) { this.email = email; this.password = password }
+            val userId = currentUserId
+                ?: return Result.failure(IllegalStateException("Sign-in completed without a user session"))
+            // Signing in again is the explicit reactivation action for a temporarily deactivated account.
+            val profile = client.postgrest["profiles"]
+                .select { filter { eq("id", userId) } }
+                .decodeSingle<Profile>()
+            if (profile.isDeactivated) {
+                client.postgrest.rpc("reactivate_user_account")
+            }
             registerFcmTokenForCurrentUser()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -98,6 +107,22 @@ class AuthRepository @Inject constructor(
             client.auth.signOut()
             Result.success(Unit)
         } catch (e: Exception) { Result.failure(e) }
+    }
+
+    /** Marks the current profile deactivated on the server, then ends this device's session. */
+    suspend fun deactivateAccount(): Result<Unit> {
+        return try {
+            if (currentUserId == null) {
+                return Result.failure(IllegalStateException("Please sign in again to deactivate your account."))
+            }
+            client.postgrest.rpc("deactivate_user_account")
+            // Token cleanup is best-effort; still sign out if cleanup fails.
+            try { removeCurrentDeviceToken() } catch (_: Exception) { }
+            client.auth.signOut()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     private suspend fun registerFcmTokenForCurrentUser() {
