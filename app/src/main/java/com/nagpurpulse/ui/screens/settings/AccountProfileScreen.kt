@@ -1406,6 +1406,15 @@ private fun LocationPickerRow(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF26191A), Color(0xFF111116), Color(0xFF21171B))
+                    ),
+                    RoundedCornerShape(18.dp)
+                )
+                .border(1.dp, Color(0xFFFF6848).copy(alpha = 0.78f), RoundedCornerShape(18.dp))
         ) {
             when {
                 loading -> DropdownMenuItem(text = { Text("Loading Nagpur areas…", color = TertiaryText) }, onClick = {}, enabled = false)
