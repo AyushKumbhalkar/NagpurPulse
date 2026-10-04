@@ -58,6 +58,9 @@ fun DisplayDensityScreen(
         )
     }
 
+    LaunchedEffect(DensityManager.density) { selected = DensityManager.density }
+    LaunchedEffect(FeedLayoutManager.feedStyle) { selectedFeedStyle = FeedLayoutManager.feedStyle }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
@@ -152,8 +155,6 @@ fun DisplayDensityScreen(
                     modifier = Modifier.clickable {
 
                         selectedFeedStyle = style
-
-                        FeedLayoutManager.feedStyle = style
 
                         android.util.Log.d(
                             "FEED_STYLE_CLICK",
