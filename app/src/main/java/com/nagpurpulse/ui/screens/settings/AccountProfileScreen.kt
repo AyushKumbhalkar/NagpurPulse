@@ -850,44 +850,211 @@ fun AccountProfileScreen(
     }
 
     if (showChangeEmailDialog) {
-        AlertDialog(
+        androidx.compose.ui.window.Dialog(
             onDismissRequest = { if (!accountActionBusy) showChangeEmailDialog = false },
-            title = { Text("Change email") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("A confirmation email may be sent to your new address.")
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = !accountActionBusy,
+                dismissOnClickOutside = !accountActionBusy
+            )
+        ) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp)
+                        .heightIn(max = maxHeight * 0.88f)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF24191A), Color(0xFF121116), Color(0xFF1B151A))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Color(0xFFFF7A24).copy(alpha = 0.72f),
+                            RoundedCornerShape(32.dp)
+                        )
+                        .padding(horizontal = 18.dp, vertical = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(34.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFD2C7CA).copy(alpha = 0.85f))
+                    )
+
+                    Spacer(Modifier.height(28.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(92.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(Color(0xFFFF9B45).copy(alpha = 0.32f), Color(0xFF7D310D).copy(alpha = 0.24f))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFF8A35).copy(alpha = 0.9f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Email,
+                            contentDescription = null,
+                            tint = Color(0xFFFFA04E),
+                            modifier = Modifier.size(42.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+
+                    Text(
+                        text = "Change email",
+                        color = Color(0xFFF8F6F7),
+                        fontSize = 27.sp,
+                        lineHeight = 33.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Text(
+                        text = "We’ll send a confirmation link to your new address.",
+                        color = Color(0xFFC4BEC8),
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
                     OutlinedTextField(
                         value = newEmail,
                         onValueChange = { newEmail = it },
-                        label = { Text("New email address") },
+                        placeholder = {
+                            Text("name@example.com", color = Color(0xFF89858F), fontSize = 15.sp)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Email, contentDescription = null, tint = Color(0xFF89858F))
+                        },
                         singleLine = true,
                         enabled = !accountActionBusy,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFFF7F3F5),
+                            unfocusedTextColor = Color(0xFFF7F3F5),
+                            focusedBorderColor = Color(0xFFFF8A35),
+                            unfocusedBorderColor = Color(0xFF625B64),
+                            cursorColor = Color(0xFFFF8A35),
+                            focusedContainerColor = Color(0xFF17151B).copy(alpha = 0.55f),
+                            unfocusedContainerColor = Color(0xFF17151B).copy(alpha = 0.55f),
+                            focusedLeadingIconColor = Color(0xFF89858F),
+                            unfocusedLeadingIconColor = Color(0xFF89858F)
+                        ),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
                         )
                     )
-                }
-            },
-            dismissButton = {
-                TextButton(enabled = !accountActionBusy, onClick = { showChangeEmailDialog = false }) { Text("Cancel") }
-            },
-            confirmButton = {
-                Button(
-                    enabled = !accountActionBusy && android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail.trim()).matches(),
-                    onClick = {
-                        accountActionBusy = true
-                        vm.changeEmail(newEmail) { success, message ->
-                            accountActionBusy = false
-                            showChangeEmailDialog = false
-                            newEmail = ""
-                            if (success) accountActionMessage = message else accountActionError = message
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.VerifiedUser,
+                            contentDescription = null,
+                            tint = Color(0xFF8E8A9C),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            "Your current email stays active until you confirm.",
+                            color = Color(0xFFAAA5B5),
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
+                        )
+                    }
+
+                    Spacer(Modifier.height(26.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(0.85f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF17151A).copy(alpha = 0.55f))
+                                .border(1.dp, Color(0xFF514A54), RoundedCornerShape(50))
+                                .pressScale { if (!accountActionBusy) showChangeEmailDialog = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Cancel", color = Color(0xFFFF792E), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1.15f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (!accountActionBusy && android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail.trim()).matches())
+                                        Brush.horizontalGradient(listOf(Color(0xFFB94B12), Color(0xFF8F390F)))
+                                    else Brush.horizontalGradient(listOf(Color(0xFF71300F), Color(0xFF67300F)))
+                                )
+                                .pressScale {
+                                    if (!accountActionBusy && android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail.trim()).matches()) {
+                                        accountActionBusy = true
+                                        vm.changeEmail(newEmail) { success, message ->
+                                            accountActionBusy = false
+                                            if (success) {
+                                                showChangeEmailDialog = false
+                                                newEmail = ""
+                                                accountActionMessage = message
+                                                accountActionError = null
+                                            } else {
+                                                accountActionError = message
+                                            }
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (accountActionBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    "Update email",
+                                    color = if (android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail.trim()).matches()) Color.White else Color(0xFFB7A39A),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
-                ) { Text(if (accountActionBusy) "Updating…" else "Update email") }
+                }
             }
-        )
+        }
     }
-
     if (showChangePasswordDialog) {
         AlertDialog(
             onDismissRequest = { if (!accountActionBusy) showChangePasswordDialog = false },
