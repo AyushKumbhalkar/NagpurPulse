@@ -199,7 +199,7 @@ fun SecuritySettingsScreen(
     val securityPrefs = remember { context.getSharedPreferences("security", android.content.Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(securityPrefs.getBoolean("biometric_enabled", false)) }
     val biometricAvailable = remember {
-        BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+        BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
     }
     val snackbar = remember { SnackbarHostState() }
 
