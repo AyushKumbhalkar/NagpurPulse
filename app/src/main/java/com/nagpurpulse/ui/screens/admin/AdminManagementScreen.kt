@@ -158,7 +158,6 @@ fun AdminPostsContent(
 
                         DatePickerDialog(
                             onDismissRequest = { showDatePicker = false },
-                            shape = RoundedCornerShape(28.dp),
                             colors = DatePickerDefaults.colors(
                                 containerColor = Color(0xFF171318),
                                 selectedDayContainerColor = OrangePrimary,
@@ -467,7 +466,6 @@ fun AdminPostsContent(
 
                         DatePickerDialog(
                             onDismissRequest = { showCommentDatePicker = false },
-                            shape = RoundedCornerShape(28.dp),
                             colors = DatePickerDefaults.colors(
                                 containerColor = Color(0xFF171318),
                                 selectedDayContainerColor = OrangePrimary,
