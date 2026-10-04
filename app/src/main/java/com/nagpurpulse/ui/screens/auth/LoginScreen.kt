@@ -414,42 +414,143 @@ fun LoginScreen(
         }
  
         if (showForgotPasswordDialog) {
-            AlertDialog(
-                onDismissRequest = { showForgotPasswordDialog = false },
-                title = { Text("Reset your password") },
-                text = {
-                    Column {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { if (!uiState.isLoading) showForgotPasswordDialog = false },
+                properties = androidx.compose.ui.window.DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    dismissOnBackPress = !uiState.isLoading,
+                    dismissOnClickOutside = !uiState.isLoading
+                )
+            ) {
+                androidx.compose.foundation.layout.BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 22.dp)
+                            .heightIn(max = maxHeight * 0.88f)
+                            .clip(RoundedCornerShape(32.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF251719), Color(0xFF101116), Color(0xFF201619))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFF793D), RoundedCornerShape(32.dp))
+                            .padding(horizontal = 18.dp, vertical = 18.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier.width(34.dp).height(4.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFFBDB2B6).copy(alpha = 0.85f))
+                        )
+                        Spacer(Modifier.height(28.dp))
+                        Box(
+                            modifier = Modifier.size(92.dp).clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(Color(0xFFFF8B3D).copy(alpha = 0.38f), Color(0xFF7B2418).copy(alpha = 0.28f))
+                                    )
+                                )
+                                .border(2.dp, Color(0xFFFF793D), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Email,
+                                contentDescription = null,
+                                tint = Color(0xFFFF9A54),
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(24.dp))
                         Text(
-                            "Enter the email address linked to your NagpurPulse account. We will send you a reset link.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
+                            "Reset your password",
+                            color = Color(0xFFF8F6F7),
+                            fontSize = 25.sp,
+                            lineHeight = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.",
+                            color = Color(0xFFC7C0CA),
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                        Spacer(Modifier.height(24.dp))
                         OutlinedTextField(
                             value = resetEmail,
                             onValueChange = { resetEmail = it },
-                            label = { Text("Email address") },
+                            placeholder = { Text("Email address", color = Color(0xFF99939D)) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Email, contentDescription = null, tint = Color(0xFFB9B4BE))
+                            },
                             singleLine = true,
+                            enabled = !uiState.isLoading,
+                            shape = RoundedCornerShape(20.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFFF8F6F7),
+                                unfocusedTextColor = Color(0xFFF8F6F7),
+                                focusedBorderColor = Color(0xFFFF8B3D),
+                                unfocusedBorderColor = Color(0xFF8A6A65),
+                                cursorColor = Color(0xFFFF8B3D),
+                                focusedContainerColor = Color(0xFF151419).copy(alpha = 0.7f),
+                                unfocusedContainerColor = Color(0xFF151419).copy(alpha = 0.7f)
+                            )
                         )
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        enabled = android.util.Patterns.EMAIL_ADDRESS.matcher(resetEmail.trim()).matches() && !uiState.isLoading,
-                        onClick = {
-                            viewModel.sendPasswordReset(resetEmail.trim())
-                            showForgotPasswordDialog = false
+                        Spacer(Modifier.height(26.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.weight(0.8f).height(54.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color(0xFF101116).copy(alpha = 0.55f))
+                                    .border(1.dp, Color(0xFF77727D), RoundedCornerShape(50))
+                                    .pressScale { if (!uiState.isLoading) showForgotPasswordDialog = false },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Cancel", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Box(
+                                modifier = Modifier.weight(1.2f).height(54.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(
+                                        Brush.horizontalGradient(listOf(Color(0xFFFF790D), Color(0xFFFF393D)))
+                                    )
+                                    .pressScale {
+                                        if (android.util.Patterns.EMAIL_ADDRESS.matcher(resetEmail.trim()).matches() && !uiState.isLoading) {
+                                            viewModel.sendPasswordReset(resetEmail.trim())
+                                            showForgotPasswordDialog = false
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (uiState.isLoading) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("Send reset link", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                        Text("→", color = Color.White, fontSize = 21.sp)
+                                    }
+                                }
+                            }
                         }
-                    ) { Text("Send reset link", color = OrangePrimary) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showForgotPasswordDialog = false }) {
-                        Text("Cancel")
                     }
                 }
-            )
+            }
         }
     }
 }
