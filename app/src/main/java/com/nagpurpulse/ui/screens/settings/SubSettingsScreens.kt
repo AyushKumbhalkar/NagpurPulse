@@ -344,7 +344,7 @@ fun SecuritySettingsScreen(
                                     prompt.authenticate(androidx.biometric.BiometricPrompt.PromptInfo.Builder()
                                         .setTitle("Enable NagpurPulse app lock")
                                         .setSubtitle("Verify your identity to enable biometric app lock")
-                                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
                                         .setNegativeButtonText("Cancel")
                                         .build())
                                 }
