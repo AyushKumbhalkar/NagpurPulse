@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -275,35 +276,173 @@ fun SettingsScreen(
         )
     }
 
+    var logoutBusy by remember { mutableStateOf(false) }
+
     if (showLogout) {
-        AlertDialog(
-            onDismissRequest = { showLogout = false },
-            containerColor   = SurfaceAlt,
-            title = {
-                Text("Sign out?", color = PrimaryText, fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Text("You'll need to sign in again.", color = SecondaryText)
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogout = false
-                        viewModel.logout {
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(0) { inclusive = true }
-                                launchSingleTop = true
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { if (!logoutBusy) showLogout = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = !logoutBusy,
+                dismissOnClickOutside = !logoutBusy
+            )
+        ) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp)
+                        .heightIn(max = maxHeight * 0.88f)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF211719), Color(0xFF111116), Color(0xFF211719))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Color(0xFFFF6848).copy(alpha = 0.88f),
+                            RoundedCornerShape(32.dp)
+                        )
+                        .padding(horizontal = 18.dp, vertical = 18.dp)
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(34.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFBDB2B6).copy(alpha = 0.8f))
+                    )
+
+                    Spacer(Modifier.height(30.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(92.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(Color(0xFFFF6C43).copy(alpha = 0.34f), Color(0xFF6C211B).copy(alpha = 0.28f))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFF6548), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = null,
+                            tint = Color(0xFFFF604C),
+                            modifier = Modifier.size(43.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Text(
+                        text = "Ready to head out?",
+                        color = Color(0xFFF8F6F7),
+                        fontSize = 27.sp,
+                        lineHeight = 33.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = "You’ll be signed out of NagpurPulse on this device. You can sign back in anytime.",
+                        color = Color(0xFFC2BBC7),
+                        fontSize = 15.sp,
+                        lineHeight = 23.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    Spacer(Modifier.height(30.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(54.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF17151A).copy(alpha = 0.55f))
+                                .border(1.dp, Color(0xFF514A54), RoundedCornerShape(50))
+                                .pressScale { if (!logoutBusy) showLogout = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Stay signed in",
+                                color = Color(0xFFF1EDF0),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(54.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFFFF6652), Color(0xFFFF433D))
+                                    )
+                                )
+                                .pressScale {
+                                    if (!logoutBusy) {
+                                        logoutBusy = true
+                                        viewModel.logout {
+                                            logoutBusy = false
+                                            showLogout = false
+                                            navController.navigate(Screen.Login.route) {
+                                                popUpTo(0) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (logoutBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Logout,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(23.dp)
+                                    )
+                                    Text(
+                                        "Sign out",
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
-                ) { Text("Sign Out", color = RedAlert, fontWeight = FontWeight.SemiBold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogout = false }) {
-                    Text("Cancel", color = SecondaryText)
                 }
             }
-        )
+        }
     }
 
     Scaffold(
