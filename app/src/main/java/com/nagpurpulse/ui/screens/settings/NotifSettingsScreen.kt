@@ -80,6 +80,10 @@ class NotifSettingsViewModel @Inject constructor(
 
     init { loadSettings() }
 
+    fun dismissError() {
+        _state.value = _state.value.copy(errorMessage = null)
+    }
+
     private var lastPersistedState: NotifSettingsState? = null
     private val saveMutex = kotlinx.coroutines.sync.Mutex()
 
@@ -214,7 +218,10 @@ fun NotifSettingsScreen(
     val state by vm.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.errorMessage) {
-        state.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+        state.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.dismissError()
+        }
     }
 
     val hasPermission = remember {
