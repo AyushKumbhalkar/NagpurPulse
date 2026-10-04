@@ -116,9 +116,9 @@ class AuthRepository @Inject constructor(
                 return Result.failure(IllegalStateException("Please sign in again to deactivate your account."))
             }
             client.postgrest.rpc("deactivate_user_account")
-            // Token cleanup is best-effort; still sign out if cleanup fails.
+            // Token cleanup is best-effort; still revoke all refresh sessions if cleanup fails.
             try { removeCurrentDeviceToken() } catch (_: Exception) { }
-            client.auth.signOut()
+            client.auth.signOut(io.github.jan.supabase.auth.SignOutScope.GLOBAL)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
