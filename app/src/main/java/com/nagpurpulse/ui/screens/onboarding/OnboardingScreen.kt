@@ -51,9 +51,12 @@ fun OnboardingScreen(
             .fillMaxSize()
             .background(OnboardingBackground)
     ) {
-        val artworkHeight = (maxHeight * 0.53f).coerceIn(300.dp, 470.dp)
-        val headlineSize = if (maxWidth < 360.dp) 29.sp else 35.sp
-        val horizontalPadding = if (maxWidth < 360.dp) 20.dp else 28.dp
+        // Capture BoxWithConstraints dimensions before entering nested layout scopes.
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
+        val artworkHeight = (screenHeight * 0.53f).coerceIn(300.dp, 470.dp)
+        val headlineSize = if (screenWidth < 360.dp) 29.sp else 35.sp
+        val horizontalPadding = if (screenWidth < 360.dp) 20.dp else 28.dp
 
         // The source artwork includes empty space below the illustration.
         // Render it at its natural aspect ratio and clip only that blank lower
@@ -74,8 +77,8 @@ fun OnboardingScreen(
                     painter = painterResource(id = R.drawable.nagpurpulse_social_network_onboarding),
                     contentDescription = "NagpurPulse logo and community network illustration",
                     modifier = Modifier
-                        .width(maxWidth)
-                        .height(maxWidth / 0.452f)
+                        .width(screenWidth)
+                        .height(screenWidth / 0.452f)
                         .align(Alignment.TopCenter),
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.TopCenter
@@ -110,8 +113,8 @@ fun OnboardingScreen(
                 Text(
                     text = "Ask questions, share finds and discover\nwhat’s happening around you in Nagpur.",
                     color = Color(0xFF737373),
-                    fontSize = if (maxWidth < 360.dp) 16.sp else 18.sp,
-                    lineHeight = if (maxWidth < 360.dp) 22.sp else 25.sp,
+                    fontSize = if (screenWidth < 360.dp) 16.sp else 18.sp,
+                    lineHeight = if (screenWidth < 360.dp) 22.sp else 25.sp,
                     textAlign = TextAlign.Center
                 )
 
