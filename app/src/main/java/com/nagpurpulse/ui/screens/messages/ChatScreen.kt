@@ -570,6 +570,10 @@ private fun MessageBubble(
             if (showOptions) {
                 AlertDialog(
                     onDismissRequest = { showOptions = false },
+                    containerColor = Color(0xFF171318),
+                    titleContentColor = Color(0xFFF7F3F5),
+                    textContentColor = Color(0xFFC7C0CA),
+                    shape = RoundedCornerShape(28.dp),
                     title = { Text("Message options") },
                     text = {
                         Column {
