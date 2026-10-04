@@ -67,6 +67,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.OrangePrimary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 private val SignupInk = Color(0xFF111827)
@@ -104,8 +106,14 @@ fun SignupScreen(
 
     LaunchedEffect(scrollState) {
         snapshotFlow { scrollState.value to scrollState.maxValue }
+            .distinctUntilChanged()
+            .debounce(250)
             .collect { (offset, maxOffset) ->
-                Log.d(SIGNUP_SCROLL_TAG, "scrollOffset=$offset maxScroll=$maxOffset")
+                val percent = if (maxOffset > 0) (offset * 100 / maxOffset) else 100
+                Log.d(
+                    SIGNUP_SCROLL_TAG,
+                    "Scroll settled: offset=$offset px, max=$maxOffset px, progress=$percent%"
+                )
             }
     }
 
