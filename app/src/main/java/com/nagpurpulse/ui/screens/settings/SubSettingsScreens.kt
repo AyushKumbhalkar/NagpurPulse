@@ -60,7 +60,7 @@ fun IncognitoSettingsScreen(
                     }
                     Column(Modifier.weight(1f)) {
                         Text("Incognito Settings", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Manage saved visibility controls", color = SecondaryText, fontSize = 12.sp)
+                        Text("Incognito is a preference, not guaranteed anonymity", color = SecondaryText, fontSize = 12.sp)
                     }
                     if (state.isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = OrangePrimary, strokeWidth = 2.dp)
                 }
@@ -96,44 +96,20 @@ fun IncognitoSettingsScreen(
                     ) {
                         Icon(Icons.Filled.VisibilityOff, contentDescription = null, tint = PurpleNight, modifier = Modifier.size(34.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text("Privacy without false promises", color = PrimaryText, fontWeight = FontWeight.SemiBold)
+                        Text("What Incognito means", color = PrimaryText, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "These switches save to your profile. Some app surfaces may need separate visibility enforcement.",
-                            color = SecondaryText, fontSize = 12.sp
+                            "Incognito currently saves your preference. It does not automatically anonymize posts or comments, hide your identity from moderators, or guarantee invisibility. Use Privacy & Safety for the individual visibility controls.",
+                            color = SecondaryText, fontSize = 13.sp
                         )
                     }
                 }
-                item { SectionHeader("INCOGNITO MODE") }
+                item { SectionHeader("INCognito STATUS") }
                 item {
                     SettingsGroup {
                         SettingsRowToggle(
-                            "Enable Incognito Mode", "Save incognito mode to your account",
+                            "Incognito Mode", "Save this preference to your account; this alone does not anonymize content",
                             Icons.Filled.VisibilityOff, PurpleNight, state.incognitoMode
                         ) { vm.toggle("incognitoMode", it) }
-                        SettingsDivider()
-                        SettingsRowToggle(
-                            "Hide Profile", "Prevent other users from viewing your profile where enforced",
-                            Icons.Filled.VisibilityOff, OrangePrimary, !state.showProfile
-                        ) { vm.toggle("showProfile", !it) }
-                        SettingsDivider()
-                        SettingsRowToggle(
-                            "Hide From Search", "Exclude your profile from in-app search where enforced",
-                            Icons.Filled.VisibilityOff, BlueInfo, state.hideFromSearch
-                        ) { vm.toggle("hideFromSearch", it) }
-                    }
-                }
-                item { SectionHeader("CONTENT VISIBILITY") }
-                item {
-                    SettingsGroup {
-                        SettingsRowToggle(
-                            "Hide My Posts", "Hide your posts where feed/profile queries respect this setting",
-                            Icons.Filled.VisibilityOff, RedAlert, state.hidePosts
-                        ) { vm.toggle("hidePosts", it) }
-                        SettingsDivider()
-                        SettingsRowToggle(
-                            "Hide My Comments", "Hide your comments where supported",
-                            Icons.Filled.VisibilityOff, RedAlert, state.hideComments
-                        ) { vm.toggle("hideComments", it) }
                     }
                 }
             }
