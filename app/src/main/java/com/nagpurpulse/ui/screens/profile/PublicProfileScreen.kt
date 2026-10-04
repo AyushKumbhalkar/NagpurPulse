@@ -75,15 +75,6 @@ class PublicProfileViewModel @Inject constructor(
         viewModelScope.launch {
             profileRepository.getProfile(userId).fold(
                 onSuccess = { profile ->
-                    android.util.Log.d(
-                        "PUBLIC_PROFILE_DEBUG",
-                        """
-    username=${profile.username}
-    hideProfile=${profile.hideProfile}
-    userId=${profile.id}
-    """.trimIndent()
-                    )
-
                     postRepository.getPostsByUser(userId).fold(
                         onSuccess = { posts ->
                             _uiState.value = PublicProfileUiState(
@@ -115,7 +106,9 @@ fun PublicProfileScreen(
     val uiState     by viewModel.uiState.collectAsState()
     val displayName = uiState.profile?.username ?: "User"
     val onlineUserIds by viewModel.onlineUserIds.collectAsState()
-    val isProfileOnline = userId in onlineUserIds
+    // Respect the target user's visibility preference at the point of display too.
+    // Presence events may already be in the shared flow from an earlier subscription.
+    val isProfileOnline = userId in onlineUserIds && uiState.profile?.showOnlineStatus == true
     val avatarUrl = uiState.profile?.avatarUrl
     var avatarVisible by remember {
         mutableStateOf(false)
