@@ -56,6 +56,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 // ── UI State ──────────────────────────────────────────────────────────────────
@@ -131,25 +132,39 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private val appearanceSaveMutex = kotlinx.coroutines.sync.Mutex()
+
     fun updateDisplayDensity(density: String) {
         viewModelScope.launch {
-            val previous = DensityManager.density
-            val result = userPreferencesRepository.saveDisplayDensity(density)
-            if (result.isFailure) DensityManager.density = previous
-            _uiState.value = _uiState.value.copy(
-                settingsMessage = if (result.isSuccess) "Display density saved." else "Display density couldn't be saved. Your previous value was restored."
-            )
+            appearanceSaveMutex.withLock {
+                val previous = DensityManager.density
+                val result = userPreferencesRepository.saveDisplayDensity(density)
+                if (result.isSuccess) {
+                    DensityManager.density = density
+                } else {
+                    DensityManager.density = previous
+                }
+                _uiState.value = _uiState.value.copy(
+                    settingsMessage = if (result.isSuccess) "Display density saved." else "Display density couldn't be saved. Your previous value was restored."
+                )
+            }
         }
     }
 
     fun updateFeedStyle(style: String) {
         viewModelScope.launch {
-            val previous = FeedLayoutManager.feedStyle
-            val result = userPreferencesRepository.saveFeedStyle(style)
-            if (result.isFailure) FeedLayoutManager.feedStyle = previous
-            _uiState.value = _uiState.value.copy(
-                settingsMessage = if (result.isSuccess) "Feed style saved." else "Feed style couldn't be saved. Your previous value was restored."
-            )
+            appearanceSaveMutex.withLock {
+                val previous = FeedLayoutManager.feedStyle
+                val result = userPreferencesRepository.saveFeedStyle(style)
+                if (result.isSuccess) {
+                    FeedLayoutManager.feedStyle = style
+                } else {
+                    FeedLayoutManager.feedStyle = previous
+                }
+                _uiState.value = _uiState.value.copy(
+                    settingsMessage = if (result.isSuccess) "Feed style saved." else "Feed style couldn't be saved. Your previous value was restored."
+                )
+            }
         }
     }
 
