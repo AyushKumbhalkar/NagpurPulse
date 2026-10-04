@@ -296,14 +296,18 @@ fun SignupScreen(
                     }
                     Spacer(Modifier.height(14.dp))
 
-                    // Google is connected to the existing authentication flow.
+                    // Google is wired to the existing authentication flow. Phone and Apple
+                    // are shown as design options but clearly report that setup is still pending.
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                            .border(1.dp, SignupBorder, RoundedCornerShape(20.dp))
-                            .pressScale(onClick = {
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SignupProviderTile(
+                            label = "Google",
+                            symbol = "G",
+                            symbolColor = Color(0xFF4285F4),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
                                 scope.launch {
                                     try {
                                         val token = GoogleAuthManager(context).getGoogleIdToken()
@@ -316,14 +320,22 @@ fun SignupScreen(
                                         viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
                                     }
                                 }
-                            })
-                            .padding(vertical = 14.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("G", color = Color(0xFF4285F4), fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-                        Spacer(Modifier.size(10.dp))
-                        Text("Continue with Google", color = SignupInk, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        )
+                        SignupProviderTile(
+                            label = "Phone",
+                            symbol = "▯",
+                            symbolColor = SignupInk,
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.showError("Phone sign-in isn't configured yet.") }
+                        )
+                        SignupProviderTile(
+                            label = "Apple",
+                            symbol = "●",
+                            symbolColor = Color.Black,
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.showError("Apple sign-in isn't configured yet.") }
+                        )
                     }
 
                     Spacer(Modifier.height(18.dp))
@@ -396,6 +408,30 @@ fun SignupScreen(
             }
             Spacer(Modifier.height(18.dp))
         }
+    }
+}
+
+@Composable
+private fun SignupProviderTile(
+    label: String,
+    symbol: String,
+    symbolColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White)
+            .border(1.dp, SignupBorder, RoundedCornerShape(20.dp))
+            .pressScale(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 13.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(symbol, color = symbolColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = SignupInk, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
