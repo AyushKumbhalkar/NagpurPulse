@@ -70,7 +70,8 @@ data class SettingsUiState(
     val adminRole: String = "",            // NEW  e.g. "super_admin" | "admin" | "moderator"
     val postCount: Int = 0,                // REAL — fetched from Supabase
     val commentCount: Int = 0,             // REAL — fetched from Supabase
-    val badgeCount: Int = 0                // REAL — fetched from badges table
+    val badgeCount: Int = 0,               // REAL — fetched from badges table
+    val settingsMessage: String? = null
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -161,7 +162,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setOfflineMode(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(offlineMode = enabled)
+        _uiState.value = _uiState.value.copy(
+            offlineMode = enabled,
+            settingsMessage = "Offline reading is not implemented yet; no offline content was downloaded."
+        )
     }
 
     fun clearCache(context: Context) {
@@ -189,6 +193,21 @@ fun SettingsScreen(
     val context    = LocalContext.current
     val profile    = uiState.profile
     var showLogout by remember { mutableStateOf(false) }
+    var unavailableMessage by remember { mutableStateOf<String?>(null) }
+
+    unavailableMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { unavailableMessage = null },
+            title = { Text("Not available yet", color = PrimaryText, fontWeight = FontWeight.Bold) },
+            text = { Text(message, color = SecondaryText) },
+            confirmButton = {
+                TextButton(onClick = { unavailableMessage = null }) {
+                    Text("Got it", color = OrangePrimary)
+                }
+            },
+            containerColor = SurfaceAlt
+        )
+    }
 
     if (showLogout) {
         AlertDialog(
@@ -249,8 +268,6 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    IconButton(onClick = {}) { Icon(Icons.Filled.Search,   null, tint = SecondaryText) }
-                    IconButton(onClick = {}) { Icon(Icons.Filled.MoreVert, null, tint = SecondaryText) }
                 }
                 HorizontalDivider(color = Divider, thickness = 0.5.dp)
             }
@@ -394,7 +411,7 @@ fun SettingsScreen(
                         }
                     )
                     SettingsDivider()
-                    SettingsRowBadge("Language", "Choose your preferred language", Icons.Filled.Language, BlueInfo, "English") {}
+                    SettingsRow("Language", "English — more languages coming later", Icons.Filled.Language, BlueInfo) { unavailableMessage = "Language selection is not wired to translated app resources yet, so changing it would not actually translate the app." }
                     SettingsDivider()
                     SettingsRow("Text Size", "Adjust text size throughout the app", Icons.Filled.TextFields, TextSecondary) {
                         navController.navigate(Screen.TextSize.route)
@@ -411,14 +428,13 @@ fun SettingsScreen(
             item { SectionHeader("APP SETTINGS") }
             item {
                 SettingsGroup {
-                    SettingsRow("Content Preferences", "Topics, categories and content filters", Icons.Filled.PushPin, RedAlert) {}
+                    SettingsRow("Content Preferences", "Topics, categories and content filters", Icons.Filled.PushPin, RedAlert) { unavailableMessage = "Topic filtering is not connected to the feed query yet. This option will become active when those filters are implemented." }
                     SettingsDivider()
-                    SettingsRow("Data & Storage", "Manage data usage and media quality", Icons.Filled.Download, BlueInfo) {}
+                    SettingsRow("Data & Storage", "Manage data usage and media quality", Icons.Filled.Download, BlueInfo) { unavailableMessage = "Per-network media quality and data-usage controls are not implemented yet." }
                     SettingsDivider()
-                    SettingsRowToggle("Offline Mode", "Save posts for offline reading", Icons.Filled.WifiOff, TextSecondary,
-                        checked = uiState.offlineMode, onCheckedChange = { viewModel.setOfflineMode(it) })
+                    SettingsRow("Offline Reading", "Offline downloads are not available yet", Icons.Filled.WifiOff, TextSecondary) { unavailableMessage = "NagpurPulse does not currently download and sync posts for offline reading. This control has been removed rather than pretending it works." }
                     SettingsDivider()
-                    SettingsRowAction("Clear Cache", "Free up space by clearing cached data", Icons.Filled.Delete, RedAlert, badge = "128 MB") {
+                    SettingsRowAction("Clear Cache", "Clear temporary app and image cache", Icons.Filled.Delete, RedAlert, badge = uiState.cacheSize) {
                         viewModel.clearCache(context)
                     }
                 }
@@ -429,7 +445,7 @@ fun SettingsScreen(
             item { SectionHeader("ABOUT") }
             item {
                 SettingsGroup {
-                    SettingsRow("About Nagpur Pulse", "App info, version and terms", Icons.Filled.Info, BlueInfo) {}
+                    SettingsRow("About Nagpur Pulse", "App info, version and terms", Icons.Filled.Info, BlueInfo) { unavailableMessage = "The dedicated in-app About and legal-information screen is not connected yet." }
                     SettingsDivider()
                     SettingsRow("Help & Support", "FAQs, guides and contact support", Icons.Filled.HelpOutline, GreenSuccess) {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nagpurpulse.in/support")))
