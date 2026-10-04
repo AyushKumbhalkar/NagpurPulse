@@ -244,7 +244,16 @@ fun AdminPostsContent(
 
                     DropdownMenu(
                         expanded = showLimitMenu,
-                        onDismissRequest = { showLimitMenu = false }
+                        onDismissRequest = { showLimitMenu = false },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF26191A), Color(0xFF111116), Color(0xFF21171B))
+                                ),
+                                RoundedCornerShape(18.dp)
+                            )
+                            .border(1.dp, Color(0xFFFF6848).copy(alpha = 0.78f), RoundedCornerShape(18.dp))
                     ) {
                         listOf(20, 50, 100, 200, 500).forEach { count ->
                             DropdownMenuItem(
@@ -393,7 +402,16 @@ fun AdminPostsContent(
 
                     DropdownMenu(
                         expanded = showCommentLimitMenu,
-                        onDismissRequest = { showCommentLimitMenu = false }
+                        onDismissRequest = { showCommentLimitMenu = false },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF26191A), Color(0xFF111116), Color(0xFF21171B))
+                                ),
+                                RoundedCornerShape(18.dp)
+                            )
+                            .border(1.dp, Color(0xFFFF6848).copy(alpha = 0.78f), RoundedCornerShape(18.dp))
                     ) {
                         listOf(20, 50, 100, 200, 500).forEach { count ->
                             DropdownMenuItem(
