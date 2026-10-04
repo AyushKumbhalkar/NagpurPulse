@@ -72,7 +72,8 @@ data class SettingsUiState(
     val postCount: Int = 0,                // REAL — fetched from Supabase
     val commentCount: Int = 0,             // REAL — fetched from Supabase
     val badgeCount: Int = 0,               // REAL — fetched from badges table
-    val settingsMessage: String? = null
+    val settingsMessage: String? = null,
+    val textSize: String = "medium"
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ class SettingsViewModel @Inject constructor(
             PreferenceManager.updateTextSize(size)
             val result = userPreferencesRepository.saveTextSize(size)
             _uiState.value = _uiState.value.copy(
+                textSize = size,
                 settingsMessage = if (result.isSuccess) "Text size saved." else "Text size is applied for this session, but couldn't be saved to your account."
             )
         }
@@ -172,6 +174,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val size = userPreferencesRepository.getTextSize()
             PreferenceManager.updateTextSize(size)
+            _uiState.value = _uiState.value.copy(textSize = size)
         }
     }
 
