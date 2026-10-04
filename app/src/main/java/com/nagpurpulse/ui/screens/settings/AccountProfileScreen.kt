@@ -810,6 +810,10 @@ fun AccountProfileScreen(
     if (showDeactivateDialog) {
         AlertDialog(
             onDismissRequest = { if (!accountActionBusy) showDeactivateDialog = false },
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),
             title = { Text("Temporarily deactivate account?") },
             text = {
                 Text("Your account will be marked deactivated and you'll be signed out on this device. Signing in again with your credentials reactivates it. Your content is not deleted.")
@@ -840,6 +844,10 @@ fun AccountProfileScreen(
     if (accountActionMessage != null || accountActionError != null) {
         AlertDialog(
             onDismissRequest = { accountActionMessage = null; accountActionError = null },
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),
             title = { Text(if (accountActionError == null) "Account update" else "Could not update account") },
             text = { Text(accountActionMessage ?: accountActionError.orEmpty()) },
             confirmButton = {
@@ -1059,6 +1067,10 @@ fun AccountProfileScreen(
     if (showChangePasswordDialog) {
         AlertDialog(
             onDismissRequest = { if (!accountActionBusy) showChangePasswordDialog = false },
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),
             title = { Text("Change password") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
