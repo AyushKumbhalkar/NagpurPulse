@@ -485,8 +485,8 @@ fun AccountProfileScreen(
                         Text("Account & Profile", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("Manage your identity and public profile", color = SecondaryText, fontSize = 12.sp)
                     }
-                    Row(
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(OrangePrimary)
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(OrangePrimary)
                             .pressScale {
 
                                 when {
@@ -511,13 +511,10 @@ fun AccountProfileScreen(
 
                                 avatarUri = null
                                 pendingAvatarUrl = null
-                            }.padding(horizontal = 18.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            }.padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        if (s.isSaving) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        else Icon(Icons.Filled.Check, contentDescription = "Save profile", tint = Color.White, modifier = Modifier.size(20.dp))
-                        Text(if (s.isSaving) "Saving…" else "Save changes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        if (s.isSaving) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Text("Save", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
                 HorizontalDivider(color = Divider, thickness = 0.5.dp)
