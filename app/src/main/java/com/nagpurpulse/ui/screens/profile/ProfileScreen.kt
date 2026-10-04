@@ -66,7 +66,7 @@ data class ProfileUiState(
     val comments: List<Comment> = emptyList(),
     val savedPosts: List<Post> = emptyList(),
     val badges: List<Badge> = emptyList(),
-    val commentCount: Int = 0,
+    val commentCount: Int = -1,
     val savedCount: Int = 0,
     val unreadNotifCount: Int = 0,
     val isLoading: Boolean = false,
@@ -118,13 +118,11 @@ class ProfileViewModel @Inject constructor(
                 val postsJob = async { postRepository.getPostsByUser(userId) }
                 val badgesJob = async { profileRepository.getBadges(userId) }
                 val notifJob = async { notificationRepository.getUnreadCount(userId) }
-                val commentsCountJob = async { profileRepository.getCommentCount(userId) }
                 val savedIdsJob = async { savedPostsRepository.getSavedPostIds(userId) }
                 profileJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(profile = p) }
                 postsJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(posts = p) }
                 badgesJob.await().onSuccess { b -> _uiState.value = _uiState.value.copy(badges = b) }
                 notifJob.await().onSuccess { count -> _uiState.value = _uiState.value.copy(unreadNotifCount = count) }
-                commentsCountJob.await().onSuccess { count -> _uiState.value = _uiState.value.copy(commentCount = count) }
                 savedIdsJob.await().onSuccess { ids -> _uiState.value = _uiState.value.copy(savedCount = ids.size) }
                 if (_uiState.value.activeTab == 1) loadComments(userId)
                 if (_uiState.value.activeTab == 2) loadSavedPosts(userId)
@@ -356,7 +354,7 @@ fun ProfileScreen(
             item {
                 val tabs = listOf(
                     "Threads (${uiState.posts.size})",
-                    "Comments (${uiState.commentCount})",
+                    if (uiState.commentCount >= 0) "Comments (${uiState.commentCount})" else "Comments",
                     "Saved (${uiState.savedCount})"
                 )
                 TabRow(
