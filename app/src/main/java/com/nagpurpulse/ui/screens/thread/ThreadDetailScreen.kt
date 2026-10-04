@@ -1068,10 +1068,19 @@ fun ThreadDetailScreen(
                                 DropdownMenu(
                                     expanded = menuExpanded,
                                     onDismissRequest = { menuExpanded = false },
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(Color(0xFF26191A), Color(0xFF111116), Color(0xFF21171B))
+                                            ),
+                                            RoundedCornerShape(18.dp)
+                                        )
+                                        .border(1.dp, Color(0xFFFF6848).copy(alpha = 0.78f), RoundedCornerShape(18.dp))
                                 ) {
 
                                     DropdownMenuItem(
-                                        text = { Text("Report Post") },
+                                        text = { Text("Report Post", color = PrimaryText) },
                                         onClick = {
                                             menuExpanded = false
                                             showReportDialog = true
