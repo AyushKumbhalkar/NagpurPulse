@@ -1406,9 +1406,6 @@ private fun LocationPickerRow(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = Color(0xFF171318),
-            shape = RoundedCornerShape(18.dp),
-            tonalElevation = 8.dp
         ) {
             when {
                 loading -> DropdownMenuItem(text = { Text("Loading Nagpur areas…", color = TertiaryText) }, onClick = {}, enabled = false)
