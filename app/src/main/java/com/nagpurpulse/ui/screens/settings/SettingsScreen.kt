@@ -112,13 +112,22 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateTextSize(size: String) {
+        if (size !in setOf("small", "medium", "large", "extra_large")) return
         viewModelScope.launch {
-            PreferenceManager.updateTextSize(size)
-            val result = userPreferencesRepository.saveTextSize(size)
-            _uiState.value = _uiState.value.copy(
-                textSize = size,
-                settingsMessage = if (result.isSuccess) "Text size saved." else "Text size is applied for this session, but couldn't be saved to your account."
-            )
+            appearanceSaveMutex.withLock {
+                val previous = PreferenceManager.textSize
+                val result = userPreferencesRepository.saveTextSize(size)
+                if (result.isSuccess) {
+                    PreferenceManager.updateTextSize(size)
+                    _uiState.value = _uiState.value.copy(textSize = size)
+                } else {
+                    PreferenceManager.updateTextSize(previous)
+                    _uiState.value = _uiState.value.copy(textSize = previous)
+                }
+                _uiState.value = _uiState.value.copy(
+                    settingsMessage = if (result.isSuccess) "Text size saved." else "Text size couldn't be saved. Your previous value was restored."
+                )
+            }
         }
     }
 
