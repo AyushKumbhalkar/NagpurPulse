@@ -215,8 +215,10 @@ class AuthRepository @Inject constructor(
                     }
                     .decodeSingle<Profile>()
 
-            profile.username.isNotBlank() &&
-                !profile.avatarUrl.isNullOrBlank()
+            // Username is the onboarding completion marker. Avatar selection is optional:
+            // existing accounts with no avatar must not be forced through identity/username setup
+            // again after signing out and signing back in.
+            profile.username.isNotBlank()
 
         } catch (_: Exception) {
 
