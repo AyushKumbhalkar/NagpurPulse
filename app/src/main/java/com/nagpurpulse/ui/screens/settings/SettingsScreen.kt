@@ -239,7 +239,7 @@ class SettingsViewModel @Inject constructor(
 
     fun logout(onDone: () -> Unit) {
         viewModelScope.launch {
-            notificationRepository.deleteFcmToken()
+            // signOut() already performs best-effort device-token cleanup; avoid a second network round-trip.
             authRepository.signOut()
             onDone()
         }
