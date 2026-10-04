@@ -153,29 +153,6 @@ fun OnboardingScreen(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        Modifier
-                            .width(38.dp)
-                            .height(12.dp)
-                            .clip(CircleShape)
-                            .background(OnboardingOrange)
-                    )
-                    repeat(2) {
-                        Box(
-                            Modifier
-                                .width(12.dp)
-                                .height(12.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFD8D5D1))
-                        )
-                    }
-                }
             }
         }
     }
