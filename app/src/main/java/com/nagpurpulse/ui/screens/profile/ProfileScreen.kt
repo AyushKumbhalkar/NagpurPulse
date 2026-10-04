@@ -292,7 +292,7 @@ fun ProfileScreen(
                                 .clip(CircleShape)
                                 .background(OrangePrimary)
                                 .align(Alignment.TopEnd)
-                                .offset(x = 2.dp, y = (-2).dp)
+                                .offset(x = (-3).dp, y = 3.dp)
                         )
                     }
                 }
