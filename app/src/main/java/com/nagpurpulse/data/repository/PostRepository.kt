@@ -111,9 +111,13 @@ class PostRepository @Inject constructor(
             val posts = client.postgrest["posts"].select {
                 filter { ilike("title", "%$query%") }
                 order("upvotes", Order.DESCENDING)
-                limit(20)
+                limit(100)
             }.decodeList<Post>()
-            Result.success(enrichPostsWithUsernames(posts))
+
+            // Apply profile visibility preferences before returning search results.
+            // Anonymous posts remain anonymous and are not joined to profile identity.
+            val visiblePosts = filterVisiblePosts(posts, forSearch = true).take(20)
+            Result.success(enrichPostsWithUsernames(visiblePosts))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -125,9 +129,41 @@ class PostRepository @Inject constructor(
                 filter { eq("user_id", userId) }
                 order("created_at", Order.DESCENDING)
             }.decodeList<Post>()
-            Result.success(enrichPostsWithUsernames(posts))
+
+            val isOwnProfile = authRepository.currentUserId == userId
+            if (isOwnProfile) {
+                Result.success(enrichPostsWithUsernames(posts))
+            } else {
+                val profile = fetchUserProfiles(listOf(userId))[userId]
+                if (profile == null || profile.hideProfile || profile.hidePosts) {
+                    Result.success(emptyList())
+                } else {
+                    Result.success(enrichPostsWithUsernames(posts))
+                }
+            }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun filterVisiblePosts(
+        posts: List<Post>,
+        forSearch: Boolean
+    ): List<Post> {
+        val authorIds = posts.filter { !it.isAnonymous }.map { it.userId }.distinct()
+        val profiles = fetchUserProfiles(authorIds)
+        return posts.filter { post ->
+            if (post.isAnonymous) {
+                true
+            } else {
+                val profile = profiles[post.userId]
+                // Fail closed when a profile can't be loaded: do not expose a post
+                // whose visibility rules cannot be checked.
+                profile != null &&
+                    !profile.hideProfile &&
+                    !profile.hidePosts &&
+                    (!forSearch || !profile.hideFromSearch)
+            }
         }
     }
 
