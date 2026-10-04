@@ -216,6 +216,22 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    fun updateTheme(enabled: Boolean, context: Context) {
+        // Theme remains responsive even if the account preference endpoint is unavailable.
+        ThemeManager.toggleTheme(enabled)
+        userPreferencesRepository.saveThemeLocally(context, !enabled)
+        viewModelScope.launch {
+            val result = userPreferencesRepository.saveAmoledMode(!enabled)
+            _uiState.value = _uiState.value.copy(
+                settingsMessage = if (result.isSuccess) {
+                    "Theme preference saved."
+                } else {
+                    "Theme changed on this device, but account sync failed. Check your connection and retry."
+                }
+            )
+        }
+    }
+
     fun clearCache(context: Context) {
         authRepository.clearLocalCache(context)
         _uiState.value = _uiState.value.copy(cacheSize = "Cleared")
@@ -242,14 +258,6 @@ fun SettingsScreen(
     val scope      = rememberCoroutineScope()
     val profile    = uiState.profile
 
-    // Keep the theme choice across app restarts without depending on a remote
-    // preference request to render the first frame.
-    LaunchedEffect(context) {
-        val savedLightTheme = context
-            .getSharedPreferences("nagpurpulse_settings", Context.MODE_PRIVATE)
-            .getBoolean("light_theme", ThemeManager.isLightTheme)
-        ThemeManager.isLightTheme = savedLightTheme
-    }
     var showLogout by remember { mutableStateOf(false) }
     var unavailableMessage by remember { mutableStateOf<String?>(null) }
 
@@ -462,14 +470,7 @@ fun SettingsScreen(
                         iconTint      = PurpleNight,
                         checked       = ThemeManager.isLightTheme,
                         onCheckedChange = { enabled ->
-                            context.getSharedPreferences(
-                                "nagpurpulse_settings",
-                                Context.MODE_PRIVATE
-                            ).edit().putBoolean("light_theme", enabled).apply()
-                            scope.launch {
-                                delay(180)
-                                ThemeManager.toggleTheme(enabled)
-                            }
+                            viewModel.updateTheme(enabled, context)
                         }
                     )
                     SettingsDivider()
