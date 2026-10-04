@@ -1403,15 +1403,21 @@ private fun LocationPickerRow(
                 Icon(Icons.Filled.ArrowDropDown, "Choose Nagpur location", tint = OrangePrimary)
             }
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = Color(0xFF171318),
+            shape = RoundedCornerShape(18.dp),
+            tonalElevation = 8.dp
+        ) {
             when {
-                loading -> DropdownMenuItem(text = { Text("Loading Nagpur areas…") }, onClick = {}, enabled = false)
+                loading -> DropdownMenuItem(text = { Text("Loading Nagpur areas…", color = TertiaryText) }, onClick = {}, enabled = false)
                 suggestions.isEmpty() -> {
-                    DropdownMenuItem(text = { Text(lookupError ?: "No locations found") }, onClick = {}, enabled = false)
-                    DropdownMenuItem(text = { Text("Retry") }, onClick = { loadAreas() })
+                    DropdownMenuItem(text = { Text(lookupError ?: "No locations found", color = TertiaryText) }, onClick = {}, enabled = false)
+                    DropdownMenuItem(text = { Text("Retry", color = OrangePrimary, fontWeight = FontWeight.SemiBold) }, onClick = { loadAreas() })
                 }
                 else -> suggestions.forEach { area ->
-                    DropdownMenuItem(text = { Text(area) }, onClick = { onValueChange(area); expanded = false })
+                    DropdownMenuItem(text = { Text(area, color = if (area == value) OrangePrimary else PrimaryText, fontWeight = if (area == value) FontWeight.SemiBold else FontWeight.Normal) }, onClick = { onValueChange(area); expanded = false })
                 }
             }
         }
@@ -1613,27 +1619,35 @@ private fun AvatarManagementCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
 
-                    FilledTonalButton(
+                    Button(
                         onClick = onUpload,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
                     ) {
                         Icon(Icons.Default.CameraAlt, null)
                         Spacer(Modifier.width(8.dp))
                         Text("Choose New Avatar")
                     }
 
-                    FilledTonalButton(
+                    OutlinedButton(
                         onClick = onRandom,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangePrimary.copy(alpha = 0.55f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangePrimary)
                     ) {
                         Icon(Icons.Default.Shuffle, null)
                         Spacer(Modifier.width(8.dp))
                         Text("Try Random Avatar")
                     }
 
-                    FilledTonalButton(
+                    OutlinedButton(
                         onClick = onRemove,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, RedAlert.copy(alpha = 0.45f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RedAlert)
                     ) {
                         Icon(Icons.Default.Delete, null)
                         Spacer(Modifier.width(8.dp))
