@@ -92,7 +92,7 @@ fun SplashScreen(onFinished: () -> Unit) {
         ) {
             // Official NagpurPulse logo artwork
             Image(
-                painter = painterResource(id = R.drawable.nagpurpulse_app_icon),
+                painter = painterResource(id = R.drawable.nagpurpulse_orange_pulse_icon),
                 contentDescription = "NagpurPulse logo",
                 modifier = Modifier
                     .size(logoSize)
