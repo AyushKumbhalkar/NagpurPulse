@@ -310,17 +310,24 @@ class AccountProfileViewModel @Inject constructor(
     */
 
     fun removeAvatar() {
-
         val uid = authRepository.currentUserId ?: return
-
         viewModelScope.launch {
-
-            authRepository.updateFullProfile(
-                userId = uid,
-                avatarUrl = ""
+            _s.value = _s.value.copy(isSaving = true)
+            authRepository.updateFullProfile(userId = uid, avatarUrl = "").fold(
+                onSuccess = {
+                    _s.value = _s.value.copy(
+                        avatarUrl = null,
+                        isSaving = false,
+                        saveSuccess = true
+                    )
+                },
+                onFailure = { error ->
+                    _s.value = _s.value.copy(
+                        isSaving = false,
+                        error = error.message ?: "Unable to remove avatar."
+                    )
+                }
             )
-
-            load()
         }
     }
 
@@ -496,6 +503,10 @@ fun AccountProfileScreen(
                                             context = context,
                                             uri = avatarUri!!
                                         )
+                                    }
+
+                                    pendingAvatarUrl == "" -> {
+                                        vm.removeAvatar()
                                     }
 
                                     pendingAvatarUrl != null -> {
@@ -1112,7 +1123,7 @@ private fun AvatarManagementCard(
                         else -> avatarUrl
                     }
 
-                    if (previewAvatar != null) {
+                    if (!previewAvatar.isNullOrBlank()) {
 
                         AsyncImage(
                             model = previewAvatar,
