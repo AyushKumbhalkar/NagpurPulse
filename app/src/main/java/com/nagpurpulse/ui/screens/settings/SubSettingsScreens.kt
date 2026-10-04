@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -236,8 +237,10 @@ fun SecuritySettingsScreen(
                 ) { Text(if (state.isSendingReset) "Sending…" else "Send reset email", color = OrangePrimary) }
             },
             dismissButton = { TextButton(onClick = { showPasswordDialog = false }) { Text("Cancel", color = SecondaryText) } },
-            containerColor = Surface
-        )
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),)
     }
 
     if (showCurrentPasswordDialog) {
@@ -254,8 +257,10 @@ fun SecuritySettingsScreen(
             },
             confirmButton = { TextButton(enabled = !state.isChangingPassword, onClick = { vm.changePassword(currentPassword, newPassword, confirmPassword); showCurrentPasswordDialog = false; currentPassword = ""; newPassword = ""; confirmPassword = "" }) { Text(if (state.isChangingPassword) "Updating…" else "Change password", color = OrangePrimary) } },
             dismissButton = { TextButton(onClick = { showCurrentPasswordDialog = false }) { Text("Cancel", color = SecondaryText) } },
-            containerColor = Surface
-        )
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),)
     }
     if (showSignOutEverywhereDialog) {
         AlertDialog(
@@ -264,8 +269,10 @@ fun SecuritySettingsScreen(
             text = { Text("This revokes your sign-in sessions on other devices too. You may need to sign in again on this device.", color = SecondaryText) },
             confirmButton = { TextButton(enabled = !state.isSigningOutEverywhere, onClick = { vm.signOutEverywhere { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Login.route) { popUpTo(navController.graph.id) { inclusive = true } } }; showSignOutEverywhereDialog = false }) { Text(if (state.isSigningOutEverywhere) "Signing out…" else "Sign out everywhere", color = RedAlert) } },
             dismissButton = { TextButton(onClick = { showSignOutEverywhereDialog = false }) { Text("Cancel", color = SecondaryText) } },
-            containerColor = Surface
-        )
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),)
     }
 
     infoMessage?.let { message ->
@@ -274,8 +281,10 @@ fun SecuritySettingsScreen(
             title = { Text("Not available yet", color = PrimaryText) },
             text = { Text(message, color = SecondaryText) },
             confirmButton = { TextButton(onClick = { infoMessage = null }) { Text("Got it", color = OrangePrimary) } },
-            containerColor = Surface
-        )
+            containerColor = Color(0xFF171318),
+            titleContentColor = Color(0xFFF7F3F5),
+            textContentColor = Color(0xFFC7C0CA),
+            shape = RoundedCornerShape(28.dp),)
     }
 
     Scaffold(
