@@ -982,12 +982,19 @@ private fun ProfileEditRow(
                     Text(value.ifBlank { "—" }, color = PrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
             }
-            Icon(
-                if (editing) Icons.Filled.Check else Icons.AutoMirrored.Filled.ArrowForwardIos,
-                null,
-                tint = if (editing) OrangePrimary else TertiaryText,
-                modifier = Modifier.size(16.dp).pressScale { editing = false }
-            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .pressScale { editing = !editing },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (editing) Icons.Filled.Check else Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = if (editing) "Finish editing $label" else "Edit $label",
+                    tint = if (editing) OrangePrimary else TertiaryText,
+                    modifier = Modifier.size(if (editing) 24.dp else 16.dp)
+                )
+            }
         }
 
 }}
