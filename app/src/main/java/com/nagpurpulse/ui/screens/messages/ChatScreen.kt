@@ -350,9 +350,6 @@ fun ChatScreen(
                     DropdownMenu(
                         expanded = showChatMenu,
                         onDismissRequest = { showChatMenu = false },
-                        containerColor = Color(0xFF171318),
-                        shape = RoundedCornerShape(16.dp),
-                        tonalElevation = 8.dp
                     ) {
                         DropdownMenuItem(
                             text = { Text("View profile") },
