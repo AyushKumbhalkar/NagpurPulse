@@ -97,6 +97,15 @@ class ProfileViewModel @Inject constructor(
      * Load only the data needed for the current profile tab. Comments and saved posts
      * are fetched on demand instead of blocking every profile opening.
      */
+    fun refreshProfile() {
+        val userId = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            profileRepository.getProfile(userId).onSuccess { profile ->
+                _uiState.value = _uiState.value.copy(profile = profile)
+            }
+        }
+    }
+
     fun refresh(showLoading: Boolean = false) {
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
@@ -191,7 +200,7 @@ fun ProfileScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh(showLoading = false)
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshProfile()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
