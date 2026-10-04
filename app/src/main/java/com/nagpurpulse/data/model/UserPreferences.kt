@@ -11,7 +11,7 @@ data class UserPreferences(
     @SerialName("language")         val language: String  = "en",
     @SerialName("text_size")        val textSize: String  = "medium",
     @SerialName("display_density")  val displayDensity: String = "comfortable",
-    @SerialName("feed_style")       val feedStyle: String = "compact",
+    @SerialName("feed_style")       val feedStyle: String = "expanded",
     @SerialName("amoled_mode")      val amoledMode: Boolean = false,
     @SerialName("reduce_animations")val reduceAnimations: Boolean = false,
     @SerialName("large_media")      val largeMedia: Boolean = true,
