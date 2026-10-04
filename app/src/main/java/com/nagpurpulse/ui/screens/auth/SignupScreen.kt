@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -46,6 +48,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import android.util.Log
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +73,7 @@ private val SignupInk = Color(0xFF111827)
 private val SignupMuted = Color(0xFF64748B)
 private val SignupBorder = Color(0xFFE5E7EB)
 private val SignupOrange = Color(0xFFFF7518)
+private const val SIGNUP_SCROLL_TAG = "NagpurPulseSignupScroll"
 
 @Composable
 fun SignupScreen(
@@ -91,10 +97,19 @@ fun SignupScreen(
 
     var contentReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
+        Log.d(SIGNUP_SCROLL_TAG, "SignupScreen entered")
         delay(60)
         contentReady = true
     }
 
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value to scrollState.maxValue }
+            .collect { (offset, maxOffset) ->
+                Log.d(SIGNUP_SCROLL_TAG, "scrollOffset=$offset maxScroll=$maxOffset")
+            }
+    }
+
+    MaterialTheme(colorScheme = lightColorScheme()) {
     Box(modifier = Modifier.fillMaxSize()) {
         CinematicBackground(isLogin = false)
 
@@ -124,7 +139,7 @@ fun SignupScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 18.dp)
                         .clip(RoundedCornerShape(32.dp))
-                        .background(Color.White.copy(alpha = 0.97f))
+                        .background(Color(0xFFFEFEFF))
                         .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 22.dp, vertical = 24.dp)
                 ) {
@@ -287,18 +302,14 @@ fun SignupScreen(
                     }
                     Spacer(Modifier.height(14.dp))
 
-                    // Google is wired to the existing authentication flow. Phone and Apple
-                    // are shown as design options but clearly report that setup is still pending.
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        SignupProviderTile(
-                            label = "Google",
-                            symbol = "G",
-                            symbolColor = Color(0xFF4285F4),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White)
+                            .border(1.dp, SignupBorder, RoundedCornerShape(18.dp))
+                            .pressScale(onClick = {
                                 scope.launch {
                                     try {
                                         val token = GoogleAuthManager(context).getGoogleIdToken()
@@ -311,50 +322,46 @@ fun SignupScreen(
                                         viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
                                     }
                                 }
-                            }
+                            })
+                            .padding(horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter = painterResource(id = com.nagpurpulse.R.drawable.ic_google),
+                            contentDescription = "Google",
+                            modifier = Modifier.size(19.dp)
                         )
-                        SignupProviderTile(
-                            label = "Phone",
-                            symbol = "▯",
-                            symbolColor = SignupInk,
-                            modifier = Modifier.weight(1f),
-                            onClick = { viewModel.showError("Phone sign-in isn't configured yet.") }
-                        )
-                        SignupProviderTile(
-                            label = "Apple",
-                            symbol = "●",
-                            symbolColor = Color.Black,
-                            modifier = Modifier.weight(1f),
-                            onClick = { viewModel.showError("Apple sign-in isn't configured yet.") }
-                        )
+                        Spacer(Modifier.size(9.dp))
+                        Text("Continue with Google", color = SignupInk, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color(0xFFFFF3E8))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFFFFF5EC))
+                            .border(1.dp, Color(0xFFFFE4CF), RoundedCornerShape(20.dp))
                             .pressScale(onClick = onGuestContinue)
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(54.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(Color(0xFFFFE0C2)),
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(13.dp))
+                                .background(Color(0xFFFFE4CF)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Groups, contentDescription = null, tint = SignupOrange, modifier = Modifier.size(30.dp))
+                            Icon(Icons.Filled.Groups, contentDescription = null, tint = SignupOrange, modifier = Modifier.size(21.dp))
                         }
-                        Spacer(Modifier.size(14.dp))
+                        Spacer(Modifier.size(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Continue as Guest", color = SignupInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(3.dp))
-                            Text("Explore NagpurPulse without an account", color = SignupMuted, fontSize = 13.sp, lineHeight = 18.sp)
+                            Text("Continue as Guest", color = SignupInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Explore without an account", color = SignupMuted, fontSize = 12.sp, lineHeight = 16.sp)
                         }
-                        Text("→", color = SignupOrange, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Filled.ArrowForward, contentDescription = "Continue as guest", tint = SignupOrange, modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -399,6 +406,7 @@ fun SignupScreen(
             }
             Spacer(Modifier.height(18.dp))
         }
+    }
     }
 }
 
