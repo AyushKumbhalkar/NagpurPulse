@@ -105,10 +105,17 @@ class SettingsViewModel @Inject constructor(
     }
     // ──────────────────────────────────────────────────────────────────────────
 
+    fun dismissSettingsMessage() {
+        _uiState.value = _uiState.value.copy(settingsMessage = null)
+    }
+
     fun updateTextSize(size: String) {
         viewModelScope.launch {
             PreferenceManager.updateTextSize(size)
-            userPreferencesRepository.saveTextSize(size)
+            val result = userPreferencesRepository.saveTextSize(size)
+            _uiState.value = _uiState.value.copy(
+                settingsMessage = if (result.isSuccess) "Text size saved." else "Text size is applied for this session, but couldn't be saved to your account."
+            )
         }
     }
 
@@ -125,11 +132,25 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateDisplayDensity(density: String) {
-        viewModelScope.launch { userPreferencesRepository.saveDisplayDensity(density) }
+        viewModelScope.launch {
+            val previous = DensityManager.density
+            val result = userPreferencesRepository.saveDisplayDensity(density)
+            if (result.isFailure) DensityManager.density = previous
+            _uiState.value = _uiState.value.copy(
+                settingsMessage = if (result.isSuccess) "Display density saved." else "Display density couldn't be saved. Your previous value was restored."
+            )
+        }
     }
 
     fun updateFeedStyle(style: String) {
-        viewModelScope.launch { userPreferencesRepository.saveFeedStyle(style) }
+        viewModelScope.launch {
+            val previous = FeedLayoutManager.feedStyle
+            val result = userPreferencesRepository.saveFeedStyle(style)
+            if (result.isFailure) FeedLayoutManager.feedStyle = previous
+            _uiState.value = _uiState.value.copy(
+                settingsMessage = if (result.isSuccess) "Feed style saved." else "Feed style couldn't be saved. Your previous value was restored."
+            )
+        }
     }
 
     private fun loadTextSize() {
