@@ -8,14 +8,18 @@ class PreferencesBootstrap @Inject constructor(
 ) {
 
     suspend fun load() {
+        val preferences = repository.getPreferences().getOrNull() ?: return
 
-        repository.getPreferences()
-            .getOrNull()
-            ?.let {
+        preferences.textSize
+            .takeIf { it in setOf("small", "medium", "large", "extra_large") }
+            ?.let(PreferenceManager::updateTextSize)
 
-                PreferenceManager.updateTextSize(
-                    it.textSize
-                )
-            }
+        preferences.displayDensity
+            .takeIf { it in setOf("compact", "comfortable", "spacious") }
+            ?.let { DensityManager.density = it }
+
+        preferences.feedStyle
+            .takeIf { it == "compact" || it == "expanded" }
+            ?.let { FeedLayoutManager.feedStyle = it }
     }
 }
