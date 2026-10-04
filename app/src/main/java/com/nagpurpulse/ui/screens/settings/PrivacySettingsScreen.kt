@@ -48,6 +48,7 @@ data class PrivacyUiState(
     val incognitoMode: Boolean = false,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val loadFailed: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -66,10 +67,11 @@ class PrivacySettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+            _state.value = _state.value.copy(isLoading = true, loadFailed = false, errorMessage = null)
             authRepository.getCurrentProfile().fold(
                 onSuccess = { profile ->
                     val loaded = PrivacyUiState(
+                        loadFailed = false,
                         showProfile = !profile.hideProfile,
                         showOnlineStatus = profile.showOnlineStatus,
                         allowDms = profile.allowDms,
@@ -85,6 +87,7 @@ class PrivacySettingsViewModel @Inject constructor(
                 onFailure = {
                     _state.value = _state.value.copy(
                         isLoading = false,
+                        loadFailed = true,
                         errorMessage = "Privacy settings couldn't be loaded. Check your connection and retry."
                     )
                 }
@@ -200,7 +203,7 @@ fun PrivacySettingsScreen(
             s.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = OrangePrimary)
             }
-            s.errorMessage != null && s.showProfile && s.isLoading.not() -> {
+            s.loadFailed -> {
                 // Keep the settings UI available; the snackbar reports errors and retry is explicit below.
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(padding),
