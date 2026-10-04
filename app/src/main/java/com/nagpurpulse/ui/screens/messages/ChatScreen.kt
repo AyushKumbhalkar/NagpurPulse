@@ -350,10 +350,19 @@ fun ChatScreen(
                     DropdownMenu(
                         expanded = showChatMenu,
                         onDismissRequest = { showChatMenu = false },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF26191A), Color(0xFF111116), Color(0xFF21171B))
+                                ),
+                                RoundedCornerShape(18.dp)
+                            )
+                            .border(1.dp, Color(0xFFFF6848).copy(alpha = 0.78f), RoundedCornerShape(18.dp))
                     ) {
                         DropdownMenuItem(
-                            text = { Text("View profile") },
-                            leadingIcon = { Icon(Icons.Filled.Person, null) },
+                            text = { Text("View profile", color = PrimaryText) },
+                            leadingIcon = { Icon(Icons.Filled.Person, null, tint = OrangePrimary) },
                             enabled = uiState.otherUserId.isNotBlank(),
                             onClick = {
                                 showChatMenu = false
@@ -361,8 +370,8 @@ fun ChatScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Copy conversation ID") },
-                            leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
+                            text = { Text("Copy conversation ID", color = PrimaryText) },
+                            leadingIcon = { Icon(Icons.Filled.ContentCopy, null, tint = OrangePrimary) },
                             onClick = {
                                 showChatMenu = false
                                 clipboardManager.setText(AnnotatedString(conversationId))
