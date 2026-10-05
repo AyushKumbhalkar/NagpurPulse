@@ -68,6 +68,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.nagpurpulse.R
+import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -112,9 +115,7 @@ fun LoginScreen(
     LaunchedEffect(Unit) { delay(60); contentReady = true }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        CinematicBackground(isLogin = true)
-
-
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF9F2)))
 
         Column(
             modifier = Modifier
@@ -125,11 +126,27 @@ fun LoginScreen(
         ) {
 
 
-            // ── Logo ────────────────────────────────────────────────────
-            PremiumLogo("Welcome back to Nagpur")
-
-          //  PremiumLogo(" ")
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(26.dp))
+            Image(
+                painter = painterResource(R.drawable.nagpurpulse_logo),
+                contentDescription = "NagpurPulse",
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.height(48.dp)
+            )
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "Welcome back.",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Pick up where you left off.",
+                color = TertiaryText,
+                fontSize = 15.sp
+            )
+            Spacer(Modifier.height(20.dp))
 
 
             // ── Form card ───────────────────────────────────────────────
