@@ -475,10 +475,7 @@ fun PremiumInputField(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(350)) + slideInHorizontally(
-            initialOffsetX = { -30 },
-            animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)
-        )
+        enter = fadeIn(tween(250))
     ) {
         Box(
             modifier = Modifier
