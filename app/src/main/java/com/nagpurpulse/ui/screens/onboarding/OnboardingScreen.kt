@@ -81,7 +81,7 @@ fun OnboardingScreen(
         veryCompact -> 270.dp
         compact -> 315.dp
         screenHeight < 800 -> 380.dp
-        else -> 450.dp
+        else -> 510.dp
     }
     val logoWidth = when {
         screenWidth < 360 -> 190.dp
