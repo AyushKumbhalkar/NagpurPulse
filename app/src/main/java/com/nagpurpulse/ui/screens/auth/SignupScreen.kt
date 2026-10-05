@@ -154,37 +154,21 @@ fun SignupScreen(
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(
-                            text = "Your people",
+                            text = "Your people are here.",
                             color = ink,
-                            fontSize = if (compact) 29.sp else 36.sp,
-                            lineHeight = if (compact) 31.sp else 38.sp,
+                            fontSize = if (compact) 30.sp else 36.sp,
+                            lineHeight = if (compact) 34.sp else 40.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.7).sp
-                        )
-                        Text(
-                            text = "are here.",
-                            color = SignupOrange,
-                            fontSize = if (compact) 31.sp else 36.sp,
-                            lineHeight = if (compact) 34.sp else 38.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.7).sp
-                        )
-                        Spacer(Modifier.height(5.dp))
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 48.dp)
-                                .width(if (compact) 112.dp else 138.dp)
-                                .height(3.dp)
-                                .clip(RoundedCornerShape(50.dp))
-                                .background(SignupOrange)
+                            letterSpacing = (-0.7).sp,
+                            maxLines = 1
                         )
                     }
                     Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
                     Text(
-                        text = "Create your account and join\nthe conversations happening around\nNagpur.",
+                        text = "Create your account and join the conversations happening around Nagpur.",
                         color = muted,
-                        fontSize = if (compact) 14.sp else 16.sp,
-                        lineHeight = if (compact) 19.sp else 23.sp
+                        fontSize = if (compact) 15.sp else 16.sp,
+                        lineHeight = if (compact) 21.sp else 23.sp
                     )
                     Spacer(Modifier.height(if (compact) 8.dp else 20.dp))
 
@@ -194,13 +178,13 @@ fun SignupScreen(
                             onValueChange = { email = it },
                             placeholder = "Email address",
                             leadingIcon = {
-                                Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Email, null, tint = muted, modifier = Modifier.size(21.dp))
                             },
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = KeyboardType.Email
                             ),
                             index = 0,
-                            containerColor = cardBackground
+                            containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
                     }
                     if (email.isNotBlank() && !emailLooksValid) {
@@ -231,7 +215,7 @@ fun SignupScreen(
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = if (visible) "Hide password" else "Show password",
-                                            tint = OrangePrimary
+                                            tint = muted
                                         )
                                     }
                                 }
@@ -426,7 +410,7 @@ fun SignupScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    "Already part of NagpurPulse?",
+                    "Already have an account?",
                     color = muted,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
@@ -447,7 +431,7 @@ fun SignupScreen(
                 )
             }
 
-            Spacer(Modifier.height(if (compact) 9.dp else 16.dp))
+            Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -455,19 +439,19 @@ fun SignupScreen(
             ) {
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
-                    title = "Secure & private",
+                    title = "Secure\n& private",
                     background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
-                    title = "Be part of Nagpur",
+                    title = "Be a part\nof Nagpur",
                     background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
-                    title = "Interesting discussions",
+                    title = "Interesting\ndiscussions",
                     background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
                 )
@@ -536,6 +520,6 @@ private fun SignupBenefit(
         ) {
             icon()
         }
-        Text(title, color = benefitText, fontSize = 9.sp, lineHeight = 11.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = benefitText, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
