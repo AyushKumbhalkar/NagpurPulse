@@ -58,6 +58,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -154,12 +156,28 @@ fun SignupScreen(
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(
-                            text = "Your people are here.",
-                            color = ink,
+                            text = buildAnnotatedString {
+                                withStyle(
+                                    SpanStyle(
+                                        color = ink,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                ) {
+                                    append("Your people ")
+                                }
+                                withStyle(
+                                    SpanStyle(
+                                        color = SignupOrange,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                ) {
+                                    append("are here.")
+                                }
+                            },
                             fontSize = if (compact) 30.sp else 36.sp,
                             lineHeight = if (compact) 34.sp else 40.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.7).sp,
+                            letterSpacing = (-0.8).sp,
                             maxLines = 1
                         )
                     }
