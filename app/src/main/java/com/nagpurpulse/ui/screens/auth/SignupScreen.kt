@@ -567,15 +567,19 @@ private fun SignupEmailVerificationDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val popupWidth = maxWidth * 0.79f
-            val ref: (Float) -> androidx.compose.ui.unit.Dp = { value ->
+            val popupWidth = maxWidth * 0.82f
+            val popupHeight = maxHeight * 0.74f
+            val refX: (Float) -> androidx.compose.ui.unit.Dp = { value ->
                 popupWidth * (value / 810f)
+            }
+            val refY: (Float) -> androidx.compose.ui.unit.Dp = { value ->
+                popupHeight * (value / 1105f)
             }
 
             Box(
                 modifier = Modifier
                     .width(popupWidth)
-                    .aspectRatio(811f / 1105f)
+                    .height(popupHeight)
                     .clip(RoundedCornerShape(30.dp))
                     .background(Color(0xFFFFFCF7))
             ) {
@@ -583,7 +587,7 @@ private fun SignupEmailVerificationDialog(
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(ref(205f))
+                        .height(refY(205f))
                         .align(Alignment.TopCenter)
                 ) {
                     val fill = Path().apply {
@@ -608,7 +612,7 @@ private fun SignupEmailVerificationDialog(
                     drawPath(
                         line,
                         brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFF4B07D)),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = ref(2.2f).toPx())
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = refX(2.2f).toPx())
                     )
                 }
 
@@ -626,8 +630,8 @@ private fun SignupEmailVerificationDialog(
                 // Close button: reference position and scale.
                 Box(
                     modifier = Modifier
-                        .offset(x = ref(672f), y = ref(22f))
-                        .size(ref(80f))
+                        .offset(x = refX(710f), y = refY(22f))
+                        .size(refX(80f))
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFFFF7EF))
                         .pressScale(onClick = onDismiss),
@@ -637,15 +641,15 @@ private fun SignupEmailVerificationDialog(
                         Icons.Filled.Close,
                         contentDescription = null,
                         tint = Color(0xFF777777),
-                        modifier = Modifier.size(ref(38f))
+                        modifier = Modifier.size(refX(38f))
                     )
                 }
 
                 // Illustration.
                 Box(
                     modifier = Modifier
-                        .offset(x = ref(268f), y = ref(65f))
-                        .size(ref(275f))
+                        .offset(x = refX(268f), y = refY(65f))
+                        .size(refX(275f))
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFFFF0E3)),
                     contentAlignment = Alignment.Center
@@ -654,7 +658,7 @@ private fun SignupEmailVerificationDialog(
                         painter = painterResource(R.drawable.verify_email),
                         contentDescription = "Email verification",
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                        modifier = Modifier.size(ref(275f))
+                        modifier = Modifier.size(refX(275f))
                     )
                 }
 
@@ -670,7 +674,7 @@ private fun SignupEmailVerificationDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = ref(340f)),
+                        .offset(y = refY(340f)),
                     fontSize = 31.sp,
                     lineHeight = 36.sp,
                     textAlign = TextAlign.Center
@@ -681,7 +685,7 @@ private fun SignupEmailVerificationDialog(
                     "We’ve sent a 6-digit verification code to",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = ref(429f)),
+                        .offset(y = refY(429f)),
                     color = Color(0xFF64748B),
                     fontSize = 16.sp,
                     lineHeight = 22.sp,
@@ -693,7 +697,7 @@ private fun SignupEmailVerificationDialog(
                     email,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = ref(477f)),
+                        .offset(y = refY(477f)),
                     color = Color(0xFF142033),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
@@ -706,7 +710,7 @@ private fun SignupEmailVerificationDialog(
                     "Enter the code below to continue.",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = ref(526f)),
+                        .offset(y = refY(526f)),
                     color = Color(0xFF64748B),
                     fontSize = 16.sp,
                     lineHeight = 22.sp,
@@ -722,23 +726,23 @@ private fun SignupEmailVerificationDialog(
                     textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent),
                     cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
                     modifier = Modifier
-                        .offset(x = ref(50f), y = ref(595f))
-                        .width(ref(710f))
-                        .height(ref(118f)),
+                        .offset(x = refX(50f), y = refY(595f))
+                        .width(refX(710f))
+                        .height(refY(118f)),
                     decorationBox = {
                         Row(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.spacedBy(ref(10f))
+                            horizontalArrangement = Arrangement.spacedBy(refX(10f))
                         ) {
                             repeat(6) { index ->
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .clip(RoundedCornerShape(ref(17f)))
+                                        .clip(RoundedCornerShape(refX(17f)))
                                         .background(Color(0xFFFFFBF7))
                                         .border(
-                                            width = ref(1.5f),
+                                            width = refX(1.5f),
                                             color = Color(0xFFFFCBAA),
                                             shape = RoundedCornerShape(ref(17f))
                                         ),
@@ -761,7 +765,7 @@ private fun SignupEmailVerificationDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = ref(765f)),
+                        .offset(y = refY(765f)),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -802,7 +806,7 @@ private fun SignupEmailVerificationDialog(
                         error,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset(y = ref(805f)),
+                            .offset(y = refY(805f)),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center
@@ -812,9 +816,9 @@ private fun SignupEmailVerificationDialog(
                 // Verify button.
                 Box(
                     modifier = Modifier
-                        .offset(x = ref(50f), y = ref(828f))
-                        .width(ref(710f))
-                        .height(ref(113f))
+                        .offset(x = refX(50f), y = refY(828f))
+                        .width(refX(710f))
+                        .height(refY(113f))
                         .clip(RoundedCornerShape(60.dp))
                         .background(
                             Brush.horizontalGradient(
@@ -834,12 +838,12 @@ private fun SignupEmailVerificationDialog(
                             fontSize = 21.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.width(ref(16f)))
+                        Spacer(Modifier.width(refX(16f)))
                         Icon(
                             Icons.Filled.ArrowForward,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(ref(31f))
+                            modifier = Modifier.size(refX(31f))
                         )
                     }
                 }
@@ -849,7 +853,7 @@ private fun SignupEmailVerificationDialog(
                     "Change email address",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = ref(975f))
+                        .offset(y = refY(975f))
                         .pressScale(onClick = onChangeEmail),
                     color = Color(0xFFF4511E),
                     fontSize = 16.sp,
