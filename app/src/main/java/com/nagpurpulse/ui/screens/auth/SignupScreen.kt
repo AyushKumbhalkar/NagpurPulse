@@ -744,7 +744,7 @@ private fun SignupEmailVerificationDialog(
                                         .border(
                                             width = refX(1.5f),
                                             color = Color(0xFFFFCBAA),
-                                            shape = RoundedCornerShape(ref(17f))
+                                            shape = RoundedCornerShape(refX(17f))
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -792,7 +792,7 @@ private fun SignupEmailVerificationDialog(
                         "Resend",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset(y = ref(765f))
+                            .offset(y = refY(765f))
                             .pressScale(onClick = onResend),
                         color = Color(0xFFF4511E),
                         fontSize = 16.sp,
