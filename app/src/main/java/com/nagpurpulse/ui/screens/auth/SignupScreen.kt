@@ -9,10 +9,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,8 +48,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import android.util.Log
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,15 +65,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.OrangePrimary
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 private val SignupInk = Color(0xFF111827)
 private val SignupMuted = Color(0xFF64748B)
 private val SignupBorder = Color(0xFFE5E7EB)
 private val SignupOrange = Color(0xFFFF7518)
-private const val SIGNUP_SCROLL_TAG = "NagpurPulseSignupScroll"
 
 @Composable
 fun SignupScreen(
@@ -95,28 +88,13 @@ fun SignupScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
     val emailLooksValid = email.isNotBlank() &&
         android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
     var contentReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        Log.d(SIGNUP_SCROLL_TAG, "SignupScreen entered")
         delay(60)
         contentReady = true
-    }
-
-    LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value to scrollState.maxValue }
-            .distinctUntilChanged()
-            .debounce(250)
-            .collect { (offset, maxOffset) ->
-                val percent = if (maxOffset > 0) (offset * 100 / maxOffset) else 100
-                Log.d(
-                    SIGNUP_SCROLL_TAG,
-                    "Scroll settled: offset=$offset px, max=$maxOffset px, progress=$percent%"
-                )
-            }
     }
 
     MaterialTheme(colorScheme = lightColorScheme()) {
@@ -129,8 +107,7 @@ fun SignupScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
-                .verticalScroll(scrollState)
-                .padding(bottom = 20.dp),
+
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(26.dp))
