@@ -459,7 +459,6 @@ fun SignupScreen(
                 )
             }
             Spacer(Modifier.height(if (compact) 10.dp else 18.dp))
-        }
     }
 }
 
