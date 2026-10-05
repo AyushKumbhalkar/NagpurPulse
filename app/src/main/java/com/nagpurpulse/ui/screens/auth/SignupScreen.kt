@@ -418,7 +418,6 @@ fun SignupScreen(
             Spacer(Modifier.height(18.dp))
         }
     }
-    }
 }
 
 @Composable
@@ -471,6 +470,8 @@ private fun SignupBenefit(
     background: Color,
     modifier: Modifier = Modifier
 ) {
+    val benefitText = if (LocalIsDarkTheme.current) PrimaryText else inkLight
+
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -485,6 +486,6 @@ private fun SignupBenefit(
         ) {
             icon()
         }
-        Text(title, color = muted, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = benefitText, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
