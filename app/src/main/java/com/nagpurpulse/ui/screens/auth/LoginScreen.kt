@@ -189,11 +189,10 @@ fun LoginScreen(
     onGuestContinue: () -> Unit = onLoginSuccess,
     viewModel: AuthViewModel = hiltViewModel()
 ){
-    val uiState       by viewModel.uiState.collectAsState()
-    var email         by remember { mutableStateOf("") }
-    val emailLooksValid = email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
-    var password      by remember { mutableStateOf("") }
-    var pwVisible     by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var pwVisible by remember { mutableStateOf(false) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     var resetEmail by remember { mutableStateOf("") }
 
@@ -203,15 +202,22 @@ fun LoginScreen(
     val isDarkTheme = LocalIsDarkTheme.current
     val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
     val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
+    val inputBackground = if (isDarkTheme) SurfaceAlt else Color.White
     val ink = if (isDarkTheme) PrimaryText else Color(0xFF111827)
     val muted = if (isDarkTheme) SecondaryText else Color(0xFF64748B)
+    val emailLooksValid = email.isNotBlank() &&
+        android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
+        val pageTop = 40.dp
+        val logoHeight = 48.dp
+        val cardPaddingV = if (compact) 10.dp else 20.dp
+        val fieldGap = if (compact) 4.dp else 9.dp
+        val buttonHeight = if (compact) 50.dp else 58.dp
 
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
-        // Same static peach wave footer used by SignupScreen.
         if (!isDarkTheme) {
             Image(
                 painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
@@ -228,134 +234,143 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                .imePadding(),
+                .imePadding()
+                .padding(top = pageTop, bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-
-            Spacer(Modifier.height(40.dp))
-            Image(
-                painter = painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
-                contentDescription = "NagpurPulse",
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                modifier = Modifier.height(48.dp)
-            )
-            // Match SignupScreen's exact headline position.
-            Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 36.dp)
-            ) {
-                LoginAnimatedHeadline(
-                    compact = compact,
-                    ink = ink,
-                    orange = Color(0xFFFF7518)
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(28.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(OrangePrimary)
-                )
-                Spacer(Modifier.width(9.dp))
-                Text(
-                    "WELCOME BACK",
-                    color = OrangePrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.6.sp
-                )
-                Spacer(Modifier.width(9.dp))
-                Box(
-                    modifier = Modifier
-                        .width(28.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(OrangePrimary)
-                )
-            }
-            Spacer(Modifier.height(18.dp))
-
-
-            // ── Form card ───────────────────────────────────────────────
             Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(if (isDarkTheme) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
+                    contentDescription = "NagpurPulse",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.height(logoHeight)
+                )
+
+                Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
+
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(cardBackground)
-                        .border(
-                            1.dp,
-                            OrangePrimary.copy(0.30f),
-                            RoundedCornerShape(24.dp)
-                        )
-                        .padding(DensityManager.cardPadding.dp)
+                        .padding(horizontal = 36.dp)
                 ) {
-                    // Email
-                    PremiumInputField(
-                        value = email, onValueChange = { email = it },
-                        placeholder = "Email",
-                        leadingIcon = { Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(18.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        index = 0
+                    LoginAnimatedHeadline(
+                        compact = compact,
+                        ink = ink,
+                        orange = Color(0xFFFF7518)
                     )
+                }
+
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 36.dp)
+                ) {
+                    Text(
+                        text = "Welcome back.",
+                        color = ink,
+                        fontSize = if (compact) 15.sp else 16.sp,
+                        lineHeight = if (compact) 21.sp else 23.sp
+                    )
+                }
+
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(pageBackground)
+                        .border(1.dp, pageBackground, RoundedCornerShape(32.dp))
+                        .padding(horizontal = 18.dp, vertical = cardPaddingV)
+                ) {
+                    LoginFieldContainer {
+                        PremiumInputField(
+                            value = email,
+                            onValueChange = { email = it },
+                            placeholder = "Email address",
+                            leadingIcon = {
+                                Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            index = 0,
+                            containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
+                        )
+                    }
+
                     if (email.isNotBlank() && !emailLooksValid) {
                         Text(
                             text = "Enter a valid email address",
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(start = 10.dp, top = 4.dp)
                         )
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(fieldGap))
 
-                    // Password
-                    PremiumInputField(
-                        value = password, onValueChange = { password = it },
-                        placeholder = "Password",
-                        leadingIcon = { Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(18.dp)) },
-                        trailingIcon = {
-                            IconButton(onClick = { pwVisible = !pwVisible }) {
-                                AnimatedContent(pwVisible, transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(150)) }, label = "eye") { v ->
-                                    Icon(if (v) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+                    LoginFieldContainer {
+                        PremiumInputField(
+                            value = password,
+                            onValueChange = { password = it },
+                            placeholder = "Password",
+                            leadingIcon = {
+                                Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { pwVisible = !pwVisible }) {
+                                    AnimatedContent(
+                                        targetState = pwVisible,
+                                        transitionSpec = { fadeIn(tween(130)) togetherWith fadeOut(tween(130)) },
+                                        label = "password-visibility"
+                                    ) { visible ->
+                                        Icon(
+                                            if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                            contentDescription = if (visible) "Hide password" else "Show password",
+                                            tint = OrangePrimary
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        index = 1
-                    )
+                            },
+                            visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            index = 1,
+                            containerColor = cardBackground
+                        )
+                    }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(if (compact) 3.dp else 10.dp))
 
                     Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            Text(
-                                "Forgot password?",
-                                color = OrangePrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.pressScale(onClick = { resetEmail = email; showForgotPasswordDialog = true })
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            "Forgot password?",
+                            color = OrangePrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.pressScale(
+                                onClick = {
+                                    resetEmail = email
+                                    showForgotPasswordDialog = true
+                                }
                             )
-                        }
+                        )
+                    }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(10.dp))
                     AnimatedErrorMessage(uiState.error)
+
                     AnimatedVisibility(
                         visible = uiState.forgotPasswordSent,
                         enter = fadeIn(tween(300)) + expandVertically(),
-                        exit  = fadeOut(tween(200)) + shrinkVertically()
+                        exit = fadeOut(tween(200)) + shrinkVertically()
                     ) {
                         Row(
                             modifier = Modifier
@@ -373,40 +388,63 @@ fun LoginScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
 
-                    PremiumButton(
-                        text = "Login  →",
-                        isLoading = uiState.isLoading,
-                        enabled = emailLooksValid && password.isNotBlank(),
-                        onClick = { viewModel.signIn(email, password, onLoginSuccess) },
-                        delayMs = 0,
-                        animateEntrance = false
-                    )
+                    Spacer(Modifier.height(if (compact) 7.dp else 12.dp))
 
-                    Spacer(Modifier.height(16.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(
-                            Modifier.weight(1f),
-                            color = Divider
-                        )
-                        Text("  or continue with  ", color = muted, fontSize = 12.sp)
-                        HorizontalDivider(
-                            Modifier.weight(1f),
-                            color = Divider
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(40.dp))
+                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
+                            .pressScale(
+                                onClick = {
+                                    if (emailLooksValid && password.isNotBlank() && !uiState.isLoading) {
+                                        viewModel.signIn(email.trim(), password, onLoginSuccess)
+                                    }
+                                }
+                            )
+                            .height(buttonHeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = if (uiState.isLoading) "Signing in…" else "Login",
+                                color = Color.White,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.size(12.dp))
+                            Text("→", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(if (compact) 7.dp else 16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        HorizontalDivider(Modifier.weight(1f), color = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB))
+                        Text("  or continue with  ", color = muted, fontSize = 12.sp)
+                        HorizontalDivider(Modifier.weight(1f), color = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB))
+                    }
+
+                    Spacer(Modifier.height(if (compact) 6.dp else 14.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(if (compact) 44.dp else 48.dp)
                             .clip(RoundedCornerShape(18.dp))
-                            .background(if (isDarkTheme) SurfaceAlt else Color.White)
-                            .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB), RoundedCornerShape(18.dp))
+                            .background(inputBackground)
+                            .border(
+                                1.dp,
+                                if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB),
+                                RoundedCornerShape(18.dp)
+                            )
                             .pressScale(onClick = {
                                 scope.launch {
                                     try {
@@ -431,15 +469,10 @@ fun LoginScreen(
                             modifier = Modifier.size(19.dp)
                         )
                         Spacer(Modifier.size(9.dp))
-                        Text(
-                            "Continue with Google",
-                            color = ink,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(if (compact) 5.dp else 12.dp))
 
                     Row(
                         modifier = Modifier
@@ -452,94 +485,89 @@ fun LoginScreen(
                                 RoundedCornerShape(20.dp)
                             )
                             .pressScale(onClick = onGuestContinue)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = if (compact) 7.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(if (compact) 34.dp else 38.dp)
                                 .clip(RoundedCornerShape(13.dp))
                                 .background(Color(0xFFFFE4CF)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Filled.Groups,
-                                contentDescription = null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(21.dp)
-                            )
+                            Icon(Icons.Filled.Groups, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                         }
                         Spacer(Modifier.size(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Continue as Guest",
-                                color = ink,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Explore without an account",
-                                color = muted,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp
-                            )
+                            Text("Continue as Guest", color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Explore without an account", color = muted, fontSize = 12.sp, lineHeight = 16.sp)
                         }
-                        Icon(
-                            Icons.Filled.ArrowForward,
-                            contentDescription = "Continue as guest",
-                            tint = OrangePrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(Icons.Filled.ArrowForward, contentDescription = "Continue as guest", tint = OrangePrimary, modifier = Modifier.size(20.dp))
                     }
+                }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
 
-            GuestContinueCard(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                onClick = onGuestContinue
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(
+                            if (isDarkTheme) SurfaceAlt.copy(alpha = 0.92f)
+                            else Color.White.copy(alpha = 0.90f)
+                        )
+                        .border(
+                            1.dp,
+                            if (isDarkTheme) OrangePrimary.copy(alpha = 0.16f)
+                            else Color(0xFFF1E7DD),
+                            RoundedCornerShape(24.dp)
+                        )
+                        .pressScale(onClick = onNavigateToSignup)
+                        .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text("Don't have an account?", color = muted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Create Account", color = Color(0xFFFF7518), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.width(4.dp))
+                    Text("→", color = Color(0xFFFF7518), fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                }
+            }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
 
             Row(
-                modifier = Modifier.pressScale(
-                    onClick = onNavigateToSignup
-                ),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Don't have an account? ",
-                    color = TertiaryText,
-                    fontSize = 14.sp
+                SignupBenefit(
+                    icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
+                    title = "Secure\n& private",
+                    background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
+                    modifier = Modifier.weight(1f)
                 )
-                Text(
-                    "Create Account",
-                    color = OrangePrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                SignupBenefit(
+                    icon = { Icon(Icons.Filled.LocationCity, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
+                    title = "Be a part\nof Nagpur",
+                    background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
+                    modifier = Modifier.weight(1f)
+                )
+                SignupBenefit(
+                    icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
+                    title = "Interesting\ndiscussions",
+                    background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(Modifier.height(2.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                TrustBadge(
-                    Icons.Filled.Shield,
-                    "Secure & private",
-                    Modifier.weight(1f)
-                )
-                TrustBadge(
-                    Icons.Filled.LocationCity,
-                    "Be a part of Nagpur",
-                    Modifier.weight(1f)
-                )
-            }
+            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
     }
 
@@ -677,5 +705,23 @@ fun LoginScreen(
                 }
             }
         }
+    }
+}
+
+}
+
+@Composable
+private fun LoginFieldContainer(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .border(
+                width = 0.75.dp,
+                color = Color(0xFFFF7518),
+                shape = RoundedCornerShape(18.dp)
+            )
+    ) {
+        content()
     }
 }
