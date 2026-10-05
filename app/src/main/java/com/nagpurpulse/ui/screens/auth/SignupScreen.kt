@@ -206,7 +206,8 @@ fun SignupScreen(
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = KeyboardType.Email
                             ),
-                            index = 0
+                            index = 0,
+                            containerColor = cardBackground
                         )
                     }
                     if (email.isNotBlank() && !emailLooksValid) {
@@ -244,7 +245,8 @@ fun SignupScreen(
                             },
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            index = 1
+                            index = 1,
+                            containerColor = cardBackground
                         )
                     }
                     Spacer(Modifier.height(10.dp))
@@ -274,7 +276,8 @@ fun SignupScreen(
                             },
                             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            index = 2
+                            index = 2,
+                            containerColor = cardBackground
                         )
                     }
 
