@@ -474,39 +474,38 @@ private fun SignupAnimatedHeadline(
             "are online."
         )
     }
+
     var phraseIndex by remember { mutableStateOf(0) }
     var visibleCharacterCount by remember { mutableStateOf(0) }
-    var isDeleting by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
             val phrase = phrases[phraseIndex]
 
-            // True typing effect: reveal one character at a time.
-            isDeleting = false
+            // Type the complete phrase continuously, one character at a time.
             for (count in 1..phrase.length) {
                 visibleCharacterCount = count
-                delay(70L)
+                delay(85L)
             }
 
-            // Pause on the completed phrase.
-            delay(1600L)
+            // Keep the COMPLETE phrase on screen long enough to read.
+            delay(2200L)
 
-            // Erase one character at a time.
-            isDeleting = true
+            // Erase the complete phrase continuously, one character at a time.
             for (count in phrase.length - 1 downTo 0) {
                 visibleCharacterCount = count
-                delay(45L)
+                delay(55L)
             }
 
-            isDeleting = false
+            // Small pause before starting the next phrase.
+            delay(450L)
+
             phraseIndex = (phraseIndex + 1) % phrases.size
-            delay(250L)
+            visibleCharacterCount = 0
         }
     }
 
-    val phrase = phrases[phraseIndex]
-    val visiblePhrase = phrase.take(visibleCharacterCount)
+    val visiblePhrase = phrases[phraseIndex].take(visibleCharacterCount)
 
     Text(
         text = buildAnnotatedString {
