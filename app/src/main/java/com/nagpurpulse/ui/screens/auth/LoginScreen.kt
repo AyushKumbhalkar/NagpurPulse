@@ -137,7 +137,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(40.dp))
             Image(
-                painter = painterResource(R.drawable.nagpurpulse_logo),
+                painter = painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
                 contentDescription = "NagpurPulse",
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.height(48.dp)
