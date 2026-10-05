@@ -73,8 +73,8 @@ import com.nagpurpulse.ui.theme.SecondaryText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val SignupInkLight = Color(0xFF111827)
-private val SignupMutedLight = Color(0xFF64748B)
+private val inkLight = Color(0xFF111827)
+private val mutedLight = Color(0xFF64748B)
 private val SignupBorder = Color(0xFFE5E7EB)
 private val SignupOrange = Color(0xFFFF7518)
 
@@ -107,8 +107,8 @@ fun SignupScreen(
     val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
     val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
     val inputBackground = if (isDarkTheme) SurfaceAlt else Color.White
-    val ink = if (isDarkTheme) PrimaryText else SignupInkLight
-    val muted = if (isDarkTheme) SecondaryText else SignupMutedLight
+    val ink = if (isDarkTheme) PrimaryText else inkLight
+    val muted = if (isDarkTheme) SecondaryText else mutedLight
     val fieldBorder = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else SignupBorder
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -151,7 +151,7 @@ fun SignupScreen(
                         .padding(horizontal = 18.dp)
                         .clip(RoundedCornerShape(32.dp))
                         .background(cardBackground)
-                        .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
+                        .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
                     Text(
@@ -176,7 +176,7 @@ fun SignupScreen(
                             onValueChange = { email = it },
                             placeholder = "Email address",
                             leadingIcon = {
-                                Icon(Icons.Filled.Email, null, tint = SignupMuted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Email, null, tint = muted, modifier = Modifier.size(21.dp))
                             },
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = KeyboardType.Email
@@ -200,7 +200,7 @@ fun SignupScreen(
                             onValueChange = { password = it },
                             placeholder = "Password",
                             leadingIcon = {
-                                Icon(Icons.Filled.Lock, null, tint = SignupMuted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Lock, null, tint = muted, modifier = Modifier.size(21.dp))
                             },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -212,7 +212,7 @@ fun SignupScreen(
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = if (visible) "Hide password" else "Show password",
-                                            tint = SignupMuted
+                                            tint = muted
                                         )
                                     }
                                 }
@@ -230,7 +230,7 @@ fun SignupScreen(
                             onValueChange = { confirmPassword = it },
                             placeholder = "Confirm password",
                             leadingIcon = {
-                                Icon(Icons.Filled.Lock, null, tint = SignupMuted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Lock, null, tint = muted, modifier = Modifier.size(21.dp))
                             },
                             trailingIcon = {
                                 IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
@@ -242,7 +242,7 @@ fun SignupScreen(
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = if (visible) "Hide confirm password" else "Show confirm password",
-                                            tint = SignupMuted
+                                            tint = muted
                                         )
                                     }
                                 }
@@ -308,8 +308,8 @@ fun SignupScreen(
                     Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
-                        Text("  or continue with  ", color = SignupMuted, fontSize = 12.sp)
-                        HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
+                        Text("  or continue with  ", color = muted, fontSize = 12.sp)
+                        HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
                     }
                     Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
 
@@ -318,8 +318,8 @@ fun SignupScreen(
                             .fillMaxWidth()
                             .height(48.dp)
                             .clip(RoundedCornerShape(18.dp))
-                            .background(Color.White)
-                            .border(1.dp, SignupBorder, RoundedCornerShape(18.dp))
+                            .background(inputBackground)
+                            .border(1.dp, fieldBorder, RoundedCornerShape(18.dp))
                             .pressScale(onClick = {
                                 scope.launch {
                                     try {
@@ -344,7 +344,7 @@ fun SignupScreen(
                             modifier = Modifier.size(19.dp)
                         )
                         Spacer(Modifier.size(9.dp))
-                        Text("Continue with Google", color = SignupInk, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
@@ -352,8 +352,8 @@ fun SignupScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color(0xFFFFF5EC))
-                            .border(1.dp, Color(0xFFFFE4CF), RoundedCornerShape(20.dp))
+                            .background(if (isDarkTheme) SurfaceAlt else Color(0xFFFFF5EC))
+                            .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFFFE4CF), RoundedCornerShape(20.dp))
                             .pressScale(onClick = onGuestContinue)
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -369,8 +369,8 @@ fun SignupScreen(
                         }
                         Spacer(Modifier.size(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Continue as Guest", color = SignupInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Explore without an account", color = SignupMuted, fontSize = 12.sp, lineHeight = 16.sp)
+                            Text("Continue as Guest", color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Explore without an account", color = muted, fontSize = 12.sp, lineHeight = 16.sp)
                         }
                         Icon(Icons.Filled.ArrowForward, contentDescription = "Continue as guest", tint = SignupOrange, modifier = Modifier.size(20.dp))
                     }
@@ -386,7 +386,7 @@ fun SignupScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Already have an account? ", color = SignupMuted, fontSize = 14.sp)
+                Text("Already have an account? ", color = muted, fontSize = 14.sp)
                 Text("Log in", color = SignupOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
@@ -441,7 +441,7 @@ private fun SignupProviderTile(
     ) {
         Text(symbol, color = symbolColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(4.dp))
-        Text(label, color = SignupInk, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -480,6 +480,6 @@ private fun SignupBenefit(
         ) {
             icon()
         }
-        Text(title, color = SignupMuted, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = muted, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
