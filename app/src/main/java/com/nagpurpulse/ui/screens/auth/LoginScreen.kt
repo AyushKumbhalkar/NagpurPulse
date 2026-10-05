@@ -380,8 +380,8 @@ fun LoginScreen(
                         Text(
                             "Forgot password?",
                             color = OrangePrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.pressScale(
                                 onClick = {
                                     resetEmail = email
