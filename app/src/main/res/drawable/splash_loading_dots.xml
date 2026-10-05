@@ -9,18 +9,18 @@
         android:name="dot1"
         android:fillColor="#FFFF6B00"
         android:pathData="M39,54m-5,0a5,5 0,1 1,10,0a5,5 0,1 1,-10,0"
-        android:alpha="0.35" />
+        android:alpha="0.45" />
 
     <path
         android:name="dot2"
         android:fillColor="#FFFF6B00"
         android:pathData="M54,54m-5,0a5,5 0,1 1,10,0a5,5 0,1 1,-10,0"
-        android:alpha="1" />
+        android:alpha="0.45" />
 
     <path
         android:name="dot3"
         android:fillColor="#FFFF6B00"
         android:pathData="M69,54m-5,0a5,5 0,1 1,10,0a5,5 0,1 1,-10,0"
-        android:alpha="0.35" />
+        android:alpha="0.45" />
 
 </vector>
