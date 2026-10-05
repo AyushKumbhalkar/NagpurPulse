@@ -113,10 +113,6 @@ fun LoginScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Staggered content entrance
-    var contentReady by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(60); contentReady = true }
-
     val isDarkTheme = LocalIsDarkTheme.current
     val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
     val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
@@ -188,11 +184,7 @@ fun LoginScreen(
 
 
             // ── Form card ───────────────────────────────────────────────
-            AnimatedVisibility(
-                visible = contentReady,
-                enter = fadeIn(animationSpec = tween(300, delayMillis = 60))
-            )  {
-                Column(
+            Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
