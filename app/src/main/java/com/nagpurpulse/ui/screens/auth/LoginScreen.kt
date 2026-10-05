@@ -213,7 +213,7 @@ fun LoginScreen(
         val pageTop = 40.dp
         val logoHeight = 48.dp
         val cardPaddingV = if (compact) 10.dp else 20.dp
-        val fieldGap = if (compact) 4.dp else 9.dp
+        val fieldGap = if (compact) 8.dp else 14.dp
         val buttonHeight = if (compact) 50.dp else 58.dp
 
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
