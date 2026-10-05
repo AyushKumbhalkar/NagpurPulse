@@ -95,6 +95,58 @@ import kotlinx.coroutines.launch
 // ─── LOGIN SCREEN ──────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
+private fun LoginAnimatedSubtitle(
+    color: Color,
+    orange: Color
+) {
+    val phrases = remember {
+        listOf(
+            "are here.",
+            "are online.",
+            "are talking.",
+            "are joining.",
+            "are active.",
+            "are around.",
+            "are asking."
+        )
+    }
+
+    var animatedText by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        var currentIndex = 0
+
+        while (true) {
+            val phrase = phrases[currentIndex]
+            animatedText = ""
+
+            for (index in phrase.indices) {
+                animatedText = phrase.substring(0, index + 1)
+                delay(75L)
+            }
+
+            delay(2500L)
+
+            for (index in phrase.length - 1 downTo 0) {
+                animatedText = phrase.substring(0, index)
+                delay(50L)
+            }
+
+            delay(400L)
+            currentIndex = (currentIndex + 1) % phrases.size
+        }
+    }
+
+    Text(
+        text = "Your people $animatedText",
+        color = color,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        maxLines = 1
+    )
+}
+
+@Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToSignup: () -> Unit,
@@ -175,11 +227,8 @@ fun LoginScreen(
                 fontWeight = FontWeight.ExtraBold
             )
             Spacer(Modifier.height(5.dp))
-            Text(
-                "Pick up where you left off.",
-                color = muted,
-                fontSize = 15.sp
-            )
+            LoginAnimatedSubtitle(color = muted, orange = OrangePrimary)
+
             Spacer(Modifier.height(18.dp))
 
 
