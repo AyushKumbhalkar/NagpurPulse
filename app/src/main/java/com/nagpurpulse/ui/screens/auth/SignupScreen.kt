@@ -441,18 +441,23 @@ private fun SignupProviderTile(
     ) {
         Text(symbol, color = symbolColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(4.dp))
-        Text(label, color = ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = SignupInkLight, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun SignupFieldContainer(content: @Composable () -> Unit) {
+    val isDarkTheme = LocalIsDarkTheme.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(Color.White)
-            .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(24.dp))
+            .background(if (isDarkTheme) SurfaceAlt else Color.White)
+            .border(
+                1.dp,
+                if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFE5E7EB),
+                RoundedCornerShape(24.dp)
+            )
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         content()
