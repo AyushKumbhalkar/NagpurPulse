@@ -16,6 +16,7 @@ import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -618,15 +619,15 @@ fun PremiumButton(
         label = "btn_scale"
     )
 
-    if (animateEntrance) AnimatedVisibility(
+    AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(400)) +
+        enter = if (animateEntrance) fadeIn(animationSpec = tween(400)) +
                 scaleIn(
                     initialScale = 0.9f,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy
                     )
-                )
+                ) else EnterTransition.None
     ) {
 
 
@@ -691,15 +692,25 @@ fun SocialButton(
     label: String,
     onClick: () -> Unit,
     delayMs: Int = 0,
+    animateEntrance: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(delayMs.toLong()); visible = true }
+    LaunchedEffect(Unit) {
+        if (animateEntrance) {
+            delay(delayMs.toLong())
+        }
+        visible = true
+    }
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(350)) +
-                scaleIn(initialScale = 0.9f)
+        enter = if (animateEntrance) {
+            fadeIn(animationSpec = tween(350)) +
+                    scaleIn(initialScale = 0.9f)
+        } else {
+            EnterTransition.None
+        }
     ) {
         Row(
             modifier = modifier
