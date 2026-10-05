@@ -472,7 +472,7 @@ fun LoginScreen(
                         Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(Modifier.height(if (compact) 5.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
 
                     Row(
                         modifier = Modifier
@@ -513,7 +513,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
+                Spacer(Modifier.height(0.dp))
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
@@ -554,13 +554,13 @@ fun LoginScreen(
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
-                    icon = { Icon(Icons.Filled.LocationCity, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
+                    icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
                     title = "Be a part\nof Nagpur",
                     background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
-                    icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
+                    icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
                     title = "Interesting\ndiscussions",
                     background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
@@ -725,35 +725,3 @@ private fun LoginFieldContainer(content: @Composable () -> Unit) {
 }
 
 
-@Composable
-private fun LoginBenefit(
-    icon: @Composable () -> Unit,
-    title: String,
-    background: Color,
-    modifier: Modifier = Modifier
-) {
-    val benefitText = if (LocalIsDarkTheme.current) PrimaryText else Color(0xFF111827)
-
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(50))
-                .background(background),
-            contentAlignment = Alignment.Center
-        ) {
-            icon()
-        }
-        Text(
-            title,
-            color = benefitText,
-            fontSize = 10.sp,
-            lineHeight = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
