@@ -1,10 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="72dp"
-    android:height="24dp"
-    android:viewportWidth="72"
-    android:viewportHeight="24">
-    <group android:name="dot1"><path android:name="dot1Path" android:fillColor="#FF8A00" android:pathData="M12,12 A4,4 0,1 0,12 20 A4,4 0,1 0,12 12 Z" android:alpha="0.25"/></group>
-    <group android:name="dot2"><path android:name="dot2Path" android:fillColor="#FF8A00" android:pathData="M36,12 A4,4 0,1 0,36 20 A4,4 0,1 0,36 12 Z" android:alpha="0.25"/></group>
-    <group android:name="dot3"><path android:name="dot3Path" android:fillColor="#FF8A00" android:pathData="M60,12 A4,4 0,1 0,60 20 A4,4 0,1 0,60 12 Z" android:alpha="0.25"/></group>
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:name="dot1"
+        android:fillColor="#FFFF6B00"
+        android:pathData="M39,54m-5,0a5,5 0,1 1,10,0a5,5 0,1 1,-10,0"
+        android:alpha="0.35" />
+
+    <path
+        android:name="dot2"
+        android:fillColor="#FFFF6B00"
+        android:pathData="M54,54m-5,0a5,5 0,1 1,10,0a5,5 0,1 1,-10,0"
+        android:alpha="1" />
+
+    <path
+        android:name="dot3"
+        android:fillColor="#FFFF6B00"
+        android:pathData="M69,54m-5,0a5,5 0,1 1,10,0a5,5 0,1 1,-10,0"
+        android:alpha="0.35" />
+
 </vector>
