@@ -243,13 +243,6 @@ fun LoginScreen(
                         .background(OrangePrimary)
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Welcome back.",
-                color = ink,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
             Spacer(Modifier.height(18.dp))
 
 
