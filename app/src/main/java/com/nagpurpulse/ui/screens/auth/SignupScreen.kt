@@ -157,6 +157,19 @@ fun SignupScreen(
                 )
             }
             Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 36.dp)
+            ) {
+                Text(
+                    text = "Create your account and join the conversations happening around Nagpur.",
+                    color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
+                    fontSize = if (compact) 15.sp else 16.sp,
+                    lineHeight = if (compact) 21.sp else 23.sp
+                )
+            }
+            Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
 
             Column(
                     modifier = Modifier
@@ -167,14 +180,6 @@ fun SignupScreen(
                         .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
-                    Text(
-                        text = "Create your account and join the conversations happening around Nagpur.",
-                        color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
-                        fontSize = if (compact) 15.sp else 16.sp,
-                        lineHeight = if (compact) 21.sp else 23.sp
-                    )
-                    Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
-
                     SignupFieldContainer {
                         PremiumInputField(
                             value = email,
