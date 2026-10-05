@@ -10,6 +10,9 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +42,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -50,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.delay
+import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 
 
 @Composable
@@ -92,6 +97,16 @@ fun OnboardingScreen(
         else -> 36.sp
     }
     val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = LocalIsDarkTheme.current
+    val pageBackground = if (isDarkTheme) {
+        Brush.verticalGradient(
+            colors = listOf(Color(0xFF121416), Color(0xFF0B0D0F), Color(0xFF15100D))
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(colorScheme.background, colorScheme.background)
+        )
+    }
     val welcomeBackground = colorScheme.background
     val welcomeOrange = colorScheme.primary
     val welcomeText = colorScheme.onBackground
@@ -109,7 +124,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(welcomeBackground)
+            .background(pageBackground)
     ) {
         Column(
             modifier = Modifier
@@ -128,12 +143,50 @@ fun OnboardingScreen(
                     animationSpec = spring(dampingRatio = 0.8f)
                 )
             ) {
-                Image(
-                    painter = painterResource(R.drawable.nagpurpulse_logo),
-                    contentDescription = "NagpurPulse",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.width(logoWidth)
-                )
+                if (isDarkTheme) {
+                    Row(
+                        modifier = Modifier.wrapContentWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(if (screenWidth < 360) 48.dp else 54.dp)
+                                .background(
+                                    color = welcomeOrange,
+                                    shape = RoundedCornerShape(50)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "N",
+                                color = Color.White,
+                                fontSize = if (screenWidth < 360) 29.sp else 33.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
+                                    append("Nagpur")
+                                }
+                                withStyle(SpanStyle(color = welcomeOrange, fontWeight = FontWeight.Bold)) {
+                                    append("Pulse")
+                                }
+                            },
+                            fontSize = if (screenWidth < 360) 30.sp else 34.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip
+                        )
+                    }
+                } else {
+                    Image(
+                        painter = painterResource(R.drawable.nagpurpulse_logo),
+                        contentDescription = "NagpurPulse",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.width(logoWidth)
+                    )
+                }
             }
 
             Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
