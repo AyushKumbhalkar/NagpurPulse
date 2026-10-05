@@ -382,9 +382,9 @@ fun SignupScreen(
                 }
             }
 
-            // Use only the available free space between the main card and footer.
-            // If the screen is short, this spacer collapses instead of overlapping content.
-            Spacer(Modifier.weight(1f, fill = false))
+            // Keep the footer lower on tall screens so the bottom of the page
+            // does not leave an unnecessarily large empty area.
+            Spacer(Modifier.height(if (compact) 88.dp else 28.dp))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
