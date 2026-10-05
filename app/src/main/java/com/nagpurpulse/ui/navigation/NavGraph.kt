@@ -343,8 +343,10 @@ fun NagpurPulseNavGraph(
         // Auth
         composable(
             Screen.Login.route,
-            enterTransition = { tabEnter(this) }, exitTransition = { tabExit(this) },
-            popEnterTransition = { tabEnter(this) }, popExitTransition = { tabExit(this) }) {
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }) {
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
@@ -361,8 +363,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.Signup.route,
-            enterTransition = { tabEnter(this) }, exitTransition = { tabExit(this) },
-            popEnterTransition = { tabEnter(this) }, popExitTransition = { tabExit(this) }) {
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }) {
             SignupScreen(
                 onSignupSuccess = {
                     onboardingOriginRoute = Screen.Signup.route
