@@ -440,7 +440,7 @@ private fun SignupProviderTile(
     ) {
         Text(symbol, color = symbolColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(4.dp))
-        Text(label, color = SignupInkLight, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = inkLight, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
