@@ -359,48 +359,96 @@ fun LoginScreen(
                     Spacer(Modifier.height(8.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        SocialButton(
-                            label = "Google",
-                            onClick = {
-
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(if (isDarkTheme) SurfaceAlt else Color.White)
+                            .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB), RoundedCornerShape(18.dp))
+                            .pressScale(onClick = {
                                 scope.launch {
-
                                     try {
-
-                                        val token =
-                                            GoogleAuthManager(context)
-                                                .getGoogleIdToken()
-
+                                        val token = GoogleAuthManager(context).getGoogleIdToken()
                                         viewModel.signInWithGoogleToken(
                                             idToken = token,
-
-                                            onExistingUser = {
-                                                onLoginSuccess()
-                                            },
-
-                                            onNewUser = {
-                                                onGoogleNewUser()
-                                            }
+                                            onExistingUser = onLoginSuccess,
+                                            onNewUser = onGoogleNewUser
                                         )
-
                                     } catch (_: Exception) {
                                         viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
                                     }
                                 }
-                            },
-                            delayMs = 0,
-                            animateEntrance = false,
-                            modifier = Modifier.fillMaxWidth()
+                            })
+                            .padding(horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_google),
+                            contentDescription = "Google",
+                            modifier = Modifier.size(19.dp)
                         )
-
+                        Spacer(Modifier.size(9.dp))
+                        Text(
+                            "Continue with Google",
+                            color = ink,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                        // Continue as Guest button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (isDarkTheme) SurfaceAlt else Color(0xFFFFF5EC))
+                            .border(
+                                1.dp,
+                                if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFFFE4CF),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .pressScale(onClick = onGuestContinue)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(13.dp))
+                                .background(Color(0xFFFFE4CF)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Groups,
+                                contentDescription = null,
+                                tint = OrangePrimary,
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
+                        Spacer(Modifier.size(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Continue as Guest",
+                                color = ink,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Explore without an account",
+                                color = muted,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            )
+                        }
+                        Icon(
+                            Icons.Filled.ArrowForward,
+                            contentDescription = "Continue as guest",
+                            tint = OrangePrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
 
 
 
