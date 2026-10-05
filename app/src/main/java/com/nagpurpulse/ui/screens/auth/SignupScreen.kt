@@ -465,45 +465,48 @@ private fun SignupAnimatedHeadline(
 ) {
     val phrases = remember {
         listOf(
-            listOf("are", "talking."),
-            listOf("are", "connecting."),
-            listOf("are", "sharing."),
-            listOf("are", "discovering."),
-            listOf("are", "discussing."),
-            listOf("are", "joining", "in."),
-            listOf("are", "online.")
+            "are talking.",
+            "are connecting.",
+            "are sharing.",
+            "are discovering.",
+            "are discussing.",
+            "are joining in.",
+            "are online."
         )
     }
     var phraseIndex by remember { mutableStateOf(0) }
-    var visibleWordCount by remember { mutableStateOf(0) }
+    var visibleCharacterCount by remember { mutableStateOf(0) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
-            val words = phrases[phraseIndex]
+            val phrase = phrases[phraseIndex]
 
-            // Write the orange phrase one word at a time.
-            visibleWordCount = 0
-            for (count in 1..words.size) {
-                delay(220L)
-                visibleWordCount = count
+            // True typing effect: reveal one character at a time.
+            isDeleting = false
+            for (count in 1..phrase.length) {
+                visibleCharacterCount = count
+                delay(70L)
             }
 
-            // Let the completed phrase remain readable.
-            delay(1500L)
+            // Pause on the completed phrase.
+            delay(1600L)
 
-            // Erase it word by word before moving to the next phrase.
-            for (count in words.size - 1 downTo 0) {
-                delay(120L)
-                visibleWordCount = count
+            // Erase one character at a time.
+            isDeleting = true
+            for (count in phrase.length - 1 downTo 0) {
+                visibleCharacterCount = count
+                delay(45L)
             }
 
+            isDeleting = false
             phraseIndex = (phraseIndex + 1) % phrases.size
+            delay(250L)
         }
     }
 
-    val visiblePhrase = phrases[phraseIndex]
-        .take(visibleWordCount)
-        .joinToString(" ")
+    val phrase = phrases[phraseIndex]
+    val visiblePhrase = phrase.take(visibleCharacterCount)
 
     Text(
         text = buildAnnotatedString {
