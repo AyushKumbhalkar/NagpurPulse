@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -98,6 +100,9 @@ fun SignupScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var showEmailVerificationDialog by remember { mutableStateOf(false) }
+    var verificationCode by remember { mutableStateOf("") }
+    var verificationSeconds by remember { mutableStateOf(45) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val emailLooksValid = email.isNotBlank() &&
@@ -110,6 +115,15 @@ fun SignupScreen(
     val ink = if (isDarkTheme) PrimaryText else inkLight
     val muted = if (isDarkTheme) SecondaryText else mutedLight
     val fieldBorder = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else SignupBorder
+
+    LaunchedEffect(showEmailVerificationDialog) {
+        if (!showEmailVerificationDialog) return@LaunchedEffect
+        verificationSeconds = 45
+        while (showEmailVerificationDialog && verificationSeconds > 0) {
+            delay(1000L)
+            if (showEmailVerificationDialog) verificationSeconds--
+        }
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
@@ -313,7 +327,11 @@ fun SignupScreen(
                                             confirmPassword.isNotBlank() && password == confirmPassword &&
                                             !uiState.isLoading
                                         ) {
-                                            viewModel.signUp(email.trim(), password, onSignupSuccess)
+                                            viewModel.signUp(email.trim(), password) {
+                                                verificationCode = ""
+                                                verificationSeconds = 45
+                                                showEmailVerificationDialog = true
+                                            }
                                         }
                                     }
                                 )
@@ -481,6 +499,164 @@ fun SignupScreen(
                 )
             }
                 Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+            }
+        }
+    }
+}
+
+    if (showEmailVerificationDialog) {
+        SignupEmailVerificationDialog(
+            email = email,
+            code = verificationCode,
+            seconds = verificationSeconds,
+            isLoading = uiState.isLoading,
+            error = uiState.error,
+            onCodeChange = { verificationCode = it },
+            onVerify = {
+                if (verificationCode.length == 6 && !uiState.isLoading) {
+                    viewModel.verifySignupEmailOtp(email, verificationCode) {
+                        showEmailVerificationDialog = false
+                        onSignupSuccess()
+                    }
+                }
+            },
+            onResend = {
+                viewModel.resendSignupEmailOtp(email) { error ->
+                    if (error == null) verificationSeconds = 45
+                }
+            },
+            onChangeEmail = {
+                showEmailVerificationDialog = false
+                verificationCode = ""
+            },
+            onDismiss = {
+                if (!uiState.isLoading) showEmailVerificationDialog = false
+            }
+        )
+    }
+
+@Composable
+private fun SignupEmailVerificationDialog(
+    email: String,
+    code: String,
+    seconds: Int,
+    isLoading: Boolean,
+    error: String?,
+    onCodeChange: (String) -> Unit,
+    onVerify: () -> Unit,
+    onResend: () -> Unit,
+    onChangeEmail: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = { if (!isLoading) onDismiss() },
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = !isLoading,
+            dismissOnClickOutside = !isLoading
+        )
+    ) {
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp)
+                    .heightIn(max = maxHeight * 0.88f)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color(0xFFFFFCF7))
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp, vertical = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Box(
+                        modifier = Modifier.size(50.dp).clip(RoundedCornerShape(50)).background(Color(0xFFFFF1E4)).pressScale(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("×", color = Color(0xFF777777), fontSize = 38.sp, lineHeight = 38.sp, fontWeight = FontWeight.Light)
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Box(
+                    modifier = Modifier.size(116.dp).clip(RoundedCornerShape(58.dp)).background(Color(0xFFFFF0E3)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier.size(82.dp).clip(RoundedCornerShape(20.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFA044), Color(0xFFFF6B1A)))).padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Email, null, tint = Color.White, modifier = Modifier.size(52.dp))
+                    }
+                }
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = Color(0xFF142033), fontWeight = FontWeight.ExtraBold)) { append("Verify your ") }
+                        withStyle(SpanStyle(color = Color(0xFFF4511E), fontWeight = FontWeight.ExtraBold)) { append("email") }
+                    },
+                    fontSize = 30.sp,
+                    lineHeight = 36.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(12.dp))
+                Text("We’ve sent a 6-digit verification code to", color = Color(0xFF64748B), fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(3.dp))
+                Text(email, color = Color(0xFF142033), fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(10.dp))
+                Text("Enter the code below to continue.", color = Color(0xFF64748B), fontSize = 16.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(24.dp))
+                BasicTextField(
+                    value = code,
+                    onValueChange = { value -> onCodeChange(value.filter(Char::isDigit).take(6)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
+                    modifier = Modifier.fillMaxWidth(),
+                    decorationBox = { _ ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            repeat(6) { index ->
+                                Box(
+                                    modifier = Modifier.weight(1f).height(82.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xFFFFFBF7)).border(1.5.dp, if (index < code.length) Color(0xFFFFC39B) else Color(0xFFFFD2B5), RoundedCornerShape(17.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(code.getOrNull(index)?.toString() ?: "", color = Color(0xFF142033), fontSize = 27.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                                }
+                            }
+                        }
+                    }
+                )
+                Spacer(Modifier.height(22.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Text("Didn’t receive the code? ", color = Color(0xFF64748B), fontSize = 15.sp)
+                    if (seconds > 0) {
+                        Text("Resend in ", color = Color(0xFF64748B), fontSize = 15.sp)
+                        Text("00:" + seconds.toString().padStart(2, '0'), color = Color(0xFFF4511E), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Text("Resend", color = Color(0xFFF4511E), fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.pressScale(onClick = onResend))
+                    }
+                }
+                if (!error.isNullOrBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, textAlign = TextAlign.Center)
+                }
+                Spacer(Modifier.height(22.dp))
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(40.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F)))).pressScale(onClick = onVerify),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Text(if (isLoading) "Verifying…" else "Verify & Continue", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(12.dp))
+                        Text("→", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+                Text("Change email address", color = Color(0xFFF4511E), fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.pressScale(onClick = onChangeEmail))
+                Spacer(Modifier.height(4.dp))
             }
         }
     }
