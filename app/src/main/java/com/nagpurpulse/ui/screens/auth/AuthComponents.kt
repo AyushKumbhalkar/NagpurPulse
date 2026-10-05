@@ -229,11 +229,7 @@ fun PremiumLogo(subtitle: String, compact: Boolean = false) {
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(700)) +
-                slideInVertically(
-                    initialOffsetY = { -60 },
-                    animationSpec = spring(Spring.DampingRatioMediumBouncy)
-                )
+        enter = fadeIn(tween(700))
     ) {
 
         Box(
