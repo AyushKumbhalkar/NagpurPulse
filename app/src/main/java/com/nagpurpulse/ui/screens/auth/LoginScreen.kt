@@ -237,10 +237,7 @@ fun LoginScreen(
 
                     // Keep only the action that is implemented. Session persistence
                     // is managed by Supabase and is not controlled by a local checkbox.
-                    var resetVisible by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) { delay(380); resetVisible = true }
-                    AnimatedVisibility(resetVisible, enter = fadeIn(tween(350))) {
-                        Row(
+                    Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
@@ -252,7 +249,6 @@ fun LoginScreen(
                                 modifier = Modifier.pressScale(onClick = { resetEmail = email; showForgotPasswordDialog = true })
                             )
                         }
-                    }
 
                     Spacer(Modifier.height(6.dp))
                     AnimatedErrorMessage(uiState.error)
