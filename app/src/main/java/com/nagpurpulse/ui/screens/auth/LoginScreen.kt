@@ -3,6 +3,8 @@ package com.nagpurpulse.ui.screens.auth
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.foundation.shape.CircleShape
@@ -75,6 +77,9 @@ import androidx.compose.ui.res.painterResource
 import com.nagpurpulse.R
 import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
