@@ -382,9 +382,9 @@ fun SignupScreen(
                 }
             }
 
-            // Keep the footer lower on tall screens so the bottom of the page
-            // does not leave an unnecessarily large empty area.
-            Spacer(Modifier.height(if (compact) 88.dp else 28.dp))
+            // Keep the footer close to the form card; don't leave a large
+            // artificial gap between the guest card and the login CTA.
+            Spacer(Modifier.height(if (compact) 4.dp else 10.dp))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
