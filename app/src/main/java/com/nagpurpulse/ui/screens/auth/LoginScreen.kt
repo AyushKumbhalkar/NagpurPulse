@@ -336,7 +336,8 @@ fun LoginScreen(
                                     }
                                 }
                             },
-                            delayMs = 520,
+                            delayMs = 0,
+                            animateEntrance = false,
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -366,73 +367,43 @@ fun LoginScreen(
             // ── Sign-up CTA card ────────────────────────────────────────
             Spacer(Modifier.height(8.dp))
 
-            var linkVisible by remember { mutableStateOf(false) }
-
-            LaunchedEffect(Unit) {
-                delay(560)
-                linkVisible = true
-            }
-
-            AnimatedVisibility(
-                linkVisible,
-                enter = fadeIn(tween(400))
+            Row(
+                modifier = Modifier.pressScale(
+                    onClick = onNavigateToSignup
+                ),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-
-                Row(
-                    modifier = Modifier.pressScale(
-                        onClick = onNavigateToSignup
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Text(
-                        "Don't have an account? ",
-                        color = TertiaryText,
-                        fontSize = 14.sp
-                    )
-
-                    Text(
-                        "Create Account",
-                        color = OrangePrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                }
+                Text(
+                    "Don't have an account? ",
+                    color = TertiaryText,
+                    fontSize = 14.sp
+                )
+                Text(
+                    "Create Account",
+                    color = OrangePrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
             }
 
             Spacer(Modifier.height(2.dp))
 
-            var trustVisible by remember { mutableStateOf(false) }
-
-            LaunchedEffect(Unit) {
-                delay(650)
-                trustVisible = true
-            }
-
-            AnimatedVisibility(
-                trustVisible,
-                enter = fadeIn(tween(400))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-
-                    TrustBadge(
-                        Icons.Filled.Shield,
-                        "Secure & private",
-                        Modifier.weight(1f)
-                    )
-
-                    TrustBadge(
-                        Icons.Filled.LocationCity,
-                        "Be a part of Nagpur",
-                        Modifier.weight(1f)
-                    )
-                }
+                TrustBadge(
+                    Icons.Filled.Shield,
+                    "Secure & private",
+                    Modifier.weight(1f)
+                )
+                TrustBadge(
+                    Icons.Filled.LocationCity,
+                    "Be a part of Nagpur",
+                    Modifier.weight(1f)
+                )
             }
         }
     }
