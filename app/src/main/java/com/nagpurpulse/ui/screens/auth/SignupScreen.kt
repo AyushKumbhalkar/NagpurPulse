@@ -152,36 +152,11 @@ fun SignupScreen(
                         .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            text = buildAnnotatedString {
-                                withStyle(
-                                    SpanStyle(
-                                        color = ink,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                ) {
-                                    append("Your people ")
-                                }
-                                withStyle(
-                                    SpanStyle(
-                                        color = SignupOrange,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                ) {
-                                    append("are here.")
-                                }
-                            },
-                            fontSize = if (compact) 30.sp else 36.sp,
-                            lineHeight = if (compact) 34.sp else 40.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.8).sp,
-                            maxLines = 1
-                        )
-                    }
+                    SignupAnimatedHeadline(
+                        compact = compact,
+                        ink = ink,
+                        orange = SignupOrange
+                    )
                     Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
                     Text(
                         text = "Create your account and join the conversations happening around Nagpur.",
@@ -480,6 +455,81 @@ fun SignupScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SignupAnimatedHeadline(
+    compact: Boolean,
+    ink: Color,
+    orange: Color
+) {
+    val phrases = remember {
+        listOf(
+            listOf("are", "talking."),
+            listOf("are", "connecting."),
+            listOf("are", "sharing."),
+            listOf("are", "discovering."),
+            listOf("are", "discussing."),
+            listOf("are", "joining", "in."),
+            listOf("are", "online.")
+        )
+    }
+    var phraseIndex by remember { mutableStateOf(0) }
+    var visibleWordCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val words = phrases[phraseIndex]
+
+            // Write the orange phrase one word at a time.
+            visibleWordCount = 0
+            for (count in 1..words.size) {
+                delay(220L)
+                visibleWordCount = count
+            }
+
+            // Let the completed phrase remain readable.
+            delay(1500L)
+
+            // Erase it word by word before moving to the next phrase.
+            for (count in words.size - 1 downTo 0) {
+                delay(120L)
+                visibleWordCount = count
+            }
+
+            phraseIndex = (phraseIndex + 1) % phrases.size
+        }
+    }
+
+    val visiblePhrase = phrases[phraseIndex]
+        .take(visibleWordCount)
+        .joinToString(" ")
+
+    Text(
+        text = buildAnnotatedString {
+            withStyle(
+                SpanStyle(
+                    color = ink,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            ) {
+                append("Your people ")
+            }
+            withStyle(
+                SpanStyle(
+                    color = orange,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            ) {
+                append(visiblePhrase)
+            }
+        },
+        fontSize = if (compact) 30.sp else 36.sp,
+        lineHeight = if (compact) 34.sp else 40.sp,
+        fontWeight = FontWeight.ExtraBold,
+        letterSpacing = (-0.8).sp,
+        maxLines = 1
+    )
 }
 
 @Composable
