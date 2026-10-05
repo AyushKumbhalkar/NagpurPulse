@@ -600,7 +600,7 @@ private fun SignupFieldContainer(content: @Composable () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .border(
-                width = 1.5.dp,
+                width = 1.75.dp,
                 color = Color(0xFFFF7518),
                 shape = RoundedCornerShape(18.dp)
             )
