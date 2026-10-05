@@ -22,9 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Button
@@ -76,14 +74,14 @@ fun OnboardingScreen(
     // preserve the illustration's visual scale.
     val heroMaxWidth = when {
         screenWidth < 360 -> 350.dp
-        screenWidth < 400 -> 400.dp
-        else -> 460.dp
+        screenWidth < 400 -> 390.dp
+        else -> 440.dp
     }
     val heroHeight = when {
-        veryCompact -> 300.dp
-        compact -> 380.dp
-        screenHeight < 800 -> 470.dp
-        else -> 540.dp
+        veryCompact -> 270.dp
+        compact -> 315.dp
+        screenHeight < 800 -> 380.dp
+        else -> 450.dp
     }
     val logoWidth = when {
         screenWidth < 360 -> 190.dp
@@ -112,8 +110,7 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .statusBarsPadding()
+                        .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = horizontalPadding),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -155,13 +152,13 @@ fun OnboardingScreen(
                     Image(
                         painter = painterResource(R.drawable.nagpurpulse_hero),
                         contentDescription = "People connecting through NagpurPulse in Nagpur",
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
 
-            Spacer(Modifier.height(if (compact) 2.dp else 6.dp))
+            Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
 
             AnimatedVisibility(
                 visible = contentVisible,
