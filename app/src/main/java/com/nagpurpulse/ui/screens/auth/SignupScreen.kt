@@ -255,7 +255,7 @@ fun SignupScreen(
                             onValueChange = { confirmPassword = it },
                             placeholder = "Confirm password",
                             leadingIcon = {
-                                Icon(Icons.Filled.Lock, null, tint = muted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             trailingIcon = {
                                 IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
