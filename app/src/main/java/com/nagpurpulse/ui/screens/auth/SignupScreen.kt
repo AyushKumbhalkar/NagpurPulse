@@ -156,19 +156,42 @@ fun SignupScreen(
                         .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = "Your people",
+                            color = ink,
+                            fontSize = if (compact) 31.sp else 36.sp,
+                            lineHeight = if (compact) 34.sp else 38.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.7).sp
+                        )
+                        Text(
+                            text = "are here.",
+                            color = SignupOrange,
+                            fontSize = if (compact) 31.sp else 36.sp,
+                            lineHeight = if (compact) 34.sp else 38.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.7).sp
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 48.dp)
+                                .width(if (compact) 112.dp else 138.dp)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(SignupOrange)
+                        )
+                    }
+                    Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
                     Text(
-                        text = "Your people are here.",
-                        color = ink,
-                        fontSize = if (compact) 24.sp else 27.sp,
-                        lineHeight = if (compact) 29.sp else 32.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Create your account and join the conversations happening around Nagpur.",
+                        text = "Create your account and join\nthe conversations happening around\nNagpur.",
                         color = muted,
-                        fontSize = 15.sp,
-                        lineHeight = 21.sp
+                        fontSize = if (compact) 15.sp else 16.sp,
+                        lineHeight = if (compact) 21.sp else 23.sp
                     )
                     Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
 
@@ -178,7 +201,7 @@ fun SignupScreen(
                             onValueChange = { email = it },
                             placeholder = "Email address",
                             leadingIcon = {
-                                Icon(Icons.Filled.Email, null, tint = muted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = KeyboardType.Email
@@ -202,7 +225,7 @@ fun SignupScreen(
                             onValueChange = { password = it },
                             placeholder = "Password",
                             leadingIcon = {
-                                Icon(Icons.Filled.Lock, null, tint = muted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -214,7 +237,7 @@ fun SignupScreen(
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = if (visible) "Hide password" else "Show password",
-                                            tint = muted
+                                            tint = OrangePrimary
                                         )
                                     }
                                 }
@@ -244,7 +267,7 @@ fun SignupScreen(
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = if (visible) "Hide confirm password" else "Show confirm password",
-                                            tint = muted
+                                            tint = OrangePrimary
                                         )
                                     }
                                 }
