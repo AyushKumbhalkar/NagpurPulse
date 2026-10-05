@@ -282,7 +282,8 @@ fun LoginScreen(
                         isLoading = uiState.isLoading,
                         enabled = emailLooksValid && password.isNotBlank(),
                         onClick = { viewModel.signIn(email, password, onLoginSuccess) },
-                        delayMs = 420
+                        delayMs = 0,
+                        animateEntrance = false
                     )
 
                     Spacer(Modifier.height(16.dp))
