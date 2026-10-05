@@ -81,7 +81,7 @@ fun OnboardingScreen(
         veryCompact -> 270.dp
         compact -> 315.dp
         screenHeight < 800 -> 380.dp
-        else -> 510.dp
+        else -> 550.dp
     }
     val logoWidth = when {
         screenWidth < 360 -> 190.dp
@@ -127,7 +127,7 @@ fun OnboardingScreen(
                 Image(
                     painter = painterResource(R.drawable.nagpurpulse_logo),
                     contentDescription = "NagpurPulse",
-                    contentScale = ContentScale.FillBounds,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.width(logoWidth)
                 )
             }
