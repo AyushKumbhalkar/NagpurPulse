@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
@@ -82,7 +81,7 @@ fun OnboardingScreen(
         veryCompact -> 270.dp
         compact -> 315.dp
         screenHeight < 800 -> 380.dp
-        else -> 3000.dp
+        else -> 550.dp
     }
     val logoWidth = when {
         screenWidth < 360 -> 190.dp
@@ -155,8 +154,7 @@ fun OnboardingScreen(
                         contentDescription = "People connecting through NagpurPulse in Nagpur",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .scale(scaleX = 1.04f, scaleY = 1.04f)
+                            .width(500.dp)
                     )
                 }
             }
