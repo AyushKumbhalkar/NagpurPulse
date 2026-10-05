@@ -565,13 +565,51 @@ private fun SignupEmailVerificationDialog(
             contentAlignment = Alignment.Center
         ) {
             val popupWidth = maxWidth * 0.79f
+            val ref: (Float) -> androidx.compose.ui.unit.Dp = { value ->
+                popupWidth * (value / 810f)
+            }
+
             Box(
                 modifier = Modifier
                     .width(popupWidth)
-                     .height(maxHeight * 0.99f)
+                    .aspectRatio(811f / 1105f)
                     .clip(RoundedCornerShape(30.dp))
                     .background(Color(0xFFFFFCF7))
             ) {
+                // Reference-matched top-right peach decoration.
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(ref(205f))
+                        .align(Alignment.TopCenter)
+                ) {
+                    val fill = Path().apply {
+                        moveTo(size.width * 0.48f, 0f)
+                        cubicTo(
+                            size.width * 0.66f, size.height * 0.08f,
+                            size.width * 0.80f, size.height * 0.04f,
+                            size.width, size.height * 0.30f
+                        )
+                        lineTo(size.width, 0f)
+                        close()
+                    }
+                    drawPath(fill, brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFFE5CF)))
+                    val line = Path().apply {
+                        moveTo(size.width * 0.60f, 0f)
+                        cubicTo(
+                            size.width * 0.74f, size.height * 0.13f,
+                            size.width * 0.87f, size.height * 0.08f,
+                            size.width, size.height * 0.36f
+                        )
+                    }
+                    drawPath(
+                        line,
+                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFF4B07D)),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = ref(2.2f).toPx())
+                    )
+                }
+
+                // Shared peach footer used by Create Account and Login.
                 Image(
                     painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
                     contentDescription = null,
@@ -582,177 +620,239 @@ private fun SignupEmailVerificationDialog(
                         .align(Alignment.BottomCenter)
                 )
 
+                // Close button: reference position and scale.
                 Box(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 14.dp, end = 14.dp)
-                        .size(42.dp)
+                    modifier = Modifier
+                        .offset(x = ref(672f), y = ref(22f))
+                        .size(ref(80f))
                         .clip(RoundedCornerShape(50))
-                        .background(Color(0xFFFFF5EC))
+                        .background(Color(0xFFFFF7EF))
                         .pressScale(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Close, null, tint = Color(0xFF777777), modifier = Modifier.size(27.dp))
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = null,
+                        tint = Color(0xFF777777),
+                        modifier = Modifier.size(ref(38f))
+                    )
                 }
 
-                Column(
+                // Illustration.
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 18.dp, vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .offset(x = ref(268f), y = ref(65f))
+                        .size(ref(275f))
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFFFFF0E3)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Spacer(Modifier.height(18.dp))
+                    Image(
+                        painter = painterResource(R.drawable.verify_email),
+                        contentDescription = "Email verification",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier.size(ref(275f))
+                    )
+                }
 
-                    // Exact verification illustration supplied in res/drawable/email_verify.
-                    Box(
-                        Modifier
-                            .size(popupWidth * 0.34f)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFFFF0E3)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.verify_email),
-                            contentDescription = "Email verification",
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                            modifier = Modifier.size(popupWidth * 0.34f)
-                        )
-                    }
+                // Heading.
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(Color(0xFF142033), fontWeight = FontWeight.ExtraBold)) {
+                            append("Verify your ")
+                        }
+                        withStyle(SpanStyle(Color(0xFFF4511E), fontWeight = FontWeight.ExtraBold)) {
+                            append("email")
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = ref(340f)),
+                    fontSize = 31.sp,
+                    lineHeight = 36.sp,
+                    textAlign = TextAlign.Center
+                )
 
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        buildAnnotatedString {
-                            withStyle(SpanStyle(Color(0xFF142033), fontWeight = FontWeight.ExtraBold)) { append("Verify your ") }
-                            withStyle(SpanStyle(Color(0xFFF4511E), fontWeight = FontWeight.ExtraBold)) { append("email") }
-                        },
-                        fontSize = 30.sp,
-                        lineHeight = 35.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "We’ve sent a 6-digit verification code to",
-                        color = Color(0xFF64748B),
-                        fontSize = 16.sp,
-                        lineHeight = 22.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        email,
-                        color = Color(0xFF142033),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Enter the code below to continue.",
-                        color = Color(0xFF64748B),
-                        fontSize = 16.sp,
-                        lineHeight = 22.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(14.dp))
+                // Description.
+                Text(
+                    "We’ve sent a 6-digit verification code to",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = ref(429f)),
+                    color = Color(0xFF64748B),
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Center
+                )
 
-                    BasicTextField(
-                        value = code,
-                        onValueChange = { onCodeChange(it.filter(Char::isDigit).take(6)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
-                        modifier = Modifier.fillMaxWidth(),
-                        decorationBox = {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                repeat(6) { index ->
-                                    Box(
-                                        Modifier
-                                            .weight(1f)
-                                            .height(popupWidth * 0.145f)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(Color(0xFFFFFBF7))
-                                            .border(1.2.dp, Color(0xFFFFCBAA), RoundedCornerShape(14.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            code.getOrNull(index)?.toString() ?: "",
-                                            color = Color(0xFF142033),
-                                            fontSize = 22.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                // Email.
+                Text(
+                    email,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = ref(477f)),
+                    color = Color(0xFF142033),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+
+                // Instruction.
+                Text(
+                    "Enter the code below to continue.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = ref(526f)),
+                    color = Color(0xFF64748B),
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                // OTP boxes.
+                BasicTextField(
+                    value = code,
+                    onValueChange = { onCodeChange(it.filter(Char::isDigit).take(6)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
+                    modifier = Modifier
+                        .offset(x = ref(50f), y = ref(595f))
+                        .width(ref(710f))
+                        .height(ref(118f)),
+                    decorationBox = {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(ref(10f))
+                        ) {
+                            repeat(6) { index ->
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(ref(17f)))
+                                        .background(Color(0xFFFFFBF7))
+                                        .border(
+                                            width = ref(1.5f),
+                                            color = Color(0xFFFFCBAA),
+                                            shape = RoundedCornerShape(ref(17f))
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        code.getOrNull(index)?.toString() ?: "",
+                                        color = Color(0xFF142033),
+                                        fontSize = 27.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                         }
-                    )
+                    }
+                )
 
-                    Spacer(Modifier.height(16.dp))
+                // Resend line.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = ref(765f)),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Didn’t receive the code? ",
+                        color = Color(0xFF64748B),
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        "Resend in ",
+                        color = Color(0xFF64748B),
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        "00:" + seconds.toString().padStart(2, '0'),
+                        color = Color(0xFFF4511E),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (seconds == 0) {
+                    Text(
+                        "Resend",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = ref(765f))
+                            .pressScale(onClick = onResend),
+                        color = Color(0xFFF4511E),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (!error.isNullOrBlank()) {
+                    Text(
+                        error,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = ref(805f)),
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Verify button.
+                Box(
+                    modifier = Modifier
+                        .offset(x = ref(50f), y = ref(828f))
+                        .width(ref(710f))
+                        .height(ref(113f))
+                        .clip(RoundedCornerShape(60.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
+                            )
+                        )
+                        .pressScale(onClick = onVerify),
+                    contentAlignment = Alignment.Center
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text("Didn’t receive the code? ", color = Color(0xFF64748B), fontSize = 15.sp)
-                        Text("Resend in ", color = Color(0xFF64748B), fontSize = 15.sp)
                         Text(
-                            "00:" + seconds.toString().padStart(2, '0'),
-                            color = Color(0xFFF4511E),
-                            fontSize = 16.sp,
+                            if (isLoading) "Verifying…" else "Verify & Continue",
+                            color = Color.White,
+                            fontSize = 21.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-
-                    if (seconds == 0) {
-                        Text(
-                            "Resend",
-                            color = Color(0xFFF4511E),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.pressScale(onClick = onResend)
+                        Spacer(Modifier.width(ref(16f)))
+                        Icon(
+                            Icons.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(ref(31f))
                         )
                     }
-
-                    if (!error.isNullOrBlank()) {
-                        Spacer(Modifier.height(5.dp))
-                        Text(error, color = MaterialTheme.colorScheme.error, fontSize = 10.sp, textAlign = TextAlign.Center)
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
-                            .pressScale(onClick = onVerify),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                if (isLoading) "Verifying…" else "Verify & Continue",
-                                color = Color.White,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Icon(Icons.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(25.dp))
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "Change email address",
-                        color = Color(0xFFF4511E),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.pressScale(onClick = onChangeEmail)
-                    )
-                    Spacer(Modifier.height(4.dp))
                 }
+
+                // Change email.
+                Text(
+                    "Change email address",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = ref(975f))
+                        .pressScale(onClick = onChangeEmail),
+                    color = Color(0xFFF4511E),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
