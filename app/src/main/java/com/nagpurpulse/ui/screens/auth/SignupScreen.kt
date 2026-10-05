@@ -191,8 +191,8 @@ fun SignupScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 18.dp)
                         .clip(RoundedCornerShape(32.dp))
-                        .background(cardBackground)
-                        .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
+                        .background(pageBackground)
+                        .border(1.dp, pageBackground, RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
                     SignupFieldContainer {
