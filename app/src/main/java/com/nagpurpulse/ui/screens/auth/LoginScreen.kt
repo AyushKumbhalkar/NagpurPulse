@@ -439,8 +439,9 @@ fun LoginScreen(
                 }
             }
         }
- 
-        if (showForgotPasswordDialog) {
+    }
+
+    if (showForgotPasswordDialog) {
             androidx.compose.ui.window.Dialog(
                 onDismissRequest = { if (!uiState.isLoading) showForgotPasswordDialog = false },
                 properties = androidx.compose.ui.window.DialogProperties(
