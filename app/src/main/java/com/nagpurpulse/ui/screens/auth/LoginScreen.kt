@@ -37,6 +37,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -185,7 +186,9 @@ fun LoginScreen(
     val ink = if (isDarkTheme) PrimaryText else Color(0xFF111827)
     val muted = if (isDarkTheme) SecondaryText else Color(0xFF64748B)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val compact = maxHeight < 800.dp
+
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
         Column(
@@ -204,10 +207,10 @@ fun LoginScreen(
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.height(48.dp)
             )
-            // Slightly tighter gap so the complete content below moves up together.
-            Spacer(Modifier.height(14.dp))
+            // Match SignupScreen's exact headline position.
+            Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
             LoginAnimatedHeadline(
-                compact = false,
+                compact = compact,
                 ink = ink,
                 orange = OrangePrimary
             )
