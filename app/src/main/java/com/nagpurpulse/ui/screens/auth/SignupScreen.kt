@@ -142,7 +142,21 @@ fun SignupScreen(
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.height(logoHeight)
             )
-            Spacer(Modifier.height(logoGap))
+            // Keep the animated headline directly on the same page background as LoginScreen.
+            // Login and Signup therefore feel like the same screen when navigating between them.
+            Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 36.dp)
+            ) {
+                SignupAnimatedHeadline(
+                    compact = compact,
+                    ink = ink,
+                    orange = SignupOrange
+                )
+            }
+            Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
 
             Column(
                     modifier = Modifier
@@ -153,12 +167,6 @@ fun SignupScreen(
                         .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
-                    SignupAnimatedHeadline(
-                        compact = compact,
-                        ink = ink,
-                        orange = SignupOrange
-                    )
-                    Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
                     Text(
                         text = "Create your account and join the conversations happening around Nagpur.",
                         color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
