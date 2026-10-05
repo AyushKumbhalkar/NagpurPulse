@@ -138,8 +138,14 @@ private fun LoginAnimatedSubtitle(
     }
 
     Text(
-        text = "Your people $animatedText",
-        color = color,
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(color = color, fontWeight = FontWeight.ExtraBold)) {
+                append("Your people ")
+            }
+            withStyle(SpanStyle(color = orange, fontWeight = FontWeight.ExtraBold)) {
+                append(animatedText)
+            }
+        },
         fontSize = 15.sp,
         lineHeight = 20.sp,
         maxLines = 1
