@@ -592,10 +592,18 @@ private fun SignupProviderTile(
 
 @Composable
 private fun SignupFieldContainer(content: @Composable () -> Unit) {
-    // PremiumInputField owns the shape, border and background.
-    // Keeping this wrapper neutral prevents the "double rounded box" effect.
+    // Give all signup fields a stronger, darker orange outline.
+    // The rounded wrapper keeps the border clean and consistent across
+    // Email, Password, and Confirm Password.
     Box(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .border(
+                width = 2.dp,
+                color = if (LocalIsDarkTheme.current) Color(0xFFFF7518) else Color(0xFFE85D0D),
+                shape = RoundedCornerShape(18.dp)
+            )
     ) {
         content()
     }
