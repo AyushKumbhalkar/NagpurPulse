@@ -142,10 +142,7 @@ fun SignupScreen(
 
             AnimatedVisibility(
                 visible = contentReady,
-                enter = fadeIn(tween(450)) + slideInVertically(
-                    initialOffsetY = { it / 12 },
-                    animationSpec = tween(450)
-                )
+                enter = fadeIn(tween(300))
             ) {
                 Column(
                     modifier = Modifier
