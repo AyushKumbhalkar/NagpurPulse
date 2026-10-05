@@ -247,35 +247,6 @@ fun OnboardingScreen(
                 }
             }
 
-            Spacer(Modifier.height(if (compact) 18.dp else 24.dp))
-
-            AnimatedVisibility(
-                visible = contentVisible,
-                enter = fadeIn(tween(450, delayMillis = 430))
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(34.dp)
-                            .height(8.dp)
-                            .background(WelcomeOrange, RoundedCornerShape(8.dp))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(IndicatorInactive, RoundedCornerShape(8.dp))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(IndicatorInactive, RoundedCornerShape(8.dp))
-                    )
-                }
-            }
-
             Spacer(Modifier.height(if (veryCompact) 16.dp else 24.dp))
         }
     }
