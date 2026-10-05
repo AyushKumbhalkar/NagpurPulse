@@ -7,9 +7,9 @@
         name="Theme.NagpurPulse"
         parent="Theme.SplashScreen">
 
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenBackground">@color/background_light</item>
 
-        <item name="windowSplashScreenAnimatedIcon">@drawable/nagpurpulse_orange_n_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_transparent_icon</item>
 
         <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Light</item>
 
