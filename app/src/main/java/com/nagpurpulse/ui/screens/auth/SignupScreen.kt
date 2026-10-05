@@ -375,7 +375,7 @@ fun SignupScreen(
                         Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(Modifier.height(if (compact) 5.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -413,7 +413,7 @@ fun SignupScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
+                Spacer(Modifier.height(0.dp))
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
