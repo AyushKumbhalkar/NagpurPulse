@@ -71,16 +71,19 @@ fun OnboardingScreen(
     val compact = screenHeight < 700
     val veryCompact = screenHeight < 620
     val horizontalPadding = if (screenWidth < 360) 18.dp else 24.dp
+    // The hero is intentionally dominant, matching the reference composition.
+    // Keep it wide on normal phones while giving it enough vertical room to
+    // preserve the illustration's visual scale.
     val heroMaxWidth = when {
         screenWidth < 360 -> 350.dp
-        screenWidth < 400 -> 390.dp
-        else -> 430.dp
+        screenWidth < 400 -> 400.dp
+        else -> 460.dp
     }
     val heroHeight = when {
-        veryCompact -> 270.dp
-        compact -> 315.dp
-        screenHeight < 800 -> 370.dp
-        else -> 430.dp
+        veryCompact -> 300.dp
+        compact -> 380.dp
+        screenHeight < 800 -> 470.dp
+        else -> 540.dp
     }
     val logoWidth = when {
         screenWidth < 360 -> 190.dp
@@ -152,13 +155,13 @@ fun OnboardingScreen(
                     Image(
                         painter = painterResource(R.drawable.nagpurpulse_hero),
                         contentDescription = "People connecting through NagpurPulse in Nagpur",
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
 
-            Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
+            Spacer(Modifier.height(if (compact) 2.dp else 6.dp))
 
             AnimatedVisibility(
                 visible = contentVisible,
