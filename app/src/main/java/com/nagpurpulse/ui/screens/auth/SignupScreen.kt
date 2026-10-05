@@ -469,12 +469,10 @@ private fun SignupAnimatedHeadline(
             "are here.",
             "are online.",
             "are talking.",
-            "are sharing.",
-            "are chatting.",
             "are joining.",
             "are active.",
             "are around.",
-            "are posting."
+            "are asking."
         )
     }
 
