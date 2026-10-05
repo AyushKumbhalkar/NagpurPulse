@@ -149,7 +149,9 @@ fun OnboardingScreen(
                     painter = painterResource(R.drawable.nagpurpulse_hero),
                     contentDescription = "People connecting through NagpurPulse in Nagpur",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .scale(1.25f)
                 )
             }
 
