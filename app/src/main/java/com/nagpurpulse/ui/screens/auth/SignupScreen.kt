@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import com.nagpurpulse.R
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -119,7 +121,7 @@ fun SignupScreen(
 
     MaterialTheme(colorScheme = lightColorScheme()) {
     Box(modifier = Modifier.fillMaxSize()) {
-        CinematicBackground(isLogin = false)
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF9F2)))
 
         Column(
             modifier = Modifier
@@ -131,9 +133,14 @@ fun SignupScreen(
                 .padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // The background artwork includes its own wordmark and tagline.
-            // Reserve the illustrated header area before the form card begins.
-            Spacer(Modifier.height(246.dp))
+            Spacer(Modifier.height(26.dp))
+            Image(
+                painter = painterResource(R.drawable.nagpurpulse_logo),
+                contentDescription = "NagpurPulse",
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.height(48.dp)
+            )
+            Spacer(Modifier.height(20.dp))
 
             AnimatedVisibility(
                 visible = contentReady,
@@ -152,7 +159,7 @@ fun SignupScreen(
                         .padding(horizontal = 22.dp, vertical = 24.dp)
                 ) {
                     Text(
-                        text = "Create your account",
+                        text = "Your people are here.",
                         color = SignupInk,
                         fontSize = 27.sp,
                         lineHeight = 32.sp,
@@ -160,7 +167,7 @@ fun SignupScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Join NagpurPulse and be part of a growing community of Nagpurians.",
+                        text = "Create your account and join the conversations happening around Nagpur.",
                         color = SignupMuted,
                         fontSize = 15.sp,
                         lineHeight = 21.sp
