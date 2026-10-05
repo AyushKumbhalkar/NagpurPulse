@@ -182,14 +182,14 @@ fun SignupScreen(
                             maxLines = 1
                         )
                     }
-                    Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
+                    Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
                     Text(
                         text = "Create your account and join the conversations happening around Nagpur.",
                         color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
                         fontSize = if (compact) 15.sp else 16.sp,
                         lineHeight = if (compact) 21.sp else 23.sp
                     )
-                    Spacer(Modifier.height(if (compact) 8.dp else 20.dp))
+                    Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
 
                     SignupFieldContainer {
                         PremiumInputField(
