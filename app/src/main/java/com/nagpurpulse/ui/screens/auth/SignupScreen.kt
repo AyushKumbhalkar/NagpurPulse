@@ -115,12 +115,12 @@ fun SignupScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
-        val pageTop = if (compact) 22.dp else 30.dp
-        val logoHeight = if (compact) 38.dp else 44.dp
-        val logoGap = if (compact) 8.dp else 14.dp
-        val cardPaddingV = if (compact) 14.dp else 20.dp
-        val fieldGap = if (compact) 6.dp else 9.dp
-        val buttonHeight = if (compact) 52.dp else 58.dp
+        val pageTop = if (compact) 10.dp else 30.dp
+        val logoHeight = if (compact) 34.dp else 44.dp
+        val logoGap = if (compact) 5.dp else 14.dp
+        val cardPaddingV = if (compact) 10.dp else 20.dp
+        val fieldGap = if (compact) 4.dp else 9.dp
+        val buttonHeight = if (compact) 50.dp else 58.dp
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
         Column(
@@ -163,8 +163,8 @@ fun SignupScreen(
                         Text(
                             text = "Your people",
                             color = ink,
-                            fontSize = if (compact) 31.sp else 36.sp,
-                            lineHeight = if (compact) 34.sp else 38.sp,
+                            fontSize = if (compact) 29.sp else 36.sp,
+                            lineHeight = if (compact) 31.sp else 38.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.7).sp
                         )
@@ -186,14 +186,14 @@ fun SignupScreen(
                                 .background(SignupOrange)
                         )
                     }
-                    Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
                     Text(
                         text = "Create your account and join\nthe conversations happening around\nNagpur.",
                         color = muted,
-                        fontSize = if (compact) 15.sp else 16.sp,
-                        lineHeight = if (compact) 21.sp else 23.sp
+                        fontSize = if (compact) 14.sp else 16.sp,
+                        lineHeight = if (compact) 19.sp else 23.sp
                     )
-                    Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 20.dp))
 
                     SignupFieldContainer {
                         PremiumInputField(
@@ -249,7 +249,7 @@ fun SignupScreen(
                             containerColor = cardBackground
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(if (compact) 3.dp else 10.dp))
 
                     SignupFieldContainer {
                         PremiumInputField(
@@ -299,7 +299,7 @@ fun SignupScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(if (compact) 7.dp else 12.dp))
 
                     Box(
                         modifier = Modifier
@@ -333,18 +333,18 @@ fun SignupScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
+                    Spacer(Modifier.height(if (compact) 7.dp else 16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
                         Text("  or continue with  ", color = muted, fontSize = 12.sp)
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
                     }
-                    Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
+                    Spacer(Modifier.height(if (compact) 6.dp else 14.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(if (compact) 44.dp else 48.dp)
                             .clip(RoundedCornerShape(18.dp))
                             .background(inputBackground)
                             .border(1.dp, fieldBorder, RoundedCornerShape(18.dp))
@@ -375,7 +375,7 @@ fun SignupScreen(
                         Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 5.dp else 12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -383,12 +383,12 @@ fun SignupScreen(
                             .background(if (isDarkTheme) SurfaceAlt else Color(0xFFFFF5EC))
                             .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFFFE4CF), RoundedCornerShape(20.dp))
                             .pressScale(onClick = onGuestContinue)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = if (compact) 7.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(if (compact) 34.dp else 38.dp)
                                 .clip(RoundedCornerShape(13.dp))
                                 .background(Color(0xFFFFE4CF)),
                             contentAlignment = Alignment.Center
@@ -420,7 +420,7 @@ fun SignupScreen(
                         RoundedCornerShape(24.dp)
                     )
                     .pressScale(onClick = onNavigateToLogin)
-                    .padding(horizontal = 18.dp, vertical = 11.dp),
+                    .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -446,7 +446,7 @@ fun SignupScreen(
                 )
             }
 
-            Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
+            Spacer(Modifier.height(if (compact) 4.dp else 12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -454,19 +454,19 @@ fun SignupScreen(
             ) {
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
-                    title = "Secure\n& private",
+                    title = "Secure & private",
                     background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
-                    title = "Be a part\nof Nagpur",
+                    title = "Be part of Nagpur",
                     background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
-                    title = "Interesting\ndiscussions",
+                    title = "Interesting discussions",
                     background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
                 )
@@ -527,13 +527,13 @@ private fun SignupBenefit(
     ) {
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(if (LocalIsDarkTheme.current) 32.dp else 32.dp)
                 .clip(RoundedCornerShape(50))
                 .background(background),
             contentAlignment = Alignment.Center
         ) {
             icon()
         }
-        Text(title, color = benefitText, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = benefitText, fontSize = 9.sp, lineHeight = 11.sp, fontWeight = FontWeight.Medium)
     }
 }
