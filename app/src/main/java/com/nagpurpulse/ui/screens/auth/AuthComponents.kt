@@ -456,9 +456,6 @@ fun PremiumInputField(
     index: Int = 0,
     containerColor: Color? = null
 ) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(180L + index * 90L); visible = true }
-
     var focused by remember { mutableStateOf(false) }
     val borderAlpha by animateFloatAsState(
         if (focused) 1f else 0.3f,
@@ -469,11 +466,7 @@ fun PremiumInputField(
         tween(200), label = "bg"
     )
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(250))
-    ) {
-        Box(
+    Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
