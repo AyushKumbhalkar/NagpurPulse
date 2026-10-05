@@ -49,7 +49,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,11 +64,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.OrangePrimary
+import com.nagpurpulse.ui.theme.LocalIsDarkTheme
+import com.nagpurpulse.ui.theme.Background
+import com.nagpurpulse.ui.theme.Surface
+import com.nagpurpulse.ui.theme.SurfaceAlt
+import com.nagpurpulse.ui.theme.PrimaryText
+import com.nagpurpulse.ui.theme.SecondaryText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val SignupInk = Color(0xFF111827)
-private val SignupMuted = Color(0xFF64748B)
+private val SignupInkLight = Color(0xFF111827)
+private val SignupMutedLight = Color(0xFF64748B)
 private val SignupBorder = Color(0xFFE5E7EB)
 private val SignupOrange = Color(0xFFFF7518)
 
@@ -98,7 +103,14 @@ fun SignupScreen(
         contentReady = true
     }
 
-    MaterialTheme(colorScheme = lightColorScheme()) {
+    val isDarkTheme = LocalIsDarkTheme.current
+    val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
+    val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
+    val inputBackground = if (isDarkTheme) SurfaceAlt else Color.White
+    val ink = if (isDarkTheme) PrimaryText else SignupInkLight
+    val muted = if (isDarkTheme) SecondaryText else SignupMutedLight
+    val fieldBorder = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else SignupBorder
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
         val pageTop = if (compact) 22.dp else 30.dp
@@ -107,7 +119,7 @@ fun SignupScreen(
         val cardPaddingV = if (compact) 14.dp else 20.dp
         val fieldGap = if (compact) 6.dp else 9.dp
         val buttonHeight = if (compact) 52.dp else 58.dp
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF9F2)))
+        Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
         Column(
             modifier = Modifier
@@ -138,13 +150,13 @@ fun SignupScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 18.dp)
                         .clip(RoundedCornerShape(32.dp))
-                        .background(Color(0xFFFEFEFF))
+                        .background(cardBackground)
                         .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
                     Text(
                         text = "Your people are here.",
-                        color = SignupInk,
+                        color = ink,
                         fontSize = if (compact) 24.sp else 27.sp,
                         lineHeight = if (compact) 29.sp else 32.sp,
                         fontWeight = FontWeight.ExtraBold
@@ -152,7 +164,7 @@ fun SignupScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Create your account and join the conversations happening around Nagpur.",
-                        color = SignupMuted,
+                        color = muted,
                         fontSize = 15.sp,
                         lineHeight = 21.sp
                     )
@@ -295,7 +307,7 @@ fun SignupScreen(
 
                     Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
+                        HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
                         Text("  or continue with  ", color = SignupMuted, fontSize = 12.sp)
                         HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
                     }
@@ -369,7 +381,7 @@ fun SignupScreen(
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White.copy(alpha = 0.82f))
+                    .background(cardBackground.copy(alpha = if (isDarkTheme) 0.94f else 0.82f))
                     .pressScale(onClick = onNavigateToLogin)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -387,19 +399,19 @@ fun SignupScreen(
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
                     title = "Secure\n& private",
-                    background = Color(0xFFD9F7E5),
+                    background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
                     title = "Be a part\nof Nagpur",
-                    background = Color(0xFFFFE1C8),
+                    background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Text("▮▮▮", color = Color(0xFF2563EB), fontSize = 15.sp, fontWeight = FontWeight.Bold) },
                     title = "Interesting\ndiscussions",
-                    background = Color(0xFFDCEEFF),
+                    background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
                 )
             }
