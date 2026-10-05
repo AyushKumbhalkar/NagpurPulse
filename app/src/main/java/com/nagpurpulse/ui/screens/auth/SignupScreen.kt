@@ -604,37 +604,20 @@ private fun SignupEmailVerificationDialog(
                 ) {
                     Spacer(Modifier.height(48.dp))
 
-                    // Envelope/message illustration.
+                    // Exact verification illustration supplied in res/drawable/email_verify.
                     Box(
                         Modifier
-                            .size(116.dp)
-                            .clip(RoundedCornerShape(58.dp))
+                            .size(184.dp)
+                            .clip(RoundedCornerShape(92.dp))
                             .background(Color(0xFFFFF0E3)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            Modifier
-                                .width(68.dp)
-                                .height(54.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFFF8A2A)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                Modifier
-                                    .width(54.dp)
-                                    .height(42.dp)
-                                    .clip(RoundedCornerShape(7.dp))
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    repeat(5) {
-                                        Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(0xFFF4511E)))
-                                    }
-                                }
-                            }
-                        }
+                        Image(
+                            painter = painterResource(R.drawable.email_verify),
+                            contentDescription = "Email verification",
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                            modifier = Modifier.size(184.dp)
+                        )
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -643,16 +626,16 @@ private fun SignupEmailVerificationDialog(
                             withStyle(SpanStyle(Color(0xFF142033), fontWeight = FontWeight.ExtraBold)) { append("Verify your ") }
                             withStyle(SpanStyle(Color(0xFFF4511E), fontWeight = FontWeight.ExtraBold)) { append("email") }
                         },
-                        fontSize = 25.sp,
-                        lineHeight = 29.sp,
+                        fontSize = 30.sp,
+                        lineHeight = 35.sp,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "We’ve sent a 6-digit verification code to",
                         color = Color(0xFF64748B),
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 21.sp,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(2.dp))
