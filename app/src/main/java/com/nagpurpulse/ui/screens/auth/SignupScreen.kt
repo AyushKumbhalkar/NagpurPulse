@@ -178,7 +178,7 @@ fun SignupScreen(
                             onValueChange = { email = it },
                             placeholder = "Email address",
                             leadingIcon = {
-                                Icon(Icons.Filled.Email, null, tint = muted, modifier = Modifier.size(21.dp))
+                                Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = KeyboardType.Email
@@ -432,7 +432,7 @@ fun SignupScreen(
             }
 
             // Explicit visual separation between the login CTA and the benefit row.
-            Spacer(Modifier.height(if (compact) 52.dp else 56.dp))
+            Spacer(Modifier.height(if (compact) 18.dp else 22.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -457,7 +457,7 @@ fun SignupScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-                Spacer(Modifier.height(if (compact) 10.dp else 18.dp))
+                Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
             }
         }
     }
