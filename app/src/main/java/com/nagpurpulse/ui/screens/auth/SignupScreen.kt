@@ -564,11 +564,11 @@ private fun SignupEmailVerificationDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val popupWidth = maxWidth * 0.82f
+            val popupWidth = maxWidth * 0.90f
             Box(
                 modifier = Modifier
                     .width(popupWidth)
-                     .aspectRatio(811f / 1105f)
+                     .height(maxHeight * 0.72f)
                     .clip(RoundedCornerShape(30.dp))
                     .background(Color(0xFFFFFCF7))
             ) {
