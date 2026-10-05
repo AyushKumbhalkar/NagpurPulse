@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Android 12+ dark-mode splash screen. Keep the same current app icon. -->
+    <!-- Keep the launch splash light even when the device system is in dark mode.
+         NagpurPulse applies its own saved theme after the splash. -->
     <style
         name="Theme.NagpurPulse"
         parent="Theme.SplashScreen">
 
-        <item name="windowSplashScreenBackground">@color/background_dark</item>
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
 
         <item name="windowSplashScreenAnimatedIcon">@drawable/nagpurpulse_orange_n_icon</item>
 
-        <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Dark</item>
+        <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Light</item>
 
     </style>
 
