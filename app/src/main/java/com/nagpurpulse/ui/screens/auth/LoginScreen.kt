@@ -10,9 +10,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import com.nagpurpulse.ui.theme.Background
 import com.nagpurpulse.ui.theme.Surface
 import com.nagpurpulse.ui.theme.SurfaceAlt
+import com.nagpurpulse.ui.theme.LocalIsDarkTheme
+import com.nagpurpulse.ui.theme.PrimaryText
+import com.nagpurpulse.ui.theme.SecondaryText
 import com.nagpurpulse.ui.theme.Divider
 import com.nagpurpulse.ui.preferences.DensityManager
 import androidx.compose.animation.AnimatedContent
@@ -114,23 +117,15 @@ fun LoginScreen(
     var contentReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(60); contentReady = true }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF9F2)))
+    val isDarkTheme = LocalIsDarkTheme.current
+    val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
+    val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
+    val ink = if (isDarkTheme) PrimaryText else Color(0xFF111827)
+    val muted = if (isDarkTheme) SecondaryText else Color(0xFF64748B)
 
-        MaterialTheme(
-            colorScheme = lightColorScheme(
-                primary = OrangePrimary,
-                onPrimary = Color.White,
-                background = Color(0xFFFFF9F2),
-                onBackground = Color(0xFF111827),
-                surface = Color(0xFFFEFEFF),
-                onSurface = Color(0xFF111827),
-                surfaceContainer = Color.White,
-                surfaceVariant = Color(0xFFF3F4F6),
-                onSurfaceVariant = Color(0xFF64748B),
-                outlineVariant = Color(0xFFE5E7EB)
-            )
-        ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(pageBackground))
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -179,14 +174,14 @@ fun LoginScreen(
             Spacer(Modifier.height(8.dp))
             Text(
                 "Welcome back.",
-                color = Color(0xFF111827),
+                color = ink,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             Spacer(Modifier.height(5.dp))
             Text(
                 "Pick up where you left off.",
-                color = Color(0xFF64748B),
+                color = muted,
                 fontSize = 15.sp
             )
             Spacer(Modifier.height(18.dp))
@@ -209,7 +204,7 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFFFEFEFF))
+                        .background(cardBackground)
                         .border(
                             1.dp,
                             OrangePrimary.copy(0.30f),
@@ -317,7 +312,7 @@ fun LoginScreen(
                             Modifier.weight(1f),
                             color = Divider
                         )
-                        Text("  or continue with  ", color = TertiaryText, fontSize = 12.sp)
+                        Text("  or continue with  ", color = muted, fontSize = 12.sp)
                         HorizontalDivider(
                             Modifier.weight(1f),
                             color = Divider
@@ -459,7 +454,6 @@ fun LoginScreen(
                 }
             }
         }
-        }
  
         if (showForgotPasswordDialog) {
             androidx.compose.ui.window.Dialog(
@@ -521,7 +515,7 @@ fun LoginScreen(
                         Spacer(Modifier.height(12.dp))
                         Text(
                             "Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.",
-                            color = Color(0xFF64748B),
+                            color = muted,
                             fontSize = 15.sp,
                             lineHeight = 22.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -559,12 +553,12 @@ fun LoginScreen(
                             Box(
                                 modifier = Modifier.weight(0.8f).height(54.dp)
                                     .clip(RoundedCornerShape(50))
-                                    .background(Color.White)
+                                    .background(if (isDarkTheme) SurfaceAlt else Color.White)
                                     .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(50))
                                     .pressScale { if (!uiState.isLoading) showForgotPasswordDialog = false },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("Cancel", color = Color(0xFF111827), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Cancel", color = ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                             }
                             Box(
                                 modifier = Modifier.weight(1.2f).height(54.dp)
