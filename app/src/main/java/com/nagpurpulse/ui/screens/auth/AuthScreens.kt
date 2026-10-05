@@ -62,6 +62,39 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun verifySignupEmailOtp(email: String, token: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            if (_uiState.value.isLoading) return@launch
+            _uiState.value = AuthUiState(isLoading = true)
+            authRepository.verifySignupEmailOtp(email.trim(), token.trim()).fold(
+                onSuccess = {
+                    _uiState.value = AuthUiState(isSuccess = true)
+                    onSuccess()
+                },
+                onFailure = { e ->
+                    _uiState.value = AuthUiState(error = e.message ?: "Invalid verification code")
+                }
+            )
+        }
+    }
+
+    fun resendSignupEmailOtp(email: String, onComplete: (String?) -> Unit = {}) {
+        viewModelScope.launch {
+            if (_uiState.value.isLoading) return@launch
+            _uiState.value = AuthUiState(isLoading = true)
+            authRepository.resendSignupEmailOtp(email.trim()).fold(
+                onSuccess = {
+                    _uiState.value = AuthUiState()
+                    onComplete(null)
+                },
+                onFailure = { e ->
+                    _uiState.value = AuthUiState(error = e.message ?: "Could not resend the verification code")
+                    onComplete(e.message ?: "Could not resend the verification code")
+                }
+            )
+        }
+    }
+
     fun signIn(email: String, password: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
