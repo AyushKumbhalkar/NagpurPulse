@@ -122,6 +122,20 @@ fun SignupScreen(
         val buttonHeight = if (compact) 50.dp else 58.dp
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
+        // Decorative peach wave footer. The asset is transparent above the wave,
+        // so it sits behind the content and naturally reveals the page background.
+        if (!isDarkTheme) {
+            Image(
+                painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2048f / 682f)
+                    .align(Alignment.BottomCenter)
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
