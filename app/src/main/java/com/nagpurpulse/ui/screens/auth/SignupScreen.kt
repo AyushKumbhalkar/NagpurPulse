@@ -126,8 +126,14 @@ fun SignupScreen(
                 .padding(top = pageTop, bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
+            // Keep the logo + signup card together as the top section so the
+            // footer can never be laid out over the header on compact devices.
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
                 contentDescription = "NagpurPulse",
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.height(logoHeight)
@@ -392,10 +398,14 @@ fun SignupScreen(
                 }
             }
 
-            Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
                     .background(
                         if (isDarkTheme) SurfaceAlt.copy(alpha = 0.92f)
                         else Color.White.copy(alpha = 0.90f)
@@ -458,9 +468,10 @@ fun SignupScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(Modifier.height(if (compact) 10.dp else 18.dp))
+                Spacer(Modifier.height(if (compact) 10.dp else 18.dp))
+            }
+        }
     }
-}
 
 @Composable
 private fun SignupProviderTile(
