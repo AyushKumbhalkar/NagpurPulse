@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
@@ -153,7 +154,9 @@ fun OnboardingScreen(
                         painter = painterResource(R.drawable.nagpurpulse_hero),
                         contentDescription = "People connecting through NagpurPulse in Nagpur",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .scale(scaleX = 1.04f, scaleY = 1.04f)
                     )
                 }
             }
