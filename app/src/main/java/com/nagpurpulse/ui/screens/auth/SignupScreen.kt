@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -98,7 +99,14 @@ fun SignupScreen(
     }
 
     MaterialTheme(colorScheme = lightColorScheme()) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val compact = maxHeight < 800.dp
+        val pageTop = if (compact) 10.dp else 18.dp
+        val logoHeight = if (compact) 38.dp else 44.dp
+        val logoGap = if (compact) 8.dp else 14.dp
+        val cardPaddingV = if (compact) 14.dp else 20.dp
+        val fieldGap = if (compact) 6.dp else 9.dp
+        val buttonHeight = if (compact) 52.dp else 58.dp
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF9F2)))
 
         Column(
@@ -107,17 +115,16 @@ fun SignupScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(bottom = 4.dp),
+                .padding(top = pageTop, bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(26.dp))
             Image(
                 painter = painterResource(R.drawable.nagpurpulse_logo),
                 contentDescription = "NagpurPulse",
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                modifier = Modifier.height(48.dp)
+                modifier = Modifier.height(logoHeight)
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(logoGap))
 
             AnimatedVisibility(
                 visible = contentReady,
@@ -133,13 +140,13 @@ fun SignupScreen(
                         .clip(RoundedCornerShape(32.dp))
                         .background(Color(0xFFFEFEFF))
                         .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(32.dp))
-                        .padding(horizontal = 22.dp, vertical = 24.dp)
+                        .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
                     Text(
                         text = "Your people are here.",
                         color = SignupInk,
-                        fontSize = 27.sp,
-                        lineHeight = 32.sp,
+                        fontSize = if (compact) 24.sp else 27.sp,
+                        lineHeight = if (compact) 29.sp else 32.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Spacer(Modifier.height(8.dp))
@@ -149,7 +156,7 @@ fun SignupScreen(
                         fontSize = 15.sp,
                         lineHeight = 21.sp
                     )
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
 
                     SignupFieldContainer {
                         PremiumInputField(
@@ -173,7 +180,7 @@ fun SignupScreen(
                             modifier = Modifier.padding(start = 10.dp, top = 4.dp)
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(fieldGap))
 
                     SignupFieldContainer {
                         PremiumInputField(
@@ -271,7 +278,7 @@ fun SignupScreen(
                                     }
                                 )
                             )
-                            .height(62.dp),
+                            .height(buttonHeight),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
@@ -286,13 +293,13 @@ fun SignupScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
                         Text("  or continue with  ", color = SignupMuted, fontSize = 12.sp)
                         HorizontalDivider(Modifier.weight(1f), color = SignupBorder)
                     }
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
 
                     Row(
                         modifier = Modifier
@@ -328,7 +335,7 @@ fun SignupScreen(
                         Text("Continue with Google", color = SignupInk, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -358,7 +365,7 @@ fun SignupScreen(
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(18.dp))
@@ -371,7 +378,7 @@ fun SignupScreen(
                 Text("Log in", color = SignupOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
