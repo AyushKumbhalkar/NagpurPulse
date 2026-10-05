@@ -153,10 +153,6 @@ private fun LoginAnimatedHeadline(
                 append(animatedText)
             }
         },
-        fontSize = if (compact) 28.sp else 32.sp,
-        lineHeight = if (compact) 32.sp else 36.sp,
-        fontWeight = FontWeight.ExtraBold,
-        letterSpacing = (-0.7).sp,
         modifier = Modifier.fillMaxWidth(),
         textAlign = androidx.compose.ui.text.style.TextAlign.Start,
         fontSize = if (compact) 28.sp else 32.sp,
