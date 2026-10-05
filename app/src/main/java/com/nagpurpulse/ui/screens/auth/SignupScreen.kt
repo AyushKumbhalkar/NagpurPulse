@@ -112,7 +112,8 @@ fun SignupScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
-        val pageTop = if (compact) 10.dp else 30.dp
+        // Keep the logo at the exact same vertical position as LoginScreen.
+        val pageTop = 40.dp
         // Match the login screen logo size exactly.
         val logoHeight = 48.dp
         val logoGap = if (compact) 5.dp else 14.dp
@@ -124,7 +125,6 @@ fun SignupScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
                 .padding(top = pageTop, bottom = 4.dp),
