@@ -598,17 +598,16 @@ private fun SignupEmailVerificationDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(Modifier.height(48.dp))
+                    Spacer(Modifier.height(28.dp))
 
                     // Exact verification illustration supplied in res/drawable/email_verify.
                     Box(
                         Modifier
-                            .size(184.dp)
-                            .clip(RoundedCornerShape(92.dp))
+                            .size(140.dp)
+                            .clip(RoundedCornerShape(70.dp))
                             .background(Color(0xFFFFF0E3)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -616,38 +615,38 @@ private fun SignupEmailVerificationDialog(
                             painter = painterResource(R.drawable.verify_email),
                             contentDescription = "Email verification",
                             contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                            modifier = Modifier.size(184.dp)
+                            modifier = Modifier.size(140.dp)
                         )
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(5.dp))
                     Text(
                         buildAnnotatedString {
                             withStyle(SpanStyle(Color(0xFF142033), fontWeight = FontWeight.ExtraBold)) { append("Verify your ") }
                             withStyle(SpanStyle(Color(0xFFF4511E), fontWeight = FontWeight.ExtraBold)) { append("email") }
                         },
-                        fontSize = 30.sp,
-                        lineHeight = 35.sp,
+                        fontSize = 27.sp,
+                        lineHeight = 31.sp,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "We’ve sent a 6-digit verification code to",
                         color = Color(0xFF64748B),
-                        fontSize = 15.sp,
-                        lineHeight = 21.sp,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         email,
                         color = Color(0xFF142033),
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         maxLines = 1
                     )
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(5.dp))
                     Text(
                         "Enter the code below to continue.",
                         color = Color(0xFF64748B),
@@ -655,7 +654,7 @@ private fun SignupEmailVerificationDialog(
                         lineHeight = 18.sp,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.height(15.dp))
+                    Spacer(Modifier.height(4.dp))
 
                     BasicTextField(
                         value = code,
@@ -674,7 +673,7 @@ private fun SignupEmailVerificationDialog(
                                     Box(
                                         Modifier
                                             .weight(1f)
-                                            .height(60.dp)
+                                            .height(52.dp)
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(Color(0xFFFFFBF7))
                                             .border(1.2.dp, Color(0xFFFFCBAA), RoundedCornerShape(12.dp)),
@@ -683,7 +682,7 @@ private fun SignupEmailVerificationDialog(
                                         Text(
                                             code.getOrNull(index)?.toString() ?: "",
                                             color = Color(0xFF142033),
-                                            fontSize = 21.sp,
+                                            fontSize = 19.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -692,17 +691,17 @@ private fun SignupEmailVerificationDialog(
                         }
                     )
 
-                    Spacer(Modifier.height(15.dp))
+                    Spacer(Modifier.height(10.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text("Didn’t receive the code? ", color = Color(0xFF64748B), fontSize = 12.sp)
+                        Text("Didn’t receive the code? ", color = Color(0xFF64748B), fontSize = 13.sp)
                         Text("Resend in ", color = Color(0xFF64748B), fontSize = 12.sp)
                         Text(
                             "00:" + seconds.toString().padStart(2, '0'),
                             color = Color(0xFFF4511E),
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -722,11 +721,11 @@ private fun SignupEmailVerificationDialog(
                         Text(error, color = MaterialTheme.colorScheme.error, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
 
-                    Spacer(Modifier.height(15.dp))
+                    Spacer(Modifier.height(12.dp))
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .height(54.dp)
+                            .height(50.dp)
                             .clip(RoundedCornerShape(32.dp))
                             .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
                             .pressScale(onClick = onVerify),
@@ -736,19 +735,19 @@ private fun SignupEmailVerificationDialog(
                             Text(
                                 if (isLoading) "Verifying…" else "Verify & Continue",
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.width(10.dp))
-                            Icon(Icons.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(22.dp))
                         }
                     }
 
-                    Spacer(Modifier.height(13.dp))
+                    Spacer(Modifier.height(9.dp))
                     Text(
                         "Change email address",
                         color = Color(0xFFF4511E),
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.pressScale(onClick = onChangeEmail)
                     )
