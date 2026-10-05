@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -154,7 +155,8 @@ fun OnboardingScreen(
                         contentDescription = "People connecting through NagpurPulse in Nagpur",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .width(500.dp)
+                            .fillMaxWidth()
+                            .scale(1.25f)
                     )
                 }
             }
