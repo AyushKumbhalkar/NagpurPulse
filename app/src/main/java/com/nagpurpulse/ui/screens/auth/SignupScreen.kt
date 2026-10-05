@@ -101,7 +101,7 @@ fun SignupScreen(
     MaterialTheme(colorScheme = lightColorScheme()) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
-        val pageTop = if (compact) 10.dp else 18.dp
+        val pageTop = if (compact) 22.dp else 30.dp
         val logoHeight = if (compact) 38.dp else 44.dp
         val logoGap = if (compact) 8.dp else 14.dp
         val cardPaddingV = if (compact) 14.dp else 20.dp
