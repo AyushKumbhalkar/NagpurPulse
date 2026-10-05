@@ -118,20 +118,13 @@ fun OnboardingScreen(
         ) {
             Spacer(Modifier.height(if (compact) 18.dp else 26.dp))
 
-            AnimatedVisibility(
-                visible = contentVisible,
-                enter = fadeIn(tween(500)) + scaleIn(
-                    initialScale = 0.94f,
-                    animationSpec = spring(dampingRatio = 0.8f)
-                )
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.nagpurpulse_logo),
-                    contentDescription = "NagpurPulse",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.width(logoWidth)
-                )
-            }
+            // App logo is shown immediately with no entrance animation.
+            Image(
+                painter = painterResource(R.drawable.nagpurpulse_logo),
+                contentDescription = "NagpurPulse",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.width(logoWidth)
+            )
 
             Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
 
