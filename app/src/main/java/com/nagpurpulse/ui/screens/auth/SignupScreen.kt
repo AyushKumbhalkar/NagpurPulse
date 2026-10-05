@@ -234,7 +234,7 @@ fun SignupScreen(
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = if (visible) "Hide password" else "Show password",
-                                            tint = muted
+                                            tint = OrangePrimary
                                         )
                                     }
                                 }
