@@ -36,6 +36,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -209,6 +210,19 @@ fun LoginScreen(
         val compact = maxHeight < 800.dp
 
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
+
+        // Same static peach wave footer used by SignupScreen.
+        if (!isDarkTheme) {
+            Image(
+                painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2048f / 682f)
+                    .align(Alignment.BottomCenter)
+            )
+        }
 
         Column(
             modifier = Modifier
