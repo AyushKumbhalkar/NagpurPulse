@@ -725,3 +725,37 @@ private fun LoginFieldContainer(content: @Composable () -> Unit) {
 }
 
 
+
+
+@Composable
+private fun SignupBenefit(
+    icon: @Composable () -> Unit,
+    title: String,
+    background: Color,
+    modifier: Modifier = Modifier
+) {
+    val benefitText = if (LocalIsDarkTheme.current) PrimaryText else Color(0xFF111827)
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(50))
+                .background(background),
+            contentAlignment = Alignment.Center
+        ) {
+            icon()
+        }
+        Text(
+            title,
+            color = benefitText,
+            fontSize = 10.sp,
+            lineHeight = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
