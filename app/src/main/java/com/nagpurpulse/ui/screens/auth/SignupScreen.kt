@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -62,7 +61,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -574,45 +572,15 @@ private fun SignupEmailVerificationDialog(
                     .clip(RoundedCornerShape(30.dp))
                     .background(Color(0xFFFFFCF7))
             ) {
-                // Soft peach corner waves matching the reference.
-                Canvas(Modifier.fillMaxSize()) {
-                    val w = size.width
-                    val h = size.height
-                    val peach = Color(0xFFFFE2C7)
-                    val peach2 = Color(0xFFFFF0E2)
-                    val stroke = Color(0xFFF7A46D)
-                    val top = Path().apply {
-                        moveTo(w * .57f, 0f)
-                        cubicTo(w * .72f, h * .045f, w * .83f, h * .015f, w, h * .14f)
-                        lineTo(w, 0f)
-                        close()
-                    }
-                    drawPath(top, peach2)
-                    val top2 = Path().apply {
-                        moveTo(w * .69f, 0f)
-                        cubicTo(w * .78f, h * .055f, w * .88f, h * .04f, w, h * .17f)
-                    }
-                    drawPath(top2, androidx.compose.ui.graphics.drawscope.Stroke(width = 2.2.dp.toPx(), color = stroke))
-                    val bottom = Path().apply {
-                        moveTo(0f, h * .87f)
-                        cubicTo(w * .16f, h * .96f, w * .28f, h * .98f, w * .42f, h)
-                        lineTo(0f, h)
-                        close()
-                    }
-                    drawPath(bottom, peach)
-                    val bottom2 = Path().apply {
-                        moveTo(w * .0f, h * .85f)
-                        cubicTo(w * .12f, h * .93f, w * .28f, h * .91f, w * .40f, h)
-                    }
-                    drawPath(bottom2, androidx.compose.ui.graphics.drawscope.Stroke(width = 2.2.dp.toPx(), color = stroke))
-                    val bottomRight = Path().apply {
-                        moveTo(w * .55f, h)
-                        cubicTo(w * .72f, h * .91f, w * .87f, h * .96f, w, h * .90f)
-                        lineTo(w, h)
-                        close()
-                    }
-                    drawPath(bottomRight, peach2)
-                }
+                Image(
+                    painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(2048f / 682f)
+                        .align(Alignment.BottomCenter)
+                )
 
                 Box(
                     Modifier
