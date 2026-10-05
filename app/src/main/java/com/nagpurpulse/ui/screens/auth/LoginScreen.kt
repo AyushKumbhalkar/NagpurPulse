@@ -100,8 +100,9 @@ import kotlinx.coroutines.launch
 // ─── LOGIN SCREEN ──────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
-private fun LoginAnimatedSubtitle(
-    color: Color,
+private fun LoginAnimatedHeadline(
+    compact: Boolean,
+    ink: Color,
     orange: Color
 ) {
     val phrases = remember {
@@ -144,16 +145,18 @@ private fun LoginAnimatedSubtitle(
 
     Text(
         text = buildAnnotatedString {
-            withStyle(SpanStyle(color = color, fontWeight = FontWeight.ExtraBold)) {
+            withStyle(SpanStyle(color = ink, fontWeight = FontWeight.ExtraBold)) {
                 append("Your people ")
             }
             withStyle(SpanStyle(color = orange, fontWeight = FontWeight.ExtraBold)) {
                 append(animatedText)
             }
         },
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
-        maxLines = 1
+        fontSize = if (compact) 28.sp else 32.sp,
+        lineHeight = if (compact) 32.sp else 36.sp,
+        fontWeight = FontWeight.ExtraBold,
+        letterSpacing = (-0.7).sp,
+        maxLines = 2
     )
 }
 
@@ -202,7 +205,13 @@ fun LoginScreen(
                 modifier = Modifier.height(48.dp)
             )
             // Slightly tighter gap so the complete content below moves up together.
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(14.dp))
+            LoginAnimatedHeadline(
+                compact = false,
+                ink = ink,
+                orange = OrangePrimary
+            )
+            Spacer(Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
@@ -238,9 +247,6 @@ fun LoginScreen(
                 fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold
             )
-            Spacer(Modifier.height(5.dp))
-            LoginAnimatedSubtitle(color = muted, orange = OrangePrimary)
-
             Spacer(Modifier.height(18.dp))
 
 
