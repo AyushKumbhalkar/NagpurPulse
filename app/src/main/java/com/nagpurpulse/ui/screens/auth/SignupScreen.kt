@@ -505,7 +505,6 @@ fun SignupScreen(
             }
         }
     }
-}
 
     if (showEmailVerificationDialog) {
         SignupEmailVerificationDialog(
@@ -537,6 +536,7 @@ fun SignupScreen(
             }
         )
     }
+}
 
 @Composable
 private fun SignupEmailVerificationDialog(
