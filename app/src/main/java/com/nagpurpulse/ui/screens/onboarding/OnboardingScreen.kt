@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -50,10 +51,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.delay
 
-private val WelcomeCream = Color(0xFFFFF9F2)
-private val WelcomeOrange = Color(0xFFFF5A00)
-private val WelcomeText = Color(0xFF171717)
-private val WelcomeSecondary = Color(0xFF737373)
 
 @Composable
 fun OnboardingScreen(
@@ -94,6 +91,12 @@ fun OnboardingScreen(
         screenWidth < 400 -> 32.sp
         else -> 36.sp
     }
+    val colorScheme = MaterialTheme.colorScheme
+    val welcomeBackground = colorScheme.background
+    val welcomeOrange = colorScheme.primary
+    val welcomeText = colorScheme.onBackground
+    val welcomeSecondary = colorScheme.onSurfaceVariant
+
     val bodySize = if (screenWidth < 360) 14.sp else 15.sp
 
     var contentVisible by remember { mutableStateOf(false) }
@@ -106,7 +109,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(WelcomeCream)
+            .background(welcomeBackground)
     ) {
         Column(
             modifier = Modifier
@@ -172,7 +175,7 @@ fun OnboardingScreen(
                     buildAnnotatedString {
                         withStyle(
                             SpanStyle(
-                                color = WelcomeText,
+                                color = welcomeText,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         ) {
@@ -180,7 +183,7 @@ fun OnboardingScreen(
                         }
                         withStyle(
                             SpanStyle(
-                                color = WelcomeOrange,
+                                color = welcomeOrange,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         ) {
@@ -202,7 +205,7 @@ fun OnboardingScreen(
             ) {
                 Text(
                     text = "Ask questions, share finds and discover what's happening around you in Nagpur.",
-                    color = WelcomeSecondary,
+                    color = welcomeSecondary,
                     fontSize = bodySize,
                     lineHeight = 21.sp,
                     textAlign = TextAlign.Center,
@@ -224,7 +227,7 @@ fun OnboardingScreen(
                         .height(if (screenWidth < 360) 54.dp else 58.dp),
                     shape = RoundedCornerShape(30.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = WelcomeOrange,
+                        containerColor = welcomeOrange,
                         contentColor = Color.White
                     ),
                     elevation = ButtonDefaults.buttonElevation(
