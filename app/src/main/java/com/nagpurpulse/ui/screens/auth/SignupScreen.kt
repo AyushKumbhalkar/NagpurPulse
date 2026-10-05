@@ -99,12 +99,6 @@ fun SignupScreen(
     val emailLooksValid = email.isNotBlank() &&
         android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
-    var contentReady by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(60)
-        contentReady = true
-    }
-
     val isDarkTheme = LocalIsDarkTheme.current
     val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
     val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
@@ -140,11 +134,7 @@ fun SignupScreen(
             )
             Spacer(Modifier.height(logoGap))
 
-            AnimatedVisibility(
-                visible = contentReady,
-                enter = fadeIn(tween(300))
-            ) {
-                Column(
+            Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 18.dp)
