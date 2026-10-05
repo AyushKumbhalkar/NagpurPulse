@@ -529,15 +529,7 @@ fun PremiumInputField(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (focused)
-                                OrangePrimary.copy(alpha = 0.18f)
-                            else
-                                Color.Transparent
-                        ),
+                    modifier = Modifier.size(26.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     leadingIcon()
