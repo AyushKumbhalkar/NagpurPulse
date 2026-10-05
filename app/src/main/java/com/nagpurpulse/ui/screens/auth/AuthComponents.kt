@@ -590,10 +590,18 @@ fun PremiumButton(
     isLoading: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
-    delayMs: Int = 0
+    delayMs: Int = 0,
+    animateEntrance: Boolean = true
 ) {
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(delayMs.toLong()); visible = true }
+    LaunchedEffect(Unit) {
+        if (animateEntrance) {
+            delay(delayMs.toLong())
+            visible = true
+        } else {
+            visible = true
+        }
+    }
 
     val t = rememberInfiniteTransition(label = "btn_glow")
     val btnGlow by t.animateFloat(
@@ -610,7 +618,7 @@ fun PremiumButton(
         label = "btn_scale"
     )
 
-    AnimatedVisibility(
+    if (animateEntrance) AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(400)) +
                 scaleIn(
