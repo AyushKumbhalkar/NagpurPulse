@@ -127,7 +127,7 @@ fun OnboardingScreen(
                 Image(
                     painter = painterResource(R.drawable.nagpurpulse_logo),
                     contentDescription = "NagpurPulse",
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.FillBounds,
                     modifier = Modifier.width(logoWidth)
                 )
             }
