@@ -185,7 +185,7 @@ fun SignupScreen(
                     Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
                     Text(
                         text = "Create your account and join the conversations happening around Nagpur.",
-                        color = muted,
+                        color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
                         fontSize = if (compact) 15.sp else 16.sp,
                         lineHeight = if (compact) 21.sp else 23.sp
                     )
@@ -403,7 +403,7 @@ fun SignupScreen(
 
             // Keep the footer close to the form card; don't leave a large
             // artificial gap between the guest card and the login CTA.
-            Spacer(Modifier.height(if (compact) 4.dp else 10.dp))
+            Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
