@@ -17,6 +17,7 @@ import io.github.jan.supabase.auth.providers.builtin.IDToken
 import com.nagpurpulse.data.model.Profile
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import javax.inject.Inject
@@ -241,6 +242,29 @@ class AuthRepository @Inject constructor(
         } catch (e: Exception) { Result.failure(e) }
     }
 
+
+    suspend fun verifySignupEmailOtp(email: String, token: String): Result<Unit> {
+        return try {
+            client.auth.verifyEmailOtp(
+                type = OtpType.Email.SIGNUP,
+                email = email,
+                token = token
+            )
+            registerFcmTokenForCurrentUser()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resendSignupEmailOtp(email: String): Result<Unit> {
+        return try {
+            client.auth.resendEmail(OtpType.Email.SIGNUP, email)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     // Password reset — triggers Supabase email
     suspend fun sendPasswordReset(email: String): Result<Unit> {
