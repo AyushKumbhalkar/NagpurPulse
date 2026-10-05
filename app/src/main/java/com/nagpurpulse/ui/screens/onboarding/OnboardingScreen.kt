@@ -135,30 +135,22 @@ fun OnboardingScreen(
 
             Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
 
-            AnimatedVisibility(
-                visible = contentVisible,
-                enter = fadeIn(tween(650, delayMillis = 120)) +
-                    slideInVertically(
-                        initialOffsetY = { 40 },
-                        animationSpec = tween(650, easing = FastOutSlowInEasing)
-                    )
+            // Render the hero artwork immediately on first launch.
+            // It should be fully visible as soon as the onboarding screen appears,
+            // without fade, slide, or scale entrance animation.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = heroMaxWidth)
+                    .height(heroHeight),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = heroMaxWidth)
-                        .height(heroHeight),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.nagpurpulse_hero),
-                        contentDescription = "People connecting through NagpurPulse in Nagpur",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .scale(1.25f)
-                    )
-                }
+                Image(
+                    painter = painterResource(R.drawable.nagpurpulse_hero),
+                    contentDescription = "People connecting through NagpurPulse in Nagpur",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
