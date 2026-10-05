@@ -499,18 +499,10 @@ private fun SignupProviderTile(
 
 @Composable
 private fun SignupFieldContainer(content: @Composable () -> Unit) {
-    val isDarkTheme = LocalIsDarkTheme.current
+    // PremiumInputField owns the shape, border and background.
+    // Keeping this wrapper neutral prevents the "double rounded box" effect.
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(if (isDarkTheme) SurfaceAlt else Color.White)
-            .border(
-                1.dp,
-                if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFE5E7EB),
-                RoundedCornerShape(24.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 2.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         content()
     }
