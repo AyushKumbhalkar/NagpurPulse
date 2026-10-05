@@ -475,37 +475,38 @@ private fun SignupAnimatedHeadline(
         )
     }
 
-    var phraseIndex by remember { mutableStateOf(0) }
-    var visibleCharacterCount by remember { mutableStateOf(0) }
+    var animatedText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
+        var currentIndex = 0
+
         while (true) {
-            val phrase = phrases[phraseIndex]
+            val phrase = phrases[currentIndex]
 
-            // Type the complete phrase continuously, one character at a time.
-            for (count in 1..phrase.length) {
-                visibleCharacterCount = count
-                delay(85L)
+            // Start the new phrase completely empty.
+            animatedText = ""
+
+            // Type EVERY character continuously until the whole phrase is visible.
+            for (index in phrase.indices) {
+                animatedText = phrase.substring(0, index + 1)
+                delay(75L)
             }
 
-            // Keep the COMPLETE phrase on screen long enough to read.
-            delay(2200L)
+            // Keep the COMPLETE phrase visible so it can be read.
+            delay(2500L)
 
-            // Erase the complete phrase continuously, one character at a time.
-            for (count in phrase.length - 1 downTo 0) {
-                visibleCharacterCount = count
-                delay(55L)
+            // Delete EVERY character continuously.
+            for (index in phrase.length - 1 downTo 0) {
+                animatedText = phrase.substring(0, index)
+                delay(50L)
             }
 
-            // Small pause before starting the next phrase.
-            delay(450L)
+            // Brief clean gap before the next phrase starts.
+            delay(400L)
 
-            phraseIndex = (phraseIndex + 1) % phrases.size
-            visibleCharacterCount = 0
+            currentIndex = (currentIndex + 1) % phrases.size
         }
     }
-
-    val visiblePhrase = phrases[phraseIndex].take(visibleCharacterCount)
 
     Text(
         text = buildAnnotatedString {
@@ -523,7 +524,7 @@ private fun SignupAnimatedHeadline(
                     fontWeight = FontWeight.ExtraBold
                 )
             ) {
-                append(visiblePhrase)
+                append(animatedText)
             }
         },
         fontSize = if (compact) 30.sp else 36.sp,
