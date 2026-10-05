@@ -527,11 +527,13 @@ private fun SignupAnimatedHeadline(
                 append(animatedText)
             }
         },
-        fontSize = if (compact) 30.sp else 36.sp,
-        lineHeight = if (compact) 34.sp else 40.sp,
+        // Keep the full animated phrase visible on narrow phones instead of
+        // clipping it after "are". The headline can use two lines when needed.
+        fontSize = if (compact) 28.sp else 32.sp,
+        lineHeight = if (compact) 32.sp else 36.sp,
         fontWeight = FontWeight.ExtraBold,
-        letterSpacing = (-0.8).sp,
-        maxLines = 1
+        letterSpacing = (-0.7).sp,
+        maxLines = 2
     )
 }
 
