@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.ui.res.painterResource
@@ -380,14 +381,42 @@ fun SignupScreen(
             Spacer(Modifier.height(if (compact) 5.dp else 10.dp))
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(cardBackground.copy(alpha = if (isDarkTheme) 0.94f else 0.82f))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        if (isDarkTheme) SurfaceAlt.copy(alpha = 0.92f)
+                        else Color.White.copy(alpha = 0.90f)
+                    )
+                    .border(
+                        1.dp,
+                        if (isDarkTheme) OrangePrimary.copy(alpha = 0.16f)
+                        else Color(0xFFF1E7DD),
+                        RoundedCornerShape(24.dp)
+                    )
                     .pressScale(onClick = onNavigateToLogin)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 18.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Text("Already have an account? ", color = muted, fontSize = 14.sp)
-                Text("Log in", color = SignupOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(
+                    "Already part of NagpurPulse?",
+                    color = muted,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.width(7.dp))
+                Text(
+                    "Log in",
+                    color = SignupOrange,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "→",
+                    color = SignupOrange,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
@@ -409,7 +438,7 @@ fun SignupScreen(
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
-                    icon = { Text("▮▮▮", color = Color(0xFF2563EB), fontSize = 15.sp, fontWeight = FontWeight.Bold) },
+                    icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
                     title = "Interesting\ndiscussions",
                     background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
