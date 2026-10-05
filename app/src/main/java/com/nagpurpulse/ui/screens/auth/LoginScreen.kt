@@ -190,14 +190,7 @@ fun LoginScreen(
             // ── Form card ───────────────────────────────────────────────
             AnimatedVisibility(
                 visible = contentReady,
-                enter = fadeIn(animationSpec = tween(500, delayMillis = 100)) +
-                        slideInVertically(
-                            initialOffsetY = { 40 },
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        )
+                enter = fadeIn(animationSpec = tween(300, delayMillis = 60))
             )  {
                 Column(
                     modifier = Modifier
