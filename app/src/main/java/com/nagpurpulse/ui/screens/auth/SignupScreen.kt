@@ -107,7 +107,7 @@ fun SignupScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
-
+                .padding(bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(26.dp))
