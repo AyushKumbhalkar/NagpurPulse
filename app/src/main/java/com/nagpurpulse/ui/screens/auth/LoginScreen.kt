@@ -263,19 +263,44 @@ fun LoginScreen(
                     )
                 }
 
-                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                Spacer(Modifier.height(if (compact) 8.dp else 8.dp))
 
+                // Keep the original centered "WELCOME BACK" treatment,
+                // while reserving exactly the same header-slot height as Signup.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 36.dp)
+                        .height(if (compact) 42.dp else 46.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Welcome back.",
-                        color = ink,
-                        fontSize = if (compact) 15.sp else 16.sp,
-                        lineHeight = if (compact) 21.sp else 23.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(28.dp)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(OrangePrimary)
+                        )
+                        Spacer(Modifier.width(9.dp))
+                        Text(
+                            "WELCOME BACK",
+                            color = OrangePrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.6.sp
+                        )
+                        Spacer(Modifier.width(9.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(28.dp)
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(OrangePrimary)
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
@@ -346,9 +371,11 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(if (compact) 3.dp else 10.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        contentAlignment = Alignment.CenterEnd
                     ) {
                         Text(
                             "Forgot password?",
