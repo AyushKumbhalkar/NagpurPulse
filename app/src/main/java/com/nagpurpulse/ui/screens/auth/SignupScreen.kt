@@ -465,13 +465,15 @@ private fun SignupAnimatedHeadline(
 ) {
     val phrases = remember {
         listOf(
+            "are here.",
+            "are online.",
             "are talking.",
-            "are connecting.",
             "are sharing.",
-            "are discovering.",
-            "are discussing.",
-            "are joining in.",
-            "are online."
+            "are chatting.",
+            "are joining.",
+            "are active.",
+            "are around.",
+            "are posting."
         )
     }
 
