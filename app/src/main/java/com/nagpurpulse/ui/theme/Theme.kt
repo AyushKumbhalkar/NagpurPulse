@@ -6,7 +6,6 @@ package com.nagpurpulse.ui.theme
 
 import com.nagpurpulse.ui.preferences.PreferenceManager
 import com.nagpurpulse.ui.theme.scaledTypography
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -16,7 +15,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 // ── Composition local for theme mode access anywhere ──────────────────────────
-val LocalIsDarkTheme = staticCompositionLocalOf { true }
+val LocalIsDarkTheme = staticCompositionLocalOf { false }
 
 private val DarkColorScheme = darkColorScheme(
     primary          = OrangePrimary,
@@ -56,7 +55,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun NagpurPulseTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
 
