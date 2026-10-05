@@ -1,9 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/splash_loading_vector">
-
-    <target
-        android:name="logo"
-        android:animation="@animator/splash_logo_pulse" />
-
-</animated-vector>
+    android:drawable="@drawable/splash_transparent_icon" />
