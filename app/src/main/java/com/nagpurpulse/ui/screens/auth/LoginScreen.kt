@@ -125,36 +125,53 @@ private fun LoginAnimatedHeadline(
 
         while (true) {
             val phrase = phrases[currentIndex]
+
+            // Start the new phrase completely empty.
             animatedText = ""
 
+            // Type EVERY character continuously until the whole phrase is visible.
             for (index in phrase.indices) {
                 animatedText = phrase.substring(0, index + 1)
                 delay(75L)
             }
 
+            // Keep the COMPLETE phrase visible so it can be read.
             delay(2500L)
 
+            // Delete EVERY character continuously.
             for (index in phrase.length - 1 downTo 0) {
                 animatedText = phrase.substring(0, index)
                 delay(50L)
             }
 
+            // Brief clean gap before the next phrase starts.
             delay(400L)
+
             currentIndex = (currentIndex + 1) % phrases.size
         }
     }
 
     Text(
         text = buildAnnotatedString {
-            withStyle(SpanStyle(color = ink, fontWeight = FontWeight.ExtraBold)) {
+            withStyle(
+                SpanStyle(
+                    color = ink,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            ) {
                 append("Your people ")
             }
-            withStyle(SpanStyle(color = orange, fontWeight = FontWeight.ExtraBold)) {
+            withStyle(
+                SpanStyle(
+                    color = orange,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            ) {
                 append(animatedText)
             }
         },
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+        // Keep the full animated phrase visible on narrow phones instead of
+        // clipping it after "are". The headline can use two lines when needed.
         fontSize = if (compact) 28.sp else 32.sp,
         lineHeight = if (compact) 32.sp else 36.sp,
         fontWeight = FontWeight.ExtraBold,
@@ -211,11 +228,17 @@ fun LoginScreen(
             )
             // Match SignupScreen's exact headline position.
             Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
-            LoginAnimatedHeadline(
-                compact = compact,
-                ink = ink,
-                orange = OrangePrimary
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 36.dp)
+            ) {
+                LoginAnimatedHeadline(
+                    compact = compact,
+                    ink = ink,
+                    orange = Color(0xFFFF7518)
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
