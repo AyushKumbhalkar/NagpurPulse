@@ -46,7 +46,6 @@ fun SplashScreen(onFinished: () -> Unit) {
     val t = rememberInfiniteTransition(label = "splash")
     val glowAlpha by t.animateFloat(0.3f, 0.9f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
     val ringRotation by t.animateFloat(0f, 360f, infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart), label = "orbit")
-    val floatY by t.animateFloat(0f, -10f, infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "float")
 
     val logoScale by animateFloatAsState(if (logoVisible) 1f else 0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow), label = "logo_scale")
     val exitAlpha by animateFloatAsState(if (exitAnim) 0f else 1f, tween(500, easing = FastOutSlowInEasing), label = "exit_alpha")
@@ -94,7 +93,6 @@ fun SplashScreen(onFinished: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(logoSize)
-                    .offset(y = (floatY * if (compactHeight) 0.6f else 1f).dp)
                     .scale(logoScale),
                 contentAlignment = Alignment.Center
             ) {
