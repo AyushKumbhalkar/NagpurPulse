@@ -613,7 +613,7 @@ private fun SignupEmailVerificationDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.email_verify),
+                            painter = painterResource(R.drawable.verify_email),
                             contentDescription = "Email verification",
                             contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                             modifier = Modifier.size(184.dp)
