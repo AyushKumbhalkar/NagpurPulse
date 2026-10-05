@@ -398,6 +398,10 @@ fun SignupScreen(
                 }
             }
 
+            // Use only the available free space between the main card and footer.
+            // If the screen is short, this spacer collapses instead of overlapping content.
+            Spacer(Modifier.weight(1f, fill = false))
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
