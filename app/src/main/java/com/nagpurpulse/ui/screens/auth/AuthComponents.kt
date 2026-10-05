@@ -457,7 +457,8 @@ fun PremiumInputField(
     trailingIcon: (@Composable () -> Unit)? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    index: Int = 0
+    index: Int = 0,
+    containerColor: Color? = null
 ) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(180L + index * 90L); visible = true }
@@ -484,7 +485,7 @@ fun PremiumInputField(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = bgAlpha)
+                    (containerColor ?: MaterialTheme.colorScheme.surface).copy(alpha = bgAlpha)
                 )
                 .border(
                     width = if (focused) 1.6.dp else 1.2.dp,
