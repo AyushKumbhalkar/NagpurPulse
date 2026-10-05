@@ -3,6 +3,7 @@ package com.nagpurpulse.ui.screens.splash
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.nagpurpulse.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.ui.theme.*
@@ -86,82 +90,20 @@ fun SplashScreen(onFinished: () -> Unit) {
             modifier = Modifier.graphicsLayer { alpha = exitAlpha },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo
-            Box(modifier = Modifier.size(logoSize).offset(y = (floatY * if (compactHeight) 0.6f else 1f).dp).scale(logoScale), contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .size(logoSize * 0.97f)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    OrangePrimary.copy(
-                                        alpha = if (LocalIsDarkTheme.current)
-                                            glowAlpha * 0.12f
-                                        else
-                                            glowAlpha * 0.18f
-                                    ),
-                                    Color.Transparent
-                                )
-                            )
-                        )
+            // Current NagpurPulse app icon
+            Box(
+                modifier = Modifier
+                    .size(logoSize)
+                    .offset(y = (floatY * if (compactHeight) 0.6f else 1f).dp)
+                    .scale(logoScale),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
+                    contentDescription = "NagpurPulse",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
                 )
-                Box(modifier = Modifier.size(logoSize * 0.79f).graphicsLayer { rotationZ = ringRotation }.border(
-                    1.5.dp,
-                    Brush.sweepGradient(
-                        listOf(
-                            Color.Transparent,
-                            OrangePrimary.copy(
-                                alpha = if (LocalIsDarkTheme.current)
-                                    glowAlpha * 0.6f
-                                else
-                                    glowAlpha * 0.85f
-                            ),
-                            OrangePrimary.copy(
-                                alpha = if (LocalIsDarkTheme.current)
-                                    glowAlpha
-                                else
-                                    1f
-                            ),
-                            OrangePrimary.copy(
-                                alpha = if (LocalIsDarkTheme.current)
-                                    glowAlpha * 0.6f
-                                else
-                                    glowAlpha * 0.85f
-                            ),
-                            Color.Transparent
-                        )
-                    ),
-                    CircleShape
-                ))
-                Box(
-                    modifier = Modifier
-                        .size(logoSize * 0.63f)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                if (LocalIsDarkTheme.current) {
-                                    listOf(
-                                        Color(0xFF1A0D00),
-                                        Color(0xFF0A0600)
-                                    )
-                                } else {
-                                    listOf(
-                                        OrangePrimary.copy(alpha = 0.12f),
-                                        OrangePrimary.copy(alpha = 0.05f)
-                                    )
-                                }
-                            )
-                        )
-                        .border(
-                            1.dp,
-                            OrangePrimary.copy(alpha = 0.6f),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("∿", color = OrangePrimary, fontSize = if (compactHeight) 32.sp else 38.sp, fontWeight = FontWeight.Bold)
-                }
             }
 
             Spacer(Modifier.height(if (compactHeight) 16.dp else 28.dp))
