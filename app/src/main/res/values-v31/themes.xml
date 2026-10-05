@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Android 12+ light-mode splash screen. Use the current NagpurPulse app icon. -->
+    <!-- Android 12+ light-mode splash screen. Keep the mandatory Android splash visually invisible so the app opens directly into its branded splash. -->
     <style
         name="Theme.NagpurPulse"
         parent="Theme.SplashScreen">
 
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenBackground">@color/background_light</item>
 
-        <item name="windowSplashScreenAnimatedIcon">@drawable/nagpurpulse_orange_n_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_transparent_icon</item>
 
         <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Light</item>
 
