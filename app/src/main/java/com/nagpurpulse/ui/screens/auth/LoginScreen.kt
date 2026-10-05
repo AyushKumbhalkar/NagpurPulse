@@ -10,6 +10,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
 import com.nagpurpulse.ui.theme.Surface
 import com.nagpurpulse.ui.theme.SurfaceAlt
 import com.nagpurpulse.ui.theme.Divider
@@ -116,6 +117,20 @@ fun LoginScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF9F2)))
 
+        MaterialTheme(
+            colorScheme = lightColorScheme(
+                primary = OrangePrimary,
+                onPrimary = Color.White,
+                background = Color(0xFFFFF9F2),
+                onBackground = Color(0xFF111827),
+                surface = Color(0xFFFEFEFF),
+                onSurface = Color(0xFF111827),
+                surfaceContainer = Color.White,
+                surfaceVariant = Color(0xFFF3F4F6),
+                onSurfaceVariant = Color(0xFF64748B),
+                outlineVariant = Color(0xFFE5E7EB)
+            )
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -125,27 +140,56 @@ fun LoginScreen(
         ) {
 
 
-            Spacer(Modifier.height(26.dp))
+            Spacer(Modifier.height(40.dp))
             Image(
                 painter = painterResource(R.drawable.nagpurpulse_logo),
                 contentDescription = "NagpurPulse",
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.height(48.dp)
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(OrangePrimary)
+                )
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    "WELCOME BACK",
+                    color = OrangePrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.6.sp
+                )
+                Spacer(Modifier.width(9.dp))
+                Box(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(OrangePrimary)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
                 "Welcome back.",
-                color = MaterialTheme.colorScheme.onBackground,
+                color = Color(0xFF111827),
                 fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(5.dp))
             Text(
                 "Pick up where you left off.",
-                color = TertiaryText,
+                color = Color(0xFF64748B),
                 fontSize = 15.sp
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(18.dp))
 
 
             // ── Form card ───────────────────────────────────────────────
@@ -165,14 +209,7 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Surface,
-                                    SurfaceAlt
-                                )
-                            )
-                        )
+                        .background(Color(0xFFFEFEFF))
                         .border(
                             1.dp,
                             OrangePrimary.copy(0.30f),
@@ -421,6 +458,7 @@ fun LoginScreen(
                     )
                 }
             }
+        }
         }
  
         if (showForgotPasswordDialog) {
