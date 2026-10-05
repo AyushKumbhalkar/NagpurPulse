@@ -446,7 +446,7 @@ fun SignupScreen(
                 )
             }
 
-            Spacer(Modifier.height(if (compact) 4.dp else 12.dp))
+            Spacer(Modifier.height(if (compact) 9.dp else 16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -471,7 +471,7 @@ fun SignupScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(if (compact) 10.dp else 18.dp))
         }
     }
 }
