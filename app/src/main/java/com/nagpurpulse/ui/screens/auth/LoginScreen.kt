@@ -474,8 +474,8 @@ fun LoginScreen(
                             .padding(horizontal = 22.dp)
                             .heightIn(max = maxHeight * 0.88f)
                             .clip(RoundedCornerShape(32.dp))
-                            .background(Color(0xFFFEFEFF))
-                            .border(1.dp, Color(0xFFFF793D), RoundedCornerShape(32.dp))
+                            .background(if (isDarkTheme) Surface else Color(0xFFFEFEFF))
+                            .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.45f) else Color(0xFFFF793D), RoundedCornerShape(32.dp))
                             .padding(horizontal = 18.dp, vertical = 18.dp)
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -506,7 +506,7 @@ fun LoginScreen(
                         Spacer(Modifier.height(24.dp))
                         Text(
                             "Reset your password",
-                            color = Color(0xFF111827),
+                            color = ink,
                             fontSize = 25.sp,
                             lineHeight = 32.sp,
                             fontWeight = FontWeight.Bold,
@@ -525,9 +525,9 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = resetEmail,
                             onValueChange = { resetEmail = it },
-                            placeholder = { Text("Email address", color = Color(0xFF94A3B8)) },
+                            placeholder = { Text("Email address", color = muted) },
                             leadingIcon = {
-                                Icon(Icons.Filled.Email, contentDescription = null, tint = Color(0xFF64748B))
+                                Icon(Icons.Filled.Email, contentDescription = null, tint = muted)
                             },
                             singleLine = true,
                             enabled = !uiState.isLoading,
@@ -535,13 +535,13 @@ fun LoginScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier.fillMaxWidth(),
                             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color(0xFF111827),
-                                unfocusedTextColor = Color(0xFF111827),
-                                focusedBorderColor = Color(0xFFFF8B3D),
-                                unfocusedBorderColor = Color(0xFFE5E7EB),
+                                focusedTextColor = ink,
+                                unfocusedTextColor = ink,
+                                focusedBorderColor = OrangePrimary,
+                                unfocusedBorderColor = if (isDarkTheme) Color(0xFF3A3A3A) else Color(0xFFE5E7EB),
                                 cursorColor = OrangePrimary,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
+                                focusedContainerColor = if (isDarkTheme) SurfaceAlt else Color.White,
+                                unfocusedContainerColor = if (isDarkTheme) SurfaceAlt else Color.White
                             )
                         )
                         Spacer(Modifier.height(26.dp))
@@ -554,7 +554,7 @@ fun LoginScreen(
                                 modifier = Modifier.weight(0.8f).height(54.dp)
                                     .clip(RoundedCornerShape(50))
                                     .background(if (isDarkTheme) SurfaceAlt else Color.White)
-                                    .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(50))
+                                    .border(1.dp, if (isDarkTheme) Color(0xFF3A3A3A) else Color(0xFFE5E7EB), RoundedCornerShape(50))
                                     .pressScale { if (!uiState.isLoading) showForgotPasswordDialog = false },
                                 contentAlignment = Alignment.Center
                             ) {
