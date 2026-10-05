@@ -113,7 +113,8 @@ fun SignupScreen(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
         val pageTop = if (compact) 10.dp else 30.dp
-        val logoHeight = if (compact) 34.dp else 44.dp
+        // Match the login screen logo size exactly.
+        val logoHeight = 48.dp
         val logoGap = if (compact) 5.dp else 14.dp
         val cardPaddingV = if (compact) 10.dp else 20.dp
         val fieldGap = if (compact) 4.dp else 9.dp
