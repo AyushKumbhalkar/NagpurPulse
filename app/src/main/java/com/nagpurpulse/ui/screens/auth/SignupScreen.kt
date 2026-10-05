@@ -476,6 +476,7 @@ fun SignupScreen(
             }
         }
     }
+}
 
 @Composable
 private fun SignupProviderTile(
