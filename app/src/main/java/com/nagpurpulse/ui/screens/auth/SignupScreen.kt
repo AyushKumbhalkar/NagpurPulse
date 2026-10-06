@@ -144,6 +144,20 @@ fun SignupScreen(
         val buttonHeight = if (compact) 50.dp else 58.dp
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
+        // New NagpurPulse auth header artwork. It is transparent, so the logo
+        // and headline can sit naturally on top of the city/wave illustration.
+        if (!isDarkTheme) {
+            Image(
+                painter = painterResource(R.drawable.auth_header),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1774f / 502f)
+                    .align(Alignment.TopCenter)
+            )
+        }
+
         // Decorative peach wave footer. The asset is transparent above the wave,
         // so it sits behind the content and naturally reveals the page background.
         if (!isDarkTheme) {
@@ -180,7 +194,7 @@ fun SignupScreen(
             )
             // Keep the animated headline directly on the same page background as LoginScreen.
             // Login and Signup therefore feel like the same screen when navigating between them.
-            Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
+            Spacer(Modifier.height(if (compact) 62.dp else 86.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
