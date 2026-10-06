@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -1062,7 +1063,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         fontSize = titleSize,
                         lineHeight = if (compactWidth) 33.sp else 36.sp,
                         textAlign = TextAlign.Center,
-                        maxLines = 1
+                        maxLines = 2
                     )
 
                     Spacer(Modifier.height(18.dp))
@@ -1091,7 +1092,7 @@ private fun SignupEmailAlreadyUsedDialog(
                                     listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
                                 )
                             )
-                            .pressScale(onClick = onGoToLogin),
+                            .clickable(onClick = onGoToLogin),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -1170,7 +1171,7 @@ private fun SignupEmailAlreadyUsedDialog(
                                 color = Color(0xFFFFCBAA),
                                 shape = RoundedCornerShape(60.dp)
                             )
-                            .pressScale(onClick = onTryDifferentEmail),
+                            .clickable(onClick = onTryDifferentEmail),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -1193,7 +1194,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         .size(48.dp)
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFFFF7EF))
-                        .pressScale(onClick = onDismiss),
+                        .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
