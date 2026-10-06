@@ -203,7 +203,7 @@ fun SignupScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-10).dp)
+                    .offset(y = (-19).dp)
                     .padding(horizontal = 36.dp)
             ) {
                 SignupAnimatedHeadline(
@@ -216,7 +216,7 @@ fun SignupScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-10).dp)
+                    .offset(y = (-19).dp)
                     .padding(horizontal = 36.dp)
             ) {
                 Text(
@@ -231,7 +231,7 @@ fun SignupScreen(
             Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = (-10).dp)
+                        .offset(y = (-19).dp)
                         .padding(horizontal = 18.dp)
                         .clip(RoundedCornerShape(32.dp))
                         .background(pageBackground)
@@ -459,7 +459,7 @@ fun SignupScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-29).dp),
+                    .offset(y = (-38).dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(0.dp))
