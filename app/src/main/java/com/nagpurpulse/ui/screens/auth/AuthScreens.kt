@@ -81,10 +81,20 @@ class AuthViewModel @Inject constructor(
     }
 
     fun verifySignupEmailOtp(email: String, token: String, onSuccess: () -> Unit) {
+        val normalizedEmail = email.trim()
+        val normalizedToken = token.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            _uiState.value = AuthUiState(error = "Enter a valid email address.")
+            return
+        }
+        if (!normalizedToken.matches(Regex("\\d{6}"))) {
+            _uiState.value = AuthUiState(error = "Enter the 6-digit verification code.")
+            return
+        }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.verifySignupEmailOtp(email.trim(), token.trim()).fold(
+            authRepository.verifySignupEmailOtp(normalizedEmail, normalizedToken).fold(
                 onSuccess = {
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
@@ -97,10 +107,17 @@ class AuthViewModel @Inject constructor(
     }
 
     fun resendSignupEmailOtp(email: String, onComplete: (String?) -> Unit = {}) {
+        val normalizedEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            val error = "Enter a valid email address."
+            _uiState.value = AuthUiState(error = error)
+            onComplete(error)
+            return
+        }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.resendSignupEmailOtp(email.trim()).fold(
+            authRepository.resendSignupEmailOtp(normalizedEmail).fold(
                 onSuccess = {
                     _uiState.value = AuthUiState()
                     onComplete(null)
@@ -114,10 +131,19 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signIn(email: String, password: String, onSuccess: () -> Unit) {
+        val normalizedEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            _uiState.value = AuthUiState(error = "Enter a valid email address.")
+            return
+        }
+        if (password.isBlank()) {
+            _uiState.value = AuthUiState(error = "Enter your password.")
+            return
+        }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.signIn(email, password).fold(
+            authRepository.signIn(normalizedEmail, password).fold(
                 onSuccess = {
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
