@@ -556,7 +556,9 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
+            // Match the Create Account screen exactly: the footer CTA starts
+            // after the same guest-card spacing and uses the same -38.dp visual lift.
+            Spacer(Modifier.height(if (compact) 27.dp else 31.dp))
 
             Column(
                 modifier = Modifier
