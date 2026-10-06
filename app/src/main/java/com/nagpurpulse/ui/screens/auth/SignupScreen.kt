@@ -153,7 +153,7 @@ fun SignupScreen(
                 contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1774f / 750f)
+                    .aspectRatio(1774f / 600f)
                     .offset(y = 19.dp)
                     .align(Alignment.TopCenter)
             )
@@ -168,7 +168,7 @@ fun SignupScreen(
                 contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(2048f / 682f)
+                    .aspectRatio(2048f / 540f)
                     .align(Alignment.BottomCenter)
             )
         }
