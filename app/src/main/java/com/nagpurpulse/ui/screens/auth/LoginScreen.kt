@@ -599,11 +599,11 @@ fun LoginScreen(
             Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
 
             Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
-        // Fixed footer: identical position on Create Account and Login.
+        // Fixed footer: keep the benefit cards at the bottom of the shared auth layout.
+        Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = if (compact) 4.dp else 8.dp)
         ) {
