@@ -45,15 +45,13 @@ class AuthRepository @Inject constructor(
         }
         return try {
             client.auth.signUpWith(Email) { this.email = email; this.password = password }
-            client.auth.currentUserOrNull()?.id
-                ?: return Result.failure(
-                    IllegalStateException(
-                        "Your account may have been created, but email confirmation is required before you can continue. Check your inbox, then sign in."
-                    )
-                )
-            // The database trigger on auth.users already creates the profiles row.
-            // Do not insert it again here: profiles.id is the primary key.
-            registerFcmTokenForCurrentUser()
+
+            // Supabase may return no active session when email confirmation is required.
+            // Account creation is still successful in that case; the verification
+            // dialog handles the next step.
+            if (client.auth.currentUserOrNull() != null) {
+                registerFcmTokenForCurrentUser()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -68,7 +66,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun signIn(email: String, password: String): Result<Unit> {
         return try {
-            client.auth.signInWith(Email) { this.email = email; this.password = password }
+            client.auth.signInWith(Email) { this.email = email.trim(); this.password = password }
             val userId = currentUserId
                 ?: return Result.failure(IllegalStateException("Sign-in completed without a user session"))
             // Signing in again is the explicit reactivation action for a temporarily deactivated account.
@@ -247,11 +245,19 @@ class AuthRepository @Inject constructor(
 
 
     suspend fun verifySignupEmailOtp(email: String, token: String): Result<Unit> {
+        val normalizedEmail = email.trim()
+        val normalizedToken = token.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            return Result.failure(IllegalArgumentException("Enter a valid email address."))
+        }
+        if (!normalizedToken.matches(Regex("\\d{6}"))) {
+            return Result.failure(IllegalArgumentException("Enter the 6-digit verification code."))
+        }
         return try {
             client.auth.verifyEmailOtp(
                 type = OtpType.Email.SIGNUP,
-                email = email,
-                token = token
+                email = normalizedEmail,
+                token = normalizedToken
             )
             registerFcmTokenForCurrentUser()
             Result.success(Unit)
@@ -261,8 +267,12 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun resendSignupEmailOtp(email: String): Result<Unit> {
+        val normalizedEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            return Result.failure(IllegalArgumentException("Enter a valid email address."))
+        }
         return try {
-            client.auth.resendEmail(OtpType.Email.SIGNUP, email)
+            client.auth.resendEmail(OtpType.Email.SIGNUP, normalizedEmail)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -271,9 +281,13 @@ class AuthRepository @Inject constructor(
 
     // Password reset — triggers Supabase email
     suspend fun sendPasswordReset(email: String): Result<Unit> {
+        val normalizedEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            return Result.failure(IllegalArgumentException("Enter a valid email address."))
+        }
         return try {
             client.auth.resetPasswordForEmail(
-                email = email,
+                email = normalizedEmail,
                 redirectUrl = "nagpurpulse://auth"
             )
             Result.success(Unit)
