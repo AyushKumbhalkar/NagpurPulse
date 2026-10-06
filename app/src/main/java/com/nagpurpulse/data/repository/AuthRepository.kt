@@ -40,6 +40,9 @@ class AuthRepository @Inject constructor(
         email: String,
         password: String
     ): Result<Unit> {
+        if (password.length < 8) {
+            return Result.failure(IllegalArgumentException("Password must be at least 8 characters"))
+        }
         return try {
             client.auth.signUpWith(Email) { this.email = email; this.password = password }
             client.auth.currentUserOrNull()?.id
@@ -529,6 +532,9 @@ class AuthRepository @Inject constructor(
 
     // ── Change password ───────────────────────────────────────────────────────
     suspend fun changePassword(newPassword: String): Result<Unit> {
+        if (newPassword.length < 8) {
+            return Result.failure(IllegalArgumentException("Password must be at least 8 characters"))
+        }
         return try {
             client.auth.updateUser { password = newPassword }
             Result.success(Unit)
