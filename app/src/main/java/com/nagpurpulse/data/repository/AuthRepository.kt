@@ -7,6 +7,7 @@ package com.nagpurpulse.data.repository
 import com.google.firebase.messaging.FirebaseMessaging
 import coil.imageLoader
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import io.github.jan.supabase.storage.storage
@@ -45,6 +46,20 @@ class AuthRepository @Inject constructor(
     fun isLoggedIn(): Boolean {
         val user = client.auth.currentUserOrNull() ?: return false
         return user.emailConfirmedAt != null
+    }
+
+    /** Server-backed admin check used only for UI routing. Database RLS/RPCs remain authoritative. */
+    suspend fun isCurrentUserAdmin(): Boolean {
+        if (!isLoggedIn()) return false
+        val uid = currentUserId ?: return false
+        return try {
+            client.postgrest["admin_roles"]
+                .select { filter { eq("user_id", uid) } }
+                .decodeList<JsonObject>()
+                .isNotEmpty()
+        } catch (_: Exception) {
+            false
+        }
     }
 
     suspend fun signUp(
