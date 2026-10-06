@@ -503,10 +503,20 @@ fun SignupScreen(
                 )
             }
 
-            // Explicit visual separation between the login CTA and the benefit row.
-            Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
+
+            }
+        // Fixed footer: identical position on Create Account and Login.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = if (compact) 4.dp else 8.dp)
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -529,8 +539,7 @@ fun SignupScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-                Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
-            }
+        }
         }
     }
 
