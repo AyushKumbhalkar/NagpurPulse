@@ -171,8 +171,8 @@ fun SignupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(2048f / 682f)
-                    .alpha(0.75f)
-                    .offset(y = 57.dp)
+                    .alpha(0.50f)
+                    .offset(y = 19.dp)
                     .align(Alignment.BottomCenter)
             )
         }
