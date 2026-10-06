@@ -451,7 +451,7 @@ fun SignupScreen(
 
             // Keep the footer close to the form card; don't leave a large
             // artificial gap between the guest card and the login CTA.
-            Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
+            Spacer(Modifier.height(if (compact) 27.dp else 31.dp))
 
             Column(
                 modifier = Modifier
