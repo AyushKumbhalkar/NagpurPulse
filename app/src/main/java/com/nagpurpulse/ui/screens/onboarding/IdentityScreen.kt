@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.*
@@ -95,6 +96,11 @@ fun IdentityScreen(
 ) {
     var selectedGender by remember(initialGender) { mutableStateOf(initialGender) }
     var visible by remember { mutableStateOf(true) }
+    var screenVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        screenVisible = true
+    }
 
     val isDark = LocalIsDarkTheme.current
     val bgColor = if (isDark) BackgroundDark else BackgroundLight
@@ -104,13 +110,25 @@ fun IdentityScreen(
             .fillMaxSize()
             .background(bgColor)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
+        AnimatedVisibility(
+            visible = screenVisible,
+            enter = fadeIn(
+                animationSpec = tween(280)
+            ) + slideInHorizontally(
+                initialOffsetX = { it / 8 },
+                animationSpec = tween(
+                    durationMillis = 320,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            )
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+            ) {
             // ── Top bar ──────────────────────────────────────────────
             Row(
                 modifier = Modifier
@@ -141,15 +159,20 @@ fun IdentityScreen(
                     modifier = Modifier.padding(start = 8.dp)
                 )
                 Spacer(Modifier.weight(1f))
-                // Mini logo
+                // NagpurPulse brand mark
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .border(2.dp, OrangePrimary, CircleShape),
+                        .background(Color.White)
+                        .border(1.dp, OrangePrimary.copy(alpha = 0.22f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("~", color = OrangePrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Image(
+                        painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
+                        contentDescription = "NagpurPulse",
+                        modifier = Modifier.size(34.dp)
+                    )
                 }
             }
 
@@ -314,7 +337,8 @@ fun IdentityScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }
