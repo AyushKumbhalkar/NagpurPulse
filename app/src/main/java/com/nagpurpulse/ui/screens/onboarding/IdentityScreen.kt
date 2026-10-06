@@ -15,7 +15,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -97,11 +96,6 @@ fun IdentityScreen(
 ) {
     var selectedGender by remember(initialGender) { mutableStateOf(initialGender) }
     var visible by remember { mutableStateOf(true) }
-    var screenVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        screenVisible = true
-    }
 
     val isDark = LocalIsDarkTheme.current
     val bgColor = if (isDark) BackgroundDark else BackgroundLight
@@ -111,25 +105,13 @@ fun IdentityScreen(
             .fillMaxSize()
             .background(bgColor)
     ) {
-        AnimatedVisibility(
-            visible = screenVisible,
-            enter = fadeIn(
-                animationSpec = tween(280)
-            ) + slideInHorizontally(
-                initialOffsetX = { it / 8 },
-                animationSpec = tween(
-                    durationMillis = 320,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
-                )
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-            ) {
             // ── Top bar ──────────────────────────────────────────────
             Row(
                 modifier = Modifier
@@ -338,8 +320,7 @@ fun IdentityScreen(
                 }
             }
 
-                Spacer(Modifier.height(8.dp))
-            }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
