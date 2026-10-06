@@ -324,7 +324,14 @@ fun SignupScreen(
                         )
                     }
 
-                    if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+                    if (password.isNotEmpty() && password.length < 8) {
+                        Text(
+                            text = "Password must be at least 8 characters",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 10.dp, top = 7.dp)
+                        )
+                    } else if (confirmPassword.isNotEmpty() && password != confirmPassword) {
                         Text(
                             text = "Passwords do not match",
                             color = MaterialTheme.colorScheme.error,
@@ -352,7 +359,7 @@ fun SignupScreen(
                             .then(
                                 Modifier.pressScale(
                                     onClick = {
-                                        if (emailLooksValid && password.isNotBlank() &&
+                                        if (emailLooksValid && password.length >= 8 &&
                                             confirmPassword.isNotBlank() && password == confirmPassword &&
                                             !uiState.isLoading
                                         ) {
