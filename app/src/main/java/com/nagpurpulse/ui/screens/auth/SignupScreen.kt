@@ -942,20 +942,20 @@ private fun SignupEmailAlreadyUsedDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // IMPORTANT: use the EXACT same popup frame as the existing
-            // email-verification / OTP dialog. The email-alert dialog must not
-            // appear as a smaller card.
-            //
-            // Verification popup reference frame: 810 × 1105.
-            // Keep this same frame and scale its contents inside it.
+            // Keep the same modal frame family as the Verify Email dialog.
+            // The foreground is a real Column layout: no child is vertically
+            // positioned with offsets, so text can never be covered by a button.
             val popupWidth = maxWidth * 0.86f
             val popupHeight = maxHeight * 0.74f
-            val refX: (Float) -> androidx.compose.ui.unit.Dp = { value ->
-                popupWidth * (value / 810f)
-            }
-            val refY: (Float) -> androidx.compose.ui.unit.Dp = { value ->
-                popupHeight * (value / 1105f)
-            }
+            val horizontalPadding = popupWidth * 0.062f
+            val illustrationSize = minOf(
+                popupWidth * 0.46f,
+                popupHeight * 0.28f
+            )
+            val compactWidth = popupWidth < 330.dp
+            val titleSize = if (compactWidth) 28.sp else 31.sp
+            val bodySize = if (compactWidth) 15.sp else 16.sp
+            val bodyLineHeight = if (compactWidth) 21.sp else 22.sp
 
             Box(
                 modifier = Modifier
@@ -964,11 +964,12 @@ private fun SignupEmailAlreadyUsedDialog(
                     .clip(RoundedCornerShape(30.dp))
                     .background(Color(0xFFFFFCF7))
             ) {
-                // Reference-matched peach top-right decoration.
+                // BACKGROUND LAYER: these decorations never participate in the
+                // foreground Column's measurement or push its content.
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(refY(205f))
+                        .height(popupHeight * 0.19f)
                         .align(Alignment.TopCenter)
                 ) {
                     val fill = Path().apply {
@@ -998,12 +999,11 @@ private fun SignupEmailAlreadyUsedDialog(
                         line,
                         brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFF4B07D)),
                         style = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = refX(2.2f).toPx()
+                            width = (popupWidth * 0.0027f).toPx()
                         )
                     )
                 }
 
-                // Same footer language as the existing verification popup.
                 Image(
                     painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
                     contentDescription = null,
@@ -1014,11 +1014,183 @@ private fun SignupEmailAlreadyUsedDialog(
                         .align(Alignment.BottomCenter)
                 )
 
-                // Close button.
+                // FOREGROUND LAYER.
+                // Scroll is only an overflow safety net for large font/display
+                // scaling. On normal screens the complete content fits without
+                // scrolling.
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(
+                            start = horizontalPadding,
+                            end = horizontalPadding,
+                            top = 44.dp,
+                            bottom = 18.dp
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.email_alert),
+                        contentDescription = "Email already used",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier.size(illustrationSize)
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(
+                                SpanStyle(
+                                    color = Color(0xFF142033),
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            ) {
+                                append("Email ")
+                            }
+                            withStyle(
+                                SpanStyle(
+                                    color = Color(0xFFF4511E),
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            ) {
+                                append("already used")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = titleSize,
+                        lineHeight = if (compactWidth) 33.sp else 36.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Text(
+                        text = "This email address is already registered with NagpurPulse. Please log in to continue.",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFF64748B),
+                        fontSize = bodySize,
+                        lineHeight = bodyLineHeight,
+                        textAlign = TextAlign.Center
+                    )
+
+                    // The description is a normal Column child. This fixed
+                    // spacing guarantees it is completely measured before the
+                    // primary action can begin.
+                    Spacer(Modifier.height(26.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(60.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
+                                )
+                            )
+                            .pressScale(onClick = onGoToLogin),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            androidx.compose.foundation.Canvas(
+                                modifier = Modifier.size(30.dp)
+                            ) {
+                                val w = size.width
+                                val h = size.height
+                                val stroke = (w * 0.11f).coerceAtLeast(1.5f)
+
+                                drawRoundRect(
+                                    color = Color.White,
+                                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.52f, h * 0.10f),
+                                    size = androidx.compose.ui.geometry.Size(w * 0.38f, h * 0.80f),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.05f),
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                        width = stroke
+                                    )
+                                )
+                                drawLine(
+                                    color = Color.White,
+                                    start = androidx.compose.ui.geometry.Offset(w * 0.08f, h * 0.50f),
+                                    end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
+                                    strokeWidth = stroke,
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = Color.White,
+                                    start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.33f),
+                                    end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
+                                    strokeWidth = stroke,
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = Color.White,
+                                    start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.67f),
+                                    end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
+                                    strokeWidth = stroke,
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                            }
+
+                            Spacer(Modifier.width(10.dp))
+
+                            Text(
+                                "Go to Login",
+                                color = Color.White,
+                                fontSize = if (compactWidth) 19.sp else 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(Modifier.width(10.dp))
+
+                            Icon(
+                                Icons.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(60.dp))
+                            .background(Color(0xFFFFFBF7))
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFFFCBAA),
+                                shape = RoundedCornerShape(60.dp)
+                            )
+                            .pressScale(onClick = onTryDifferentEmail),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Try a different email",
+                            color = Color(0xFF142033),
+                            fontSize = if (compactWidth) 18.sp else 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // 44–48dp accessible touch target; the X itself stays visually
+                // compact and is kept above the artwork/content.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(618f), y = refY(22f))
-                        .size(refX(70f))
+                        .align(Alignment.TopEnd)
+                        .padding(top = 10.dp, end = 10.dp)
+                        .size(48.dp)
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFFFF7EF))
                         .pressScale(onClick = onDismiss),
@@ -1028,163 +1200,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         Icons.Filled.Close,
                         contentDescription = "Close",
                         tint = Color(0xFF4B5563),
-                        modifier = Modifier.size(refX(32f))
-                    )
-                }
-
-                // The supplied email_alert asset is used exactly as requested.
-                Image(
-                    painter = painterResource(R.drawable.email_alert),
-                    contentDescription = "Email already used",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier
-                        .offset(x = refX(218f), y = refY(90f))
-                        .size(refX(375f))
-                )
-
-                // Heading: "Email" dark + "already used" in NagpurPulse orange.
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(
-                            SpanStyle(
-                                color = Color(0xFF142033),
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        ) {
-                            append("Email ")
-                        }
-                        withStyle(
-                            SpanStyle(
-                                color = Color(0xFFF4511E),
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        ) {
-                            append("already used")
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = refY(453f)),
-                    fontSize = 31.sp,
-                    lineHeight = 36.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                // Reference copy, intentionally kept concise and reassuring.
-                Text(
-                    text = "This email address is already registered\nwith NagpurPulse. Please log in to\ncontinue.",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = refX(28f))
-                        .offset(y = refY(555f)),
-                    color = Color(0xFF64748B),
-                    // Match the verification popup's body typography while keeping the
-                    // three-line message comfortably separated from the primary button.
-                    fontSize = 16.sp,
-                    lineHeight = 22.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                // Primary action.
-                Box(
-                    modifier = Modifier
-                        .offset(x = refX(74f), y = refY(732f))
-                        .width(refX(675f))
-                        .height(refY(112f))
-                        .clip(RoundedCornerShape(60.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
-                            )
-                        )
-                        .pressScale(onClick = onGoToLogin),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        // Reference-style "login" glyph: a door outline with an
-                        // entering arrow, drawn locally so no extra icon dependency is needed.
-                        androidx.compose.foundation.Canvas(
-                            modifier = Modifier.size(refX(52f))
-                        ) {
-                            val w = size.width
-                            val h = size.height
-
-                            // Door.
-                            drawRoundRect(
-                                color = Color.White,
-                                topLeft = androidx.compose.ui.geometry.Offset(w * 0.52f, h * 0.10f),
-                                size = androidx.compose.ui.geometry.Size(w * 0.38f, h * 0.80f),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.05f),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = refX(4f).toPx()
-                                )
-                            )
-
-                            // Entering arrow.
-                            drawLine(
-                                color = Color.White,
-                                start = androidx.compose.ui.geometry.Offset(w * 0.08f, h * 0.50f),
-                                end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
-                                strokeWidth = refX(4f).toPx(),
-                                cap = androidx.compose.ui.graphics.StrokeCap.Round
-                            )
-                            drawLine(
-                                color = Color.White,
-                                start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.33f),
-                                end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
-                                strokeWidth = refX(4f).toPx(),
-                                cap = androidx.compose.ui.graphics.StrokeCap.Round
-                            )
-                            drawLine(
-                                color = Color.White,
-                                start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.67f),
-                                end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
-                                strokeWidth = refX(4f).toPx(),
-                                cap = androidx.compose.ui.graphics.StrokeCap.Round
-                            )
-                        }
-                        Spacer(Modifier.width(refX(22f)))
-                        Text(
-                            "Go to Login",
-                            color = Color.White,
-                            fontSize = 21.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.width(refX(20f)))
-                        Icon(
-                            Icons.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(refX(31f))
-                        )
-                    }
-                }
-
-                // Secondary action.
-                Box(
-                    modifier = Modifier
-                        .offset(x = refX(76f), y = refY(879f))
-                        .width(refX(673f))
-                        .height(refY(98f))
-                        .clip(RoundedCornerShape(60.dp))
-                        .background(Color(0xFFFFFBF7))
-                        .border(
-                            width = refX(1.5f),
-                            color = Color(0xFFFFCBAA),
-                            shape = RoundedCornerShape(60.dp)
-                        )
-                        .pressScale(onClick = onTryDifferentEmail),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Try a different email",
-                        color = Color(0xFF142033),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
