@@ -596,7 +596,10 @@ fun LoginScreen(
             // Explicit visual separation between the login CTA and the benefit row.
             Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .offset(y = (-38).dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
