@@ -1073,11 +1073,15 @@ private fun SignupEmailAlreadyUsedDialog(
                     text = "This email address is already registered\nwith NagpurPulse. Please log in to\ncontinue.",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = refX(55f))
-                        .offset(y = refY(572f)),
+                        .padding(horizontal = refX(32f))
+                        .offset(y = refY(568f)),
                     color = Color(0xFF64748B),
-                    fontSize = 17.sp,
-                    lineHeight = 25.sp,
+                    // The reference uses a compact body type. Keeping this at
+                    // 15sp prevents the first line from wrapping early on
+                    // high-density phones, which was hiding the third line
+                    // behind the primary button.
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
                     textAlign = TextAlign.Center
                 )
 
