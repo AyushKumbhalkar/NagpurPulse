@@ -58,10 +58,14 @@ class AuthViewModel @Inject constructor(
         password: String,
         onSuccess: () -> Unit
     ) {
+        if (password.length < 8) {
+            _uiState.value = AuthUiState(error = "Password must be at least 8 characters.")
+            return
+        }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.signUp(email, password).fold(
+            authRepository.signUp(email.trim(), password).fold(
                 onSuccess = {
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
