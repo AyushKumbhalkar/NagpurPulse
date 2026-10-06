@@ -593,24 +593,10 @@ fun LoginScreen(
                 }
             }
 
+            // Explicit visual separation between the login CTA and the benefit row.
             Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
-
-
-            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
-
-            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
-        // Fixed footer: keep the benefit cards at the bottom of the shared auth layout.
-        Spacer(Modifier.weight(1f))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = if (compact) 4.dp else 8.dp)
-        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -633,7 +619,7 @@ fun LoginScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-        }
+                Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
     }
 
