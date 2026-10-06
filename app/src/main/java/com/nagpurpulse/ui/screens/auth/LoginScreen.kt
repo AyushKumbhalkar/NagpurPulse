@@ -72,6 +72,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -87,6 +88,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.offset
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.GreenSubtle
@@ -218,14 +220,31 @@ fun LoginScreen(
 
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
+        // Match SignupScreen auth artwork exactly.
         if (!isDarkTheme) {
             Image(
-                painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
+                painter = painterResource(R.drawable.auth_screen_header),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1774f / 850f)
+                    .alpha(0.70f)
+                    .offset(y = 0.dp)
+                    .align(Alignment.TopCenter)
+            )
+        }
+
+        if (!isDarkTheme) {
+            Image(
+                painter = painterResource(R.drawable.auth_screen_foooter),
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(2048f / 682f)
+                    .alpha(0.70f)
+                    .offset(y = 19.dp)
                     .align(Alignment.BottomCenter)
             )
         }
@@ -239,7 +258,9 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-38).dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
@@ -249,11 +270,12 @@ fun LoginScreen(
                     modifier = Modifier.height(logoHeight)
                 )
 
-                Spacer(Modifier.height(if (compact) 15.dp else 34.dp))
+                Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .offset(y = (-19).dp)
                         .padding(horizontal = 36.dp)
                 ) {
                     LoginAnimatedHeadline(
@@ -270,6 +292,7 @@ fun LoginScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .offset(y = (-19).dp)
                         .height(if (compact) 42.dp else 46.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -308,6 +331,7 @@ fun LoginScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .offset(y = (-19).dp)
                         .padding(horizontal = 18.dp)
                         .clip(RoundedCornerShape(32.dp))
                         .background(pageBackground)
