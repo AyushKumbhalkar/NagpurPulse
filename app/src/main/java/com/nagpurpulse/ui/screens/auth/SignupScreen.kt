@@ -942,17 +942,19 @@ private fun SignupEmailAlreadyUsedDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Keep the same reference coordinate system as the existing
-            // email-verification popup so both auth dialogs feel like one design.
-            // Reference image is 930 × 1130. Keep this aspect ratio on every device
-            // so the popup does not become too wide/tall on different phone screens.
-            val popupWidth = minOf(maxWidth * 0.82f, maxHeight * 0.62f)
-            val popupHeight = popupWidth * (1130f / 930f)
+            // IMPORTANT: use the EXACT same popup frame as the existing
+            // email-verification / OTP dialog. The email-alert dialog must not
+            // appear as a smaller card.
+            //
+            // Verification popup reference frame: 810 × 1105.
+            // Keep this same frame and scale its contents inside it.
+            val popupWidth = maxWidth * 0.86f
+            val popupHeight = maxHeight * 0.74f
             val refX: (Float) -> androidx.compose.ui.unit.Dp = { value ->
-                popupWidth * (value / 930f)
+                popupWidth * (value / 810f)
             }
             val refY: (Float) -> androidx.compose.ui.unit.Dp = { value ->
-                popupHeight * (value / 1130f)
+                popupHeight * (value / 1105f)
             }
 
             Box(
