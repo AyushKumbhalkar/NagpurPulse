@@ -163,7 +163,7 @@ fun SignupScreen(
         // so it sits behind the content and naturally reveals the page background.
         if (!isDarkTheme) {
             Image(
-                painter = painterResource(R.drawable.auth_screen_footer),
+                painter = painterResource(R.drawable.auth_screen_foooter),
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
                 modifier = Modifier
