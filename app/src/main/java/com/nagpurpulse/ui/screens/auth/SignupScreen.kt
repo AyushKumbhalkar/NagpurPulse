@@ -450,7 +450,9 @@ fun SignupScreen(
             Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
 
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-19).dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(0.dp))
