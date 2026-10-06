@@ -27,8 +27,6 @@ data class AuthUiState(
 )
 
 
-@HiltViewModel
-
 private fun safeAuthError(e: Throwable, fallback: String): String {
     val message = e.message?.lowercase().orEmpty()
     return when {
@@ -43,6 +41,7 @@ private fun safeAuthError(e: Throwable, fallback: String): String {
     }
 }
 
+@HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
