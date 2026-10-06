@@ -62,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -154,6 +155,7 @@ fun SignupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1774f / 850f)
+                    .alpha(0.75f)
                     .offset(y = 19.dp)
                     .align(Alignment.TopCenter)
             )
@@ -169,7 +171,8 @@ fun SignupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(2048f / 682f)
-                    .offset(y = 38.dp)
+                    .alpha(0.75f)
+                    .offset(y = 57.dp)
                     .align(Alignment.BottomCenter)
             )
         }
