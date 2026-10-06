@@ -595,6 +595,18 @@ fun LoginScreen(
 
             Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
 
+
+            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+
+            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+        // Fixed footer: identical position on Create Account and Login.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = if (compact) 4.dp else 8.dp)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -621,10 +633,7 @@ fun LoginScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
-
-            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+        }
         }
     }
 
