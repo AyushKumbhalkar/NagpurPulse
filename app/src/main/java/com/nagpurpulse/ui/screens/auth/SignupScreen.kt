@@ -109,6 +109,7 @@ fun SignupScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var showEmailVerificationDialog by remember { mutableStateOf(false) }
+    var showEmailAlreadyUsedDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
     var verificationSeconds by remember { mutableStateOf(45) }
     val context = LocalContext.current
@@ -363,11 +364,18 @@ fun SignupScreen(
                                             confirmPassword.isNotBlank() && password == confirmPassword &&
                                             !uiState.isLoading
                                         ) {
-                                            viewModel.signUp(email.trim(), password) {
-                                                verificationCode = ""
-                                                verificationSeconds = 45
-                                                showEmailVerificationDialog = true
-                                            }
+                                            viewModel.signUp(
+                                                email = email.trim(),
+                                                password = password,
+                                                onSuccess = {
+                                                    verificationCode = ""
+                                                    verificationSeconds = 45
+                                                    showEmailVerificationDialog = true
+                                                },
+                                                onEmailAlreadyUsed = {
+                                                    showEmailAlreadyUsedDialog = true
+                                                }
+                                            )
                                         }
                                     }
                                 )
@@ -572,6 +580,22 @@ fun SignupScreen(
             },
             onDismiss = {
                 if (!uiState.isLoading) showEmailVerificationDialog = false
+            }
+        )
+    }
+
+    if (showEmailAlreadyUsedDialog) {
+        SignupEmailAlreadyUsedDialog(
+            onGoToLogin = {
+                showEmailAlreadyUsedDialog = false
+                onNavigateToLogin()
+            },
+            onTryDifferentEmail = {
+                showEmailAlreadyUsedDialog = false
+                email = ""
+            },
+            onDismiss = {
+                if (!uiState.isLoading) showEmailAlreadyUsedDialog = false
             }
         )
     }
@@ -895,6 +919,234 @@ private fun SignupEmailVerificationDialog(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignupEmailAlreadyUsedDialog(
+    onGoToLogin: () -> Unit,
+    onTryDifferentEmail: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Keep the same reference coordinate system as the existing
+            // email-verification popup so both auth dialogs feel like one design.
+            val popupWidth = maxWidth * 0.86f
+            val popupHeight = maxHeight * 0.80f
+            val refX: (Float) -> androidx.compose.ui.unit.Dp = { value ->
+                popupWidth * (value / 810f)
+            }
+            val refY: (Float) -> androidx.compose.ui.unit.Dp = { value ->
+                popupHeight * (value / 1105f)
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(popupWidth)
+                    .height(popupHeight)
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(Color(0xFFFFFCF7))
+            ) {
+                // Reference-matched peach top-right decoration.
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(refY(205f))
+                        .align(Alignment.TopCenter)
+                ) {
+                    val fill = Path().apply {
+                        moveTo(size.width * 0.48f, 0f)
+                        cubicTo(
+                            size.width * 0.66f, size.height * 0.08f,
+                            size.width * 0.80f, size.height * 0.04f,
+                            size.width, size.height * 0.30f
+                        )
+                        lineTo(size.width, 0f)
+                        close()
+                    }
+                    drawPath(
+                        fill,
+                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFFE5CF))
+                    )
+
+                    val line = Path().apply {
+                        moveTo(size.width * 0.60f, 0f)
+                        cubicTo(
+                            size.width * 0.74f, size.height * 0.13f,
+                            size.width * 0.87f, size.height * 0.08f,
+                            size.width, size.height * 0.36f
+                        )
+                    }
+                    drawPath(
+                        line,
+                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFF4B07D)),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = refX(2.2f).toPx()
+                        )
+                    )
+                }
+
+                // Same footer language as the existing verification popup.
+                Image(
+                    painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(2048f / 682f)
+                        .align(Alignment.BottomCenter)
+                )
+
+                // Close button.
+                Box(
+                    modifier = Modifier
+                        .offset(x = refX(710f), y = refY(22f))
+                        .size(refX(80f))
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFFFFF7EF))
+                        .pressScale(onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Close",
+                        tint = Color(0xFF4B5563),
+                        modifier = Modifier.size(refX(38f))
+                    )
+                }
+
+                // The supplied email_alert asset is used exactly as requested.
+                Image(
+                    painter = painterResource(R.drawable.email_alert),
+                    contentDescription = "Email already used",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier
+                        .offset(x = refX(240f), y = refY(72f))
+                        .size(refX(330f))
+                )
+
+                // Heading: "Email" dark + "already used" in NagpurPulse orange.
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(
+                            SpanStyle(
+                                color = Color(0xFF142033),
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        ) {
+                            append("Email ")
+                        }
+                        withStyle(
+                            SpanStyle(
+                                color = Color(0xFFF4511E),
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        ) {
+                            append("already used")
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = refY(414f)),
+                    fontSize = 31.sp,
+                    lineHeight = 36.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                // Reference copy, intentionally kept concise and reassuring.
+                Text(
+                    text = "This email address is already registered\nwith NagpurPulse. Please log in to\ncontinue.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = refX(55f))
+                        .offset(y = refY(515f)),
+                    color = Color(0xFF64748B),
+                    fontSize = 17.sp,
+                    lineHeight = 25.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                // Primary action.
+                Box(
+                    modifier = Modifier
+                        .offset(x = refX(50f), y = refY(710f))
+                        .width(refX(710f))
+                        .height(refY(115f))
+                        .clip(RoundedCornerShape(60.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
+                            )
+                        )
+                        .pressScale(onClick = onGoToLogin),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        // Use a simple, dependency-safe login glyph that matches
+                        // the reference without requiring an additional icon pack.
+                        Text(
+                            text = "↪",
+                            color = Color.White,
+                            fontSize = 35.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(refX(22f)))
+                        Text(
+                            "Go to Login",
+                            color = Color.White,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(refX(18f)))
+                        Icon(
+                            Icons.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(refX(31f))
+                        )
+                    }
+                }
+
+                // Secondary action.
+                Box(
+                    modifier = Modifier
+                        .offset(x = refX(50f), y = refY(850f))
+                        .width(refX(710f))
+                        .height(refY(103f))
+                        .clip(RoundedCornerShape(60.dp))
+                        .background(Color(0xFFFFFBF7))
+                        .border(
+                            width = refX(1.5f),
+                            color = Color(0xFFFFCBAA),
+                            shape = RoundedCornerShape(60.dp)
+                        )
+                        .pressScale(onClick = onTryDifferentEmail),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Try a different email",
+                        color = Color(0xFF142033),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
