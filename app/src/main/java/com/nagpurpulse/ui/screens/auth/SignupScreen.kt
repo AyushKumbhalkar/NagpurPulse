@@ -567,7 +567,7 @@ private fun SignupEmailVerificationDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val popupWidth = maxWidth * 0.82f
+            val popupWidth = maxWidth * 0.86f
             val popupHeight = maxHeight * 0.74f
             val refX: (Float) -> androidx.compose.ui.unit.Dp = { value ->
                 popupWidth * (value / 810f)
@@ -674,7 +674,7 @@ private fun SignupEmailVerificationDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(340f)),
+                        .offset(y = refY(310f)),
                     fontSize = 31.sp,
                     lineHeight = 36.sp,
                     textAlign = TextAlign.Center
@@ -685,7 +685,7 @@ private fun SignupEmailVerificationDialog(
                     "We’ve sent a 6-digit verification code to",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(429f)),
+                        .offset(y = refY(399f)),
                     color = Color(0xFF64748B),
                     fontSize = 16.sp,
                     lineHeight = 22.sp,
@@ -697,7 +697,7 @@ private fun SignupEmailVerificationDialog(
                     email,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(477f)),
+                        .offset(y = refY(447f)),
                     color = Color(0xFF142033),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
@@ -710,7 +710,7 @@ private fun SignupEmailVerificationDialog(
                     "Enter the code below to continue.",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(526f)),
+                        .offset(y = refY(496f)),
                     color = Color(0xFF64748B),
                     fontSize = 16.sp,
                     lineHeight = 22.sp,
@@ -726,7 +726,7 @@ private fun SignupEmailVerificationDialog(
                     textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent),
                     cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
                     modifier = Modifier
-                        .offset(x = refX(50f), y = refY(595f))
+                        .offset(x = refX(50f), y = refY(565f))
                         .width(refX(710f))
                         .height(refY(118f)),
                     decorationBox = {
@@ -761,38 +761,38 @@ private fun SignupEmailVerificationDialog(
                     }
                 )
 
-                // Resend line.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = refY(765f)),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Didn’t receive the code? ",
-                        color = Color(0xFF64748B),
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        "Resend in ",
-                        color = Color(0xFF64748B),
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        "00:" + seconds.toString().padStart(2, '0'),
-                        color = Color(0xFFF4511E),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                if (seconds == 0) {
+                // Resend state: show exactly one layout.
+                if (seconds > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = refY(735f)),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Didn’t receive the code? ",
+                            color = Color(0xFF64748B),
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "Resend in ",
+                            color = Color(0xFF64748B),
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "00:" + seconds.toString().padStart(2, '0'),
+                            color = Color(0xFFF4511E),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
                     Text(
                         "Resend",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset(y = refY(765f))
+                            .offset(y = refY(735f))
                             .pressScale(onClick = onResend),
                         color = Color(0xFFF4511E),
                         fontSize = 16.sp,
@@ -806,7 +806,7 @@ private fun SignupEmailVerificationDialog(
                         error,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset(y = refY(805f)),
+                            .offset(y = refY(775f)),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center
@@ -816,7 +816,7 @@ private fun SignupEmailVerificationDialog(
                 // Verify button.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(50f), y = refY(828f))
+                        .offset(x = refX(50f), y = refY(798f))
                         .width(refX(710f))
                         .height(refY(113f))
                         .clip(RoundedCornerShape(60.dp))
@@ -853,7 +853,7 @@ private fun SignupEmailVerificationDialog(
                     "Change email address",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(975f))
+                        .offset(y = refY(945f))
                         .pressScale(onClick = onChangeEmail),
                     color = Color(0xFFF4511E),
                     fontSize = 16.sp,
