@@ -34,7 +34,18 @@ class AuthRepository @Inject constructor(
     val currentUser   get() = client.auth.currentUserOrNull()
     val currentUserId get() = client.auth.currentUserOrNull()?.id
 
-    fun isLoggedIn(): Boolean = client.auth.currentUserOrNull() != null
+    /**
+     * Returns true only for a live Supabase session whose email has been verified.
+     *
+     * Supabase can persist a session on the device. Checking only currentUser would
+     * therefore allow an unverified email account to look authenticated after an app
+     * restart. Email verification is part of the authentication boundary, not merely
+     * a signup-screen concern.
+     */
+    fun isLoggedIn(): Boolean {
+        val user = client.auth.currentUserOrNull() ?: return false
+        return user.emailConfirmedAt != null
+    }
 
     suspend fun signUp(
         email: String,
@@ -67,8 +78,19 @@ class AuthRepository @Inject constructor(
     suspend fun signIn(email: String, password: String): Result<Unit> {
         return try {
             client.auth.signInWith(Email) { this.email = email.trim(); this.password = password }
-            val userId = currentUserId
+            val signedInUser = client.auth.currentUserOrNull()
                 ?: return Result.failure(IllegalStateException("Sign-in completed without a user session"))
+
+            // Defense in depth: never keep an email/password session in the app if
+            // Supabase reports that the email is still unverified. Normally Supabase
+            // rejects this sign-in when Confirm Email is enabled, but this guard also
+            // protects the client if the Auth configuration is changed later.
+            if (signedInUser.emailConfirmedAt == null) {
+                try { client.auth.signOut() } catch (_: Exception) { }
+                return Result.failure(EmailConfirmationRequiredException())
+            }
+
+            val userId = signedInUser.id
             // Signing in again is the explicit reactivation action for a temporarily deactivated account.
             val profile = client.postgrest["profiles"]
                 .select { filter { eq("id", userId) } }
