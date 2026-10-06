@@ -215,15 +215,19 @@ class PostRepository @Inject constructor(
 
         return try {
 
+            val currentUserId = authRepository.currentUserId
+                ?: return Result.failure(IllegalStateException("You must be logged in to upload an image."))
+
             val fileName = "${UUID.randomUUID()}.jpg"
+            val storagePath = "$currentUserId/$fileName"
 
             client.storage["post-images"].upload(
-                path = fileName,
+                path = storagePath,
                 data = compressImage(imageBytes)
             )
 
             val publicUrl = client.storage["post-images"]
-                .publicUrl(fileName)
+                .publicUrl(storagePath)
 
             Result.success(publicUrl)
 
