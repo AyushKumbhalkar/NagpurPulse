@@ -28,6 +28,21 @@ data class AuthUiState(
 
 
 @HiltViewModel
+
+private fun safeAuthError(e: Throwable, fallback: String): String {
+    val message = e.message?.lowercase().orEmpty()
+    return when {
+        message.contains("invalid login") || message.contains("invalid credentials") ||
+            message.contains("email not confirmed") || message.contains("invalid password") ->
+            "Invalid email or password."
+        message.contains("rate limit") || message.contains("too many requests") ->
+            "Too many attempts. Please wait a moment and try again."
+        message.contains("network") || message.contains("timeout") ->
+            "Unable to connect right now. Check your internet connection and try again."
+        else -> fallback
+    }
+}
+
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
@@ -55,7 +70,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = if (e is EmailConfirmationRequiredException) {
                         AuthUiState(infoMessage = e.message)
                     } else {
-                        AuthUiState(error = e.message ?: "Signup failed")
+                        AuthUiState(error = safeAuthError(e, "Unable to create your account. Please try again."))
                     }
                 }
             )
@@ -72,7 +87,7 @@ class AuthViewModel @Inject constructor(
                     onSuccess()
                 },
                 onFailure = { e ->
-                    _uiState.value = AuthUiState(error = e.message ?: "Invalid verification code")
+                    _uiState.value = AuthUiState(error = safeAuthError(e, "Invalid verification code. Please check the code and try again."))
                 }
             )
         }
@@ -88,8 +103,8 @@ class AuthViewModel @Inject constructor(
                     onComplete(null)
                 },
                 onFailure = { e ->
-                    _uiState.value = AuthUiState(error = e.message ?: "Could not resend the verification code")
-                    onComplete(e.message ?: "Could not resend the verification code")
+                    _uiState.value = AuthUiState(error = safeAuthError(e, "Could not resend the verification code. Please try again later."))
+                    onComplete(safeAuthError(e, "Could not resend the verification code. Please try again later."))
                 }
             )
         }
@@ -104,7 +119,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
-                onFailure = { e -> _uiState.value = AuthUiState(error = e.message ?: "Login failed") }
+                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(e, "Unable to sign in. Please try again.")) }
             )
         }
     }
@@ -126,7 +141,7 @@ class AuthViewModel @Inject constructor(
                     onFailure = { e ->
                         _uiState.value =
                             AuthUiState(
-                                error = e.message ?: "Google login failed"
+                                error = safeAuthError(e, "Google sign-in failed. Please try again.")
                             )
                     }
                 )
@@ -145,7 +160,7 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.sendPasswordReset(normalizedEmail).fold(
                 onSuccess = { _uiState.value = AuthUiState(forgotPasswordSent = true) },
-                onFailure = { e -> _uiState.value = AuthUiState(error = e.message ?: "Failed to send reset email") }
+                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(e, "Unable to send the reset email. Please try again later.")) }
             )
         }
     }
@@ -187,8 +202,7 @@ class AuthViewModel @Inject constructor(
 
                         _uiState.value =
                             AuthUiState(
-                                error = e.message
-                                    ?: "Google login failed"
+                                error = safeAuthError(e, "Google sign-in failed. Please try again.")
                             )
                     }
                 )
