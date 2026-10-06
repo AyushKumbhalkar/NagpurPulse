@@ -1017,8 +1017,8 @@ private fun SignupEmailAlreadyUsedDialog(
                 // Close button.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(710f), y = refY(22f))
-                        .size(refX(80f))
+                        .offset(x = refX(618f), y = refY(22f))
+                        .size(refX(70f))
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFFFF7EF))
                         .pressScale(onClick = onDismiss),
@@ -1028,7 +1028,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         Icons.Filled.Close,
                         contentDescription = "Close",
                         tint = Color(0xFF4B5563),
-                        modifier = Modifier.size(refX(36f))
+                        modifier = Modifier.size(refX(32f))
                     )
                 }
 
@@ -1038,8 +1038,8 @@ private fun SignupEmailAlreadyUsedDialog(
                     contentDescription = "Email already used",
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     modifier = Modifier
-                        .offset(x = refX(250f), y = refY(92f))
-                        .size(refX(430f))
+                        .offset(x = refX(218f), y = refY(90f))
+                        .size(refX(375f))
                 )
 
                 // Heading: "Email" dark + "already used" in NagpurPulse orange.
@@ -1064,7 +1064,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(463f)),
+                        .offset(y = refY(453f)),
                     fontSize = 31.sp,
                     lineHeight = 36.sp,
                     textAlign = TextAlign.Center
@@ -1075,24 +1075,24 @@ private fun SignupEmailAlreadyUsedDialog(
                     text = "This email address is already registered\nwith NagpurPulse. Please log in to\ncontinue.",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = refX(32f))
-                        .offset(y = refY(568f)),
+                        .padding(horizontal = refX(28f))
+                        .offset(y = refY(555f)),
                     color = Color(0xFF64748B),
                     // The reference uses a compact body type. Keeping this at
                     // 15sp prevents the first line from wrapping early on
                     // high-density phones, which was hiding the third line
                     // behind the primary button.
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
                     textAlign = TextAlign.Center
                 )
 
                 // Primary action.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(85f), y = refY(749f))
-                        .width(refX(775f))
-                        .height(refY(129f))
+                        .offset(x = refX(74f), y = refY(732f))
+                        .width(refX(675f))
+                        .height(refY(112f))
                         .clip(RoundedCornerShape(60.dp))
                         .background(
                             Brush.horizontalGradient(
@@ -1168,9 +1168,9 @@ private fun SignupEmailAlreadyUsedDialog(
                 // Secondary action.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(87f), y = refY(899f))
-                        .width(refX(773f))
-                        .height(refY(112f))
+                        .offset(x = refX(76f), y = refY(879f))
+                        .width(refX(673f))
+                        .height(refY(98f))
                         .clip(RoundedCornerShape(60.dp))
                         .background(Color(0xFFFFFBF7))
                         .border(
