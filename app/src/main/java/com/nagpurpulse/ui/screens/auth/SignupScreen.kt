@@ -187,7 +187,12 @@ fun SignupScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-            // TEST: NagpurPulse logo temporarily hidden to validate the automation workflow.
+                Image(
+                    painter = painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
+                contentDescription = "NagpurPulse",
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.height(logoHeight)
+            )
             // Keep the animated headline directly on the same page background as LoginScreen.
             // Login and Signup therefore feel like the same screen when navigating between them.
             Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
