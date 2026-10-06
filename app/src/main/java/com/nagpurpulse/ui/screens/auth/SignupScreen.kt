@@ -944,13 +944,15 @@ private fun SignupEmailAlreadyUsedDialog(
         ) {
             // Keep the same reference coordinate system as the existing
             // email-verification popup so both auth dialogs feel like one design.
-            val popupWidth = maxWidth * 0.86f
-            val popupHeight = maxHeight * 0.80f
+            // Reference image is 930 × 1130. Keep this aspect ratio on every device
+            // so the popup does not become too wide/tall on different phone screens.
+            val popupWidth = minOf(maxWidth * 0.82f, maxHeight * 0.62f)
+            val popupHeight = popupWidth * (1130f / 930f)
             val refX: (Float) -> androidx.compose.ui.unit.Dp = { value ->
-                popupWidth * (value / 810f)
+                popupWidth * (value / 930f)
             }
             val refY: (Float) -> androidx.compose.ui.unit.Dp = { value ->
-                popupHeight * (value / 1105f)
+                popupHeight * (value / 1130f)
             }
 
             Box(
@@ -1034,8 +1036,8 @@ private fun SignupEmailAlreadyUsedDialog(
                     contentDescription = "Email already used",
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     modifier = Modifier
-                        .offset(x = refX(240f), y = refY(72f))
-                        .size(refX(330f))
+                        .offset(x = refX(250f), y = refY(92f))
+                        .size(refX(430f))
                 )
 
                 // Heading: "Email" dark + "already used" in NagpurPulse orange.
@@ -1060,7 +1062,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = refY(414f)),
+                        .offset(y = refY(463f)),
                     fontSize = 31.sp,
                     lineHeight = 36.sp,
                     textAlign = TextAlign.Center
@@ -1072,7 +1074,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = refX(55f))
-                        .offset(y = refY(515f)),
+                        .offset(y = refY(572f)),
                     color = Color(0xFF64748B),
                     fontSize = 17.sp,
                     lineHeight = 25.sp,
@@ -1082,9 +1084,9 @@ private fun SignupEmailAlreadyUsedDialog(
                 // Primary action.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(50f), y = refY(710f))
-                        .width(refX(710f))
-                        .height(refY(115f))
+                        .offset(x = refX(85f), y = refY(749f))
+                        .width(refX(775f))
+                        .height(refY(129f))
                         .clip(RoundedCornerShape(60.dp))
                         .background(
                             Brush.horizontalGradient(
@@ -1098,14 +1100,48 @@ private fun SignupEmailAlreadyUsedDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        // Use a simple, dependency-safe login glyph that matches
-                        // the reference without requiring an additional icon pack.
-                        Text(
-                            text = "↪",
-                            color = Color.White,
-                            fontSize = 35.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        // Reference-style "login" glyph: a door outline with an
+                        // entering arrow, drawn locally so no extra icon dependency is needed.
+                        androidx.compose.foundation.Canvas(
+                            modifier = Modifier.size(refX(52f))
+                        ) {
+                            val w = size.width
+                            val h = size.height
+
+                            // Door.
+                            drawRoundRect(
+                                color = Color.White,
+                                topLeft = androidx.compose.ui.geometry.Offset(w * 0.52f, h * 0.10f),
+                                size = androidx.compose.ui.geometry.Size(w * 0.38f, h * 0.80f),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.05f),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = refX(4f).toPx()
+                                )
+                            )
+
+                            // Entering arrow.
+                            drawLine(
+                                color = Color.White,
+                                start = androidx.compose.ui.geometry.Offset(w * 0.08f, h * 0.50f),
+                                end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
+                                strokeWidth = refX(4f).toPx(),
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                            )
+                            drawLine(
+                                color = Color.White,
+                                start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.33f),
+                                end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
+                                strokeWidth = refX(4f).toPx(),
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                            )
+                            drawLine(
+                                color = Color.White,
+                                start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.67f),
+                                end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
+                                strokeWidth = refX(4f).toPx(),
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                            )
+                        }
                         Spacer(Modifier.width(refX(22f)))
                         Text(
                             "Go to Login",
@@ -1113,7 +1149,7 @@ private fun SignupEmailAlreadyUsedDialog(
                             fontSize = 21.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.width(refX(18f)))
+                        Spacer(Modifier.width(refX(20f)))
                         Icon(
                             Icons.Filled.ArrowForward,
                             contentDescription = null,
@@ -1126,9 +1162,9 @@ private fun SignupEmailAlreadyUsedDialog(
                 // Secondary action.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(50f), y = refY(850f))
-                        .width(refX(710f))
-                        .height(refY(103f))
+                        .offset(x = refX(87f), y = refY(899f))
+                        .width(refX(773f))
+                        .height(refY(112f))
                         .clip(RoundedCornerShape(60.dp))
                         .background(Color(0xFFFFFBF7))
                         .border(
