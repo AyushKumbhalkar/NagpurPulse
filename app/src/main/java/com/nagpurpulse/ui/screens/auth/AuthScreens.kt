@@ -55,7 +55,8 @@ class AuthViewModel @Inject constructor(
     fun signUp(
         email: String,
         password: String,
-        onSuccess: () -> Unit
+        onSuccess: () -> Unit,
+        onEmailAlreadyUsed: () -> Unit = {}
     ) {
         if (password.length < 8) {
             _uiState.value = AuthUiState(error = "Password must be at least 8 characters.")
@@ -70,10 +71,23 @@ class AuthViewModel @Inject constructor(
                     onSuccess()
                 },
                 onFailure = { e ->
-                    _uiState.value = if (e is EmailConfirmationRequiredException) {
-                        AuthUiState(infoMessage = e.message)
+                    val message = e.message?.lowercase().orEmpty()
+                    val emailAlreadyUsed = message.contains("user already registered") ||
+                        message.contains("email already registered") ||
+                        message.contains("email address is already registered") ||
+                        message.contains("already exists")
+
+                    if (emailAlreadyUsed) {
+                        // Do not expose the raw Supabase error in the signup form.
+                        // Show the dedicated, user-friendly duplicate-email dialog instead.
+                        _uiState.value = AuthUiState()
+                        onEmailAlreadyUsed()
                     } else {
-                        AuthUiState(error = safeAuthError(e, "Unable to create your account. Please try again."))
+                        _uiState.value = if (e is EmailConfirmationRequiredException) {
+                            AuthUiState(infoMessage = e.message)
+                        } else {
+                            AuthUiState(error = safeAuthError(e, "Unable to create your account. Please try again."))
+                        }
                     }
                 }
             )
