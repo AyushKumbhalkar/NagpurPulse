@@ -689,8 +689,8 @@ private fun SignupEmailVerificationDialog(
                 // Close button: reference position and scale.
                 Box(
                     modifier = Modifier
-                        .offset(x = refX(710f), y = refY(22f))
-                        .size(refX(80f))
+                        .offset(x = refX(820f), y = refY(26f))
+                        .size(refX(84f))
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFFFF7EF))
                         .pressScale(onClick = onDismiss),
@@ -1026,7 +1026,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         Icons.Filled.Close,
                         contentDescription = "Close",
                         tint = Color(0xFF4B5563),
-                        modifier = Modifier.size(refX(38f))
+                        modifier = Modifier.size(refX(36f))
                     )
                 }
 
