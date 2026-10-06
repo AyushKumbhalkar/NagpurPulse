@@ -154,6 +154,7 @@ fun SignupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1774f / 750f)
+                    .offset(y = if (compact) 46.dp else 56.dp)
                     .align(Alignment.TopCenter)
             )
         }
@@ -194,7 +195,7 @@ fun SignupScreen(
             )
             // Keep the animated headline directly on the same page background as LoginScreen.
             // Login and Signup therefore feel like the same screen when navigating between them.
-            Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
+            Spacer(Modifier.height(if (compact) 92.dp else 112.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
