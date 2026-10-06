@@ -182,6 +182,35 @@ private val sheetExit: AnimatedContentTransitionScope<*>.() -> ExitTransition = 
     ) + fadeOut(animationSpec = tween(200))
 }
 
+// Simple, consistent animation for the four-step guest/onboarding flow.
+private val onboardingStepEnter: AnimatedContentTransitionScope<*>.() -> EnterTransition = {
+    slideInHorizontally(
+        initialOffsetX = { it / 8 },
+        animationSpec = tween(300, easing = FastOutSlowInEasing)
+    ) + fadeIn(animationSpec = tween(240))
+}
+
+private val onboardingStepExit: AnimatedContentTransitionScope<*>.() -> ExitTransition = {
+    slideOutHorizontally(
+        targetOffsetX = { -it / 12 },
+        animationSpec = tween(240, easing = FastOutSlowInEasing)
+    ) + fadeOut(animationSpec = tween(180))
+}
+
+private val onboardingStepPopEnter: AnimatedContentTransitionScope<*>.() -> EnterTransition = {
+    slideInHorizontally(
+        initialOffsetX = { -it / 12 },
+        animationSpec = tween(240, easing = FastOutSlowInEasing)
+    ) + fadeIn(animationSpec = tween(200))
+}
+
+private val onboardingStepPopExit: AnimatedContentTransitionScope<*>.() -> ExitTransition = {
+    slideOutHorizontally(
+        targetOffsetX = { it / 8 },
+        animationSpec = tween(280, easing = FastOutSlowInEasing)
+    ) + fadeOut(animationSpec = tween(200))
+}
+
 @Composable
 fun NagpurPulseNavGraph(
     navController: NavHostController,
@@ -358,6 +387,15 @@ fun NagpurPulseNavGraph(
                     onboardingOriginRoute = Screen.Login.route
                     navController.navigate(Screen.Identity.route)
                 },
+                onGuestContinue = {
+                    selectedGender = null
+                    selectedUsername = null
+                    selectedAvatar = null
+                    profileSaveError = null
+                    onboardingOriginRoute = Screen.Login.route
+                    authRepository.enterGuestMode()
+                    navController.navigate(Screen.Identity.route)
+                },
                 onNavigateToSignup = { navController.navigate(Screen.Signup.route) }
             )
         }
@@ -393,10 +431,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.Identity.route,
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }) {
+            enterTransition = { onboardingStepEnter(this) },
+            exitTransition = { onboardingStepExit(this) },
+            popEnterTransition = { onboardingStepPopEnter(this) },
+            popExitTransition = { onboardingStepPopExit(this) }) {
             IdentityScreen(
                 initialGender = selectedGender,
                 onBack = { navController.popBackStack() },
@@ -409,10 +447,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.Username.route,
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }) {
+            enterTransition = { onboardingStepEnter(this) },
+            exitTransition = { onboardingStepExit(this) },
+            popEnterTransition = { onboardingStepPopEnter(this) },
+            popExitTransition = { onboardingStepPopExit(this) }) {
             UsernameScreen(
                 initialUsername = selectedUsername,
                 checkUsernameAvailable = { candidate -> authRepository.isUsernameAvailable(candidate) },
@@ -426,10 +464,10 @@ fun NagpurPulseNavGraph(
 
         composable(
             Screen.ProfilePicture.route,
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }) {
+            enterTransition = { onboardingStepEnter(this) },
+            exitTransition = { onboardingStepExit(this) },
+            popEnterTransition = { onboardingStepPopEnter(this) },
+            popExitTransition = { onboardingStepPopExit(this) }) {
             ProfilePictureScreen(
                 onBack = { navController.popBackStack() },
                 isSaving = isSavingProfile,
