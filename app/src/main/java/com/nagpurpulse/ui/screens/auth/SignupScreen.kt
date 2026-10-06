@@ -148,7 +148,7 @@ fun SignupScreen(
         // and headline can sit naturally on top of the city/wave illustration.
         if (!isDarkTheme) {
             Image(
-                painter = painterResource(R.drawable.auth_header),
+                painter = painterResource(R.drawable.auth_screen_header),
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
                 modifier = Modifier
