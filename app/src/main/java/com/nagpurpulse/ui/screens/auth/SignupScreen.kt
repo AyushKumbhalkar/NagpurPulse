@@ -1078,10 +1078,8 @@ private fun SignupEmailAlreadyUsedDialog(
                         .padding(horizontal = refX(28f))
                         .offset(y = refY(555f)),
                     color = Color(0xFF64748B),
-                    // The reference uses a compact body type. Keeping this at
-                    // 15sp prevents the first line from wrapping early on
-                    // high-density phones, which was hiding the third line
-                    // behind the primary button.
+                    // Match the verification popup's body typography while keeping the
+                    // three-line message comfortably separated from the primary button.
                     fontSize = 16.sp,
                     lineHeight = 22.sp,
                     textAlign = TextAlign.Center
