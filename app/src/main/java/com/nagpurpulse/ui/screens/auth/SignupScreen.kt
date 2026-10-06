@@ -153,7 +153,7 @@ fun SignupScreen(
                 contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1774f / 502f)
+                    .aspectRatio(1774f / 750f)
                     .align(Alignment.TopCenter)
             )
         }
@@ -194,7 +194,7 @@ fun SignupScreen(
             )
             // Keep the animated headline directly on the same page background as LoginScreen.
             // Login and Signup therefore feel like the same screen when navigating between them.
-            Spacer(Modifier.height(if (compact) 62.dp else 86.dp))
+            Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
