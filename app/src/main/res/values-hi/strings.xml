@@ -99,4 +99,40 @@
     <string name="google_existing_body">यह Google खाता पहले से NagpurPulse पर पंजीकृत है। आपका खाता तैयार है।</string>
     <string name="google_existing_continue">NagpurPulse पर जाएँ</string>
     <string name="verify_email_delivery_note">अगर यह ईमेल पता सही है, तो सत्यापन कोड इसी पते पर भेजा गया है।</string>
+
+    <!-- Login screen -->
+    <string name="login_headline_prefix">आपके लोग </string>
+    <string-array name="login_headline_phrases">
+        <item>यहाँ हैं।</item>
+        <item>ऑनलाइन हैं।</item>
+        <item>बात कर रहे हैं।</item>
+        <item>जुड़ रहे हैं।</item>
+        <item>सक्रिय हैं।</item>
+        <item>आसपास हैं।</item>
+        <item>पूछ रहे हैं।</item>
+    </string-array>
+    <string name="login_welcome_back">वापसी पर स्वागत है</string>
+    <string name="login_email_hint">ईमेल पता</string>
+    <string name="login_password_hint">पासवर्ड</string>
+    <string name="login_err_email_invalid">मान्य ईमेल पता दर्ज करें</string>
+    <string name="login_forgot_password">पासवर्ड भूल गए?</string>
+    <string name="login_reset_sent">रीसेट ईमेल भेज दिया गया है! अपना इनबॉक्स देखें।</string>
+    <string name="login_button">लॉग इन</string>
+    <string name="login_signing_in">लॉग इन हो रहा है…</string>
+    <string name="login_or_continue_with">या इसके साथ जारी रखें</string>
+    <string name="login_continue_google">Google के साथ जारी रखें</string>
+    <string name="login_continue_guest">अतिथि के रूप में जारी रखें</string>
+    <string name="login_guest_subtitle">बिना खाते के देखें</string>
+    <string name="login_no_account">क्या आपके पास खाता नहीं है?</string>
+    <string name="login_benefit_secure">सुरक्षित
+और निजी</string>
+    <string name="login_benefit_nagpur">नागपुर का
+हिस्सा बनें</string>
+    <string name="login_benefit_discussions">दिलचस्प
+चर्चाएँ</string>
+    <string name="login_reset_title">पासवर्ड रीसेट करें</string>
+    <string name="login_reset_body">अपने NagpurPulse खाते से जुड़ा ईमेल दर्ज करें। हम आपको एक सुरक्षित रीसेट लिंक भेजेंगे।</string>
+    <string name="login_cancel">रद्द करें</string>
+    <string name="login_reset_link">रीसेट लिंक भेजें</string>
+
 </resources>
