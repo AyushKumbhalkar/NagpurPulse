@@ -587,7 +587,6 @@ fun PremiumInputField(
                         .semantics(mergeDescendants = true) {
                             if (errorMessage != null) error(errorMessage)
                         }
-                        .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                         .onGloballyPositioned { coords ->
                             autofillNode?.boundingBox = coords.boundsInWindow()
                         }
@@ -614,7 +613,9 @@ fun PremiumInputField(
                     BasicTextField(
                         value = value,
                         onValueChange = onValueChange,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
                         singleLine = true,
                         textStyle = TextStyle(
                             color = MaterialTheme.colorScheme.onSurface,
