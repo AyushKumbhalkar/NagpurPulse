@@ -214,9 +214,9 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = SurfaceAlt,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),
             icon = {
                 Box(
@@ -228,8 +228,8 @@ fun ProfileScreen(
                     Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = RedAlert, modifier = Modifier.size(24.dp))
                 }
             },
-            title = { Text("Sign out?", color = Color(0xFFF7F3F5), fontWeight = FontWeight.Bold) },
-            text = { Text("You'll need to sign in again to post or comment.", color = Color(0xFFC7C0CA)) },
+            title = { Text("Sign out?", color = PrimaryText, fontWeight = FontWeight.Bold) },
+            text = { Text("You'll need to sign in again to post or comment.", color = SecondaryText) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -243,7 +243,7 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Stay signed in", color = Color(0xFFC7C0CA))
+                    Text("Stay signed in", color = SecondaryText)
                 }
             }
         )

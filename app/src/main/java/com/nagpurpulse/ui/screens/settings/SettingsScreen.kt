@@ -287,6 +287,7 @@ fun SettingsScreen(
                 dismissOnClickOutside = !logoutBusy
             )
         ) {
+            val isDark = LocalIsDarkTheme.current
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -298,13 +299,19 @@ fun SettingsScreen(
                         .heightIn(max = maxHeight * 0.88f)
                         .clip(RoundedCornerShape(32.dp))
                         .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF211719), Color(0xFF111116), Color(0xFF211719))
-                            )
+                            if (isDark)
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF211719), Color(0xFF111116), Color(0xFF211719))
+                                )
+                            else
+                                Brush.linearGradient(
+                                    listOf(Color(0xFFFFF5F2), Color(0xFFFFFFFF), Color(0xFFFFF5F2))
+                                )
                         )
                         .border(
                             1.dp,
-                            Color(0xFFFF6848).copy(alpha = 0.88f),
+                            if (isDark) Color(0xFFFF6848).copy(alpha = 0.88f)
+                            else Color(0xFFFF6848).copy(alpha = 0.45f),
                             RoundedCornerShape(32.dp)
                         )
                         .padding(horizontal = 18.dp, vertical = 18.dp)
@@ -316,7 +323,7 @@ fun SettingsScreen(
                             .width(34.dp)
                             .height(4.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFBDB2B6).copy(alpha = 0.8f))
+                            .background(SecondaryText.copy(alpha = 0.5f))
                     )
 
                     Spacer(Modifier.height(30.dp))
@@ -327,10 +334,10 @@ fun SettingsScreen(
                             .clip(CircleShape)
                             .background(
                                 Brush.radialGradient(
-                                    listOf(Color(0xFFFF6C43).copy(alpha = 0.34f), Color(0xFF6C211B).copy(alpha = 0.28f))
+                                    listOf(Color(0xFFFF6C43).copy(alpha = 0.18f), Color(0xFFFF6C43).copy(alpha = 0.08f))
                                 )
                             )
-                            .border(1.dp, Color(0xFFFF6548), CircleShape),
+                            .border(1.dp, Color(0xFFFF6548).copy(alpha = if (isDark) 1f else 0.6f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -345,7 +352,7 @@ fun SettingsScreen(
 
                     Text(
                         text = "Ready to head out?",
-                        color = Color(0xFFF8F6F7),
+                        color = PrimaryText,
                         fontSize = 27.sp,
                         lineHeight = 33.sp,
                         fontWeight = FontWeight.Bold,
@@ -355,8 +362,8 @@ fun SettingsScreen(
                     Spacer(Modifier.height(12.dp))
 
                     Text(
-                        text = "You’ll be signed out of NagpurPulse on this device. You can sign back in anytime.",
-                        color = Color(0xFFC2BBC7),
+                        text = "You'll be signed out of NagpurPulse on this device. You can sign back in anytime.",
+                        color = SecondaryText,
                         fontSize = 15.sp,
                         lineHeight = 23.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -375,14 +382,14 @@ fun SettingsScreen(
                                 .weight(1f)
                                 .height(54.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(Color(0xFF17151A).copy(alpha = 0.55f))
-                                .border(1.dp, Color(0xFF514A54), RoundedCornerShape(50))
+                                .background(SurfaceAlt)
+                                .border(1.dp, Divider, RoundedCornerShape(50))
                                 .pressScale { if (!logoutBusy) showLogout = false },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 "Stay signed in",
-                                color = Color(0xFFF1EDF0),
+                                color = PrimaryText,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold
                             )

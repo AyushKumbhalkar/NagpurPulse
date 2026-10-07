@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nagpurpulse.data.repository.AuthRepository
+import com.nagpurpulse.data.repository.EmailAlreadyUsedException
 import com.nagpurpulse.data.repository.EmailConfirmationRequiredException
 import com.nagpurpulse.ui.theme.OrangePrimary
 import com.nagpurpulse.ui.theme.TextPrimary
@@ -78,7 +79,8 @@ class AuthViewModel @Inject constructor(
                 onFailure = { e ->
                     android.util.Log.e(AUTH_UI_LOG_TAG, "SIGNUP_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
                     val message = e.message?.lowercase().orEmpty()
-                    val emailAlreadyUsed = message.contains("user already registered") ||
+                    val emailAlreadyUsed = e is EmailAlreadyUsedException ||
+                        message.contains("user already registered") ||
                         message.contains("email already registered") ||
                         message.contains("email address is already registered") ||
                         message.contains("already exists")

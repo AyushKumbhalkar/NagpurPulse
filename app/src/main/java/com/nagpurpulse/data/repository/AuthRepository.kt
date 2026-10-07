@@ -29,6 +29,9 @@ class EmailConfirmationRequiredException : IllegalStateException(
     "Your account was created. Check your email to confirm your address, then sign in."
 )
 
+/** Thrown when Supabase silently accepts a signup for an already-registered email. */
+class EmailAlreadyUsedException : IllegalStateException("user already registered")
+
 private const val AUTH_LOG_TAG = "NP_AUTH_FLOW"
 
 class AuthRepository @Inject constructor(
@@ -81,7 +84,17 @@ class AuthRepository @Inject constructor(
             android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_REQUEST: calling Supabase signUpWith(Email)")
             client.auth.signUpWith(Email) { this.email = email; this.password = password }
             val signupUser = client.auth.currentUserOrNull()
-            android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_RESPONSE: request completed; sessionUserPresent=${signupUser != null}, emailConfirmed=${signupUser?.emailConfirmedAt != null}")
+            android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_RESPONSE: request completed; sessionUserPresent=${signupUser != null}, emailConfirmed=${signupUser?.emailConfirmedAt != null}, identitiesCount=${signupUser?.identities?.size}")
+
+            // Supabase silently "succeeds" for already-registered emails instead of throwing.
+            // The tell-tale sign is that the returned user has an empty identities list.
+            // A genuine new signup always has at least one identity entry.
+            if (signupUser != null && signupUser.identities?.isEmpty() == true) {
+                android.util.Log.w(AUTH_LOG_TAG, "SIGNUP_DUPLICATE: empty identities list detected — email already registered")
+                // Clean up the ghost session Supabase created.
+                try { client.auth.signOut() } catch (_: Exception) {}
+                return Result.failure(EmailAlreadyUsedException())
+            }
 
             // Supabase may return no active session when email confirmation is required.
             // Account creation is still successful in that case; the verification
