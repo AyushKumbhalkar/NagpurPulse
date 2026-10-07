@@ -126,12 +126,9 @@
     <string name="login_continue_guest">Continue as Guest</string>
     <string name="login_guest_subtitle">Explore without an account</string>
     <string name="login_no_account">Don't have an account?</string>
-    <string name="login_benefit_secure">Secure
-&amp; private</string>
-    <string name="login_benefit_nagpur">Be a part
-of Nagpur</string>
-    <string name="login_benefit_discussions">Interesting
-discussions</string>
+    <string name="login_benefit_secure">Secure\n&amp; private</string>
+    <string name="login_benefit_nagpur">Be a part\nof Nagpur</string>
+    <string name="login_benefit_discussions">Interesting\ndiscussions</string>
     <string name="login_reset_title">Reset your password</string>
     <string name="login_reset_body">Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.</string>
     <string name="login_cancel">Cancel</string>
