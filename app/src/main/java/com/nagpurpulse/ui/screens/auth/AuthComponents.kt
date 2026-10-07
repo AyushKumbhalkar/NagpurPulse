@@ -475,6 +475,7 @@ fun PremiumInputField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
+    focusRequester: FocusRequester? = null,
     autofillTypes: List<AutofillType> = emptyList(),
     onBlur: (() -> Unit)? = null,
     index: Int = 0,
@@ -586,6 +587,7 @@ fun PremiumInputField(
                         .semantics(mergeDescendants = true) {
                             if (errorMessage != null) error(errorMessage)
                         }
+                        .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                         .onGloballyPositioned { coords ->
                             autofillNode?.boundingBox = coords.boundsInWindow()
                         }
