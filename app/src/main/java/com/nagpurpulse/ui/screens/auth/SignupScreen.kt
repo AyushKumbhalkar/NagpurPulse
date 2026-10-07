@@ -112,7 +112,8 @@ fun SignupScreen(
     var showEmailVerificationDialog by remember { mutableStateOf(false) }
     var showEmailAlreadyUsedDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
-    var verificationSeconds by remember { mutableStateOf(45) }
+    var verificationSeconds by remember { mutableStateOf(48) }
+    var verificationRateLimited by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val emailLooksValid = email.isNotBlank() &&
@@ -128,7 +129,6 @@ fun SignupScreen(
 
     LaunchedEffect(showEmailVerificationDialog) {
         if (!showEmailVerificationDialog) return@LaunchedEffect
-        verificationSeconds = 45
         while (showEmailVerificationDialog && verificationSeconds > 0) {
             delay(1000L)
             if (showEmailVerificationDialog) verificationSeconds--
@@ -370,11 +370,18 @@ fun SignupScreen(
                                                 password = password,
                                                 onSuccess = {
                                                     verificationCode = ""
-                                                    verificationSeconds = 45
+                                                    verificationSeconds = 48
+                                                    verificationRateLimited = false
                                                     showEmailVerificationDialog = true
                                                 },
                                                 onEmailAlreadyUsed = {
                                                     showEmailAlreadyUsedDialog = true
+                                                },
+                                                onRateLimited = { seconds ->
+                                                    verificationCode = ""
+                                                    verificationSeconds = seconds
+                                                    verificationRateLimited = true
+                                                    showEmailVerificationDialog = true
                                                 }
                                             )
                                         }
@@ -561,6 +568,7 @@ fun SignupScreen(
             seconds = verificationSeconds,
             isLoading = uiState.isLoading,
             error = uiState.error,
+            rateLimited = verificationRateLimited,
             onCodeChange = { verificationCode = it },
             onVerify = {
                 if (verificationCode.length == 6 && !uiState.isLoading) {
@@ -572,12 +580,16 @@ fun SignupScreen(
             },
             onResend = {
                 viewModel.resendSignupEmailOtp(email) { error ->
-                    if (error == null) verificationSeconds = 45
+                    if (error == null) {
+                        verificationSeconds = 48
+                        verificationRateLimited = false
+                    }
                 }
             },
             onChangeEmail = {
                 showEmailVerificationDialog = false
                 verificationCode = ""
+                verificationRateLimited = false
             },
             onDismiss = {
                 if (!uiState.isLoading) showEmailVerificationDialog = false
@@ -609,6 +621,7 @@ private fun SignupEmailVerificationDialog(
     seconds: Int,
     isLoading: Boolean,
     error: String?,
+    rateLimited: Boolean,
     onCodeChange: (String) -> Unit,
     onVerify: () -> Unit,
     onResend: () -> Unit,
@@ -821,31 +834,48 @@ private fun SignupEmailVerificationDialog(
                     }
                 )
 
-                // Resend state: show exactly one layout.
+                // Supabase applies a short cooldown to repeated signup/confirmation
+                // requests. If the user cancelled the dialog and tried again too soon,
+                // explain the cooldown directly here instead of showing a raw API error.
                 if (seconds > 0) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset(y = refY(735f)),
+                            .offset(y = refY(735f))
+                            .padding(horizontal = refX(18f)),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Didn’t receive the code? ",
+                            if (rateLimited) {
+                                "A verification request was already sent. Please wait "
+                            } else {
+                                "Didn’t receive the code? Resend in "
+                            },
                             color = Color(0xFF64748B),
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            textAlign = TextAlign.Center
                         )
-                        Text(
-                            "Resend in ",
-                            color = Color(0xFF64748B),
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            "00:" + seconds.toString().padStart(2, '0'),
-                            color = Color(0xFFF4511E),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (rateLimited) {
+                            Text(
+                                "00:" + seconds.toString().padStart(2, '0'),
+                                color = Color(0xFFF4511E),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Text(
+                                "00:" + seconds.toString().padStart(2, '0'),
+                                color = Color(0xFFF4511E),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                " before requesting again",
+                                color = Color(0xFF64748B),
+                                fontSize = 15.sp
+                            )
+                        }
                     }
                 } else {
                     Text(
