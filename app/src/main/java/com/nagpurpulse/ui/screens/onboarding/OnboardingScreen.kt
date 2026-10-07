@@ -3,10 +3,7 @@ package com.nagpurpulse.ui.screens.onboarding
 import com.nagpurpulse.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,12 +19,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -48,12 +50,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
-import com.nagpurpulse.ui.theme.Background
-import com.nagpurpulse.ui.theme.LocalIsDarkTheme
-import com.nagpurpulse.ui.theme.PrimaryText
-import com.nagpurpulse.ui.theme.SecondaryText
-import com.nagpurpulse.ui.components.pressScale
+import com.nagpurpulse.ui.screens.auth.AuthAnalytics
 
 private val WelcomeCream = Color(0xFFFFF9F2)
 private val WelcomeOrange = Color(0xFFFF5A00)
@@ -84,10 +83,10 @@ fun OnboardingScreen(
         else -> 440.dp
     }
     val heroHeight = when {
-        veryCompact -> 270.dp
-        compact -> 315.dp
-        screenHeight < 800 -> 380.dp
-        else -> 550.dp
+        veryCompact -> 210.dp
+        compact -> 245.dp
+        screenHeight < 800 -> 280.dp
+        else -> 330.dp
     }
     val logoWidth = when {
         screenWidth < 360 -> 190.dp
@@ -102,9 +101,10 @@ fun OnboardingScreen(
     val bodySize = if (screenWidth < 360) 14.sp else 15.sp
 
     var contentVisible by remember { mutableStateOf(false) }
-    val isDark = LocalIsDarkTheme.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
+        AuthAnalytics.log(context, "onboarding_view")
         delay(100)
         contentVisible = true
     }
@@ -117,8 +117,9 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                        .statusBarsPadding()
+                .statusBarsPadding()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = horizontalPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -169,7 +170,7 @@ fun OnboardingScreen(
                                 fontWeight = FontWeight.ExtraBold
                             )
                         ) {
-                            append("Your city, ")
+                            append(stringResource(R.string.onboarding_headline_city))
                         }
                         withStyle(
                             SpanStyle(
@@ -177,7 +178,7 @@ fun OnboardingScreen(
                                 fontWeight = FontWeight.ExtraBold
                             )
                         ) {
-                            append("together.")
+                            append(stringResource(R.string.onboarding_headline_together))
                         }
                     },
                     fontSize = headlineSize,
@@ -194,7 +195,7 @@ fun OnboardingScreen(
                 enter = fadeIn(tween(550, delayMillis = 280))
             ) {
                 Text(
-                    text = "Ask questions, share finds and discover what's happening around you in Nagpur.",
+                    text = stringResource(R.string.onboarding_body),
                     color = WelcomeSecondary,
                     fontSize = bodySize,
                     lineHeight = 21.sp,
@@ -211,7 +212,10 @@ fun OnboardingScreen(
                     slideInVertically(initialOffsetY = { 30 })
             ) {
                 Button(
-                    onClick = onGetStarted,
+                    onClick = {
+                        AuthAnalytics.log(context, "onboarding_join_tap")
+                        onGetStarted()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(if (screenWidth < 360) 54.dp else 58.dp),
@@ -226,7 +230,7 @@ fun OnboardingScreen(
                     )
                 ) {
                     Text(
-                        text = "Get Started",
+                        text = stringResource(R.string.onboarding_join),
                         fontSize = if (screenWidth < 360) 17.sp else 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -235,6 +239,69 @@ fun OnboardingScreen(
                         imageVector = Icons.Filled.ArrowForward,
                         contentDescription = null,
                         modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            AnimatedVisibility(
+                visible = contentVisible,
+                enter = fadeIn(tween(500, delayMillis = 420))
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        AuthAnalytics.log(context, "onboarding_sign_in_tap")
+                        onLogin()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (screenWidth < 360) 50.dp else 54.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, WelcomeOrange),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = WelcomeOrange)
+                ) {
+                    Text(
+                        text = stringResource(R.string.onboarding_sign_in),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(2.dp))
+
+            AnimatedVisibility(
+                visible = contentVisible,
+                enter = fadeIn(tween(500, delayMillis = 480))
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextButton(
+                        onClick = {
+                            AuthAnalytics.log(context, "onboarding_guest_tap")
+                            onGuestMode()
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.onboarding_guest),
+                            color = WelcomeText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = WelcomeOrange,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.onboarding_guest_note),
+                        color = WelcomeSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
