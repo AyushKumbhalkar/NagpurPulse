@@ -59,6 +59,10 @@
     <string name="strength_strong">मजबूत</string>
     <string name="strength_cd">पासवर्डची ताकद: %1$s</string>
     <string name="password_tip">सूचना: अक्षरे, अंक आणि चिन्हे वापरून 12+ अक्षरे ठेवा.</string>
+    <string name="auth_err_login_cooldown">खूप अयशस्वी प्रयत्न झाले. पुन्हा प्रयत्न करण्यापूर्वी %1$d सेकंद प्रतीक्षा करा.</string>
+    <string name="auth_err_email_not_confirmed">साइन इन करण्यापूर्वी तुमचा ईमेल सत्यापित करा. आम्ही सत्यापन कोड पुन्हा पाठवू शकतो.</string>
+    <string name="login_email_not_confirmed_hint">तुमचा ईमेल अद्याप सत्यापित झालेला नाही. आधी तो सत्यापित करा, नंतर साइन इन करा.</string>
+    <string name="login_resend_verification">सत्यापन कोड पुन्हा पाठवा</string>
     <string name="auth_err_invalid_credentials">ईमेल किंवा पासवर्ड चुकीचा आहे.</string>
     <string name="auth_err_weak_password">हा पासवर्ड ओळखायला खूप सोपा आहे. अक्षरे, अंक आणि चिन्हे असलेला मोठा पासवर्ड वापरा.</string>
     <string name="auth_err_rate_limit">खूप प्रयत्न झाले आहेत. कृपया थोडा वेळ थांबून पुन्हा प्रयत्न करा.</string>
