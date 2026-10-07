@@ -22,6 +22,7 @@ import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import javax.inject.Inject
+import com.nagpurpulse.BuildConfig
 
 enum class UsernameAvailability { AVAILABLE, TAKEN, UNABLE_TO_CHECK }
 
@@ -101,6 +102,7 @@ class AuthRepository @Inject constructor(
             // dialog handles the next step.
             if (client.auth.currentUserOrNull() != null) {
                 registerFcmTokenForCurrentUser()
+                recordLegalConsent("email_signup")
             }
             android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_RESULT: signup returned success to ViewModel")
             Result.success(Unit)
@@ -331,6 +333,7 @@ class AuthRepository @Inject constructor(
             val verifiedUser = client.auth.currentUserOrNull()
             android.util.Log.d(AUTH_LOG_TAG, "OTP_VERIFY_RESPONSE: verification call completed; sessionUserPresent=${verifiedUser != null}, emailConfirmed=${verifiedUser?.emailConfirmedAt != null}")
             registerFcmTokenForCurrentUser()
+            recordLegalConsent("email_signup")
             android.util.Log.d(AUTH_LOG_TAG, "OTP_VERIFY_RESULT: verification succeeded")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -703,4 +706,13 @@ class AuthRepository @Inject constructor(
     }
 
 
+}
+
+/**
+ * Versions of the legal documents the app asks users to accept.
+ * Change these (for example to the new publish date) whenever you update the Terms or Privacy Policy.
+ */
+object LegalVersions {
+    const val TERMS = "2026-10-07"
+    const val PRIVACY = "2026-10-07"
 }

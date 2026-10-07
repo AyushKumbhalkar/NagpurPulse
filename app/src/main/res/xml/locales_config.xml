@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Languages offered in Android 13+ system Settings > Apps > Nagpur Pulse > Language.
+     The in-app language chip on the signup screen offers the same three. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="hi" />
+    <locale android:name="mr" />
+</locale-config>

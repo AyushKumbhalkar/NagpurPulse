@@ -17,6 +17,7 @@
         android:allowBackup="false"
         android:icon="@drawable/nagpurpulse_orange_n_icon"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:roundIcon="@drawable/nagpurpulse_orange_n_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.NagpurPulse"

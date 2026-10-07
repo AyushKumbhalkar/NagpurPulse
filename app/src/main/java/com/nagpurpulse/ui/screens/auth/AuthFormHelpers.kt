@@ -37,6 +37,12 @@ import androidx.compose.ui.unit.sp
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.nagpurpulse.R
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Password strength
@@ -240,4 +246,68 @@ internal fun StrengthSection(
             }
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Email typo suggestion ("gmial.com" -> "gmail.com")
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Only well-known typos are corrected, so valid but uncommon domains are never "fixed". */
+private val KNOWN_EMAIL_TYPOS = mapOf(
+    "gmial.com" to "gmail.com", "gmai.com" to "gmail.com", "gamil.com" to "gmail.com",
+    "gnail.com" to "gmail.com", "gmaill.com" to "gmail.com", "gmail.con" to "gmail.com",
+    "gmail.co" to "gmail.com", "gmail.cm" to "gmail.com", "gmail.om" to "gmail.com",
+    "gmail.comm" to "gmail.com", "gmail.vom" to "gmail.com", "gmail.cim" to "gmail.com",
+    "yahooo.com" to "yahoo.com", "yaho.com" to "yahoo.com", "yahoo.con" to "yahoo.com",
+    "hotmial.com" to "hotmail.com", "hotmail.con" to "hotmail.com", "hotmal.com" to "hotmail.com",
+    "outlok.com" to "outlook.com", "outlook.con" to "outlook.com", "outllok.com" to "outlook.com",
+    "iclod.com" to "icloud.com", "icloud.con" to "icloud.com",
+    "rediffmail.con" to "rediffmail.com"
+)
+
+/** Returns a corrected full address when the domain is a known typo, otherwise null. */
+fun suggestEmailCorrection(email: String): String? {
+    val trimmed = email.trim()
+    val at = trimmed.lastIndexOf('@')
+    if (at <= 0 || at == trimmed.length - 1) return null
+    val fixedDomain = KNOWN_EMAIL_TYPOS[trimmed.substring(at + 1).lowercase(java.util.Locale.ROOT)] ?: return null
+    return trimmed.substring(0, at) + "@" + fixedDomain
+}
+
+/** "Did you mean ...?" line under the email field. Tapping it applies the correction. */
+@Composable
+fun EmailSuggestionHint(
+    suggestion: String?,
+    color: Color,
+    onAccept: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (suggestion == null) return
+    Text(
+        text = stringResource(R.string.email_suggest_prompt, suggestion),
+        color = color,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontWeight = FontWeight.SemiBold,
+        textDecoration = TextDecoration.Underline,
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button) { onAccept(suggestion) }
+            .padding(start = 10.dp, top = 6.dp, bottom = 2.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite }
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Open the user's email app (used by the verification dialog)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Opens the default email app's inbox. Returns false when the phone has no email app. */
+fun openEmailApp(context: Context): Boolean = try {
+    val intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_EMAIL)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+    true
+} catch (_: ActivityNotFoundException) {
+    false
 }

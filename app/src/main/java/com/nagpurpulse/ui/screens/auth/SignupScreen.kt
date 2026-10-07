@@ -136,6 +136,8 @@ import com.nagpurpulse.ui.theme.SurfaceAlt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.foundation.layout.widthIn
+import android.widget.Toast
 
 private val inkLight = Color(0xFF111827)
 private val mutedLight = Color(0xFF64748B)
@@ -174,6 +176,7 @@ fun SignupScreen(
     var lastSubmittedCode by remember { mutableStateOf("") }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { AuthAnalytics.log(context, "signup_view") }
     val focusManager = LocalFocusManager.current
     val hapticFeedback = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -194,6 +197,7 @@ fun SignupScreen(
             if (verificationCode.length == 6 && !uiState.isLoading) {
                 lastSubmittedCode = verificationCode
                 viewModel.verifySignupEmailOtp(email, verificationCode) {
+                    AuthAnalytics.log(context, "signup_verified")
                     showEmailVerificationDialog = false
                     onSignupSuccess()
                 }
@@ -237,6 +241,7 @@ fun SignupScreen(
         submitAttempted = true
         val formValid = emailLooksValid && password.length >= 8 &&
                 confirmPassword.isNotBlank() && password == confirmPassword
+        AuthAnalytics.log(context, "signup_submit", "form_valid" to formValid.toString())
         if (!formValid) {
             // Errors are now visible under each field; give a small nudge too.
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -244,12 +249,13 @@ fun SignupScreen(
         }
         if (!uiState.isLoading) {
             viewModel.signUp(
-                email = email.trim(),
+                email = email.trim().lowercase(java.util.Locale.ROOT),
                 password = password,
                 onSuccess = {
                     // Tells Google/Samsung password manager the form was submitted,
                     // so it can offer to save the new password.
                     autofillManager?.commit()
+                    AuthAnalytics.log(context, "signup_otp_sent")
                     verificationCode = ""
                     verificationSeconds = 48
                     verificationRateLimited = false
@@ -340,7 +346,7 @@ fun SignupScreen(
             // Keep the logo + signup card together as the top section so the
             // footer can never be laid out over the header on compact devices.
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
@@ -409,6 +415,7 @@ fun SignupScreen(
                             ),
                             autofillTypes = listOf(AutofillType.EmailAddress),
                             onBlur = { emailTouched = true },
+                            errorMessage = emailError,
                             index = 0,
                             containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
@@ -416,6 +423,12 @@ fun SignupScreen(
                     AuthFieldMessage(
                         message = emailError,
                         color = MaterialTheme.colorScheme.error
+                    )
+                    // "Did you mean name@gmail.com?" - catches typos before the OTP is sent to nowhere.
+                    EmailSuggestionHint(
+                        suggestion = if (emailTouched && emailError == null) suggestEmailCorrection(email) else null,
+                        color = SignupOrange,
+                        onAccept = { email = it }
                     )
                     Spacer(Modifier.height(fieldGap))
 
@@ -452,6 +465,7 @@ fun SignupScreen(
                             ),
                             autofillTypes = listOf(AutofillType.NewPassword),
                             onBlur = { passwordTouched = true },
+                            errorMessage = passwordError,
                             index = 1,
                             containerColor = cardBackground
                         )
@@ -509,6 +523,7 @@ fun SignupScreen(
                             ),
                             autofillTypes = listOf(AutofillType.NewPassword),
                             onBlur = { confirmTouched = true },
+                            errorMessage = confirmError,
                             index = 2,
                             containerColor = cardBackground
                         )
@@ -557,6 +572,26 @@ fun SignupScreen(
 
                     Spacer(Modifier.height(if (compact) 6.dp else 10.dp))
                     LegalConsentText(textColor = muted, linkColor = SignupOrange)
+                    if (emailLooksValid) {
+                        // For users who closed the verification dialog and still have the code.
+                        Text(
+                            text = stringResource(R.string.verify_have_code),
+                            color = SignupOrange,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(role = Role.Button) {
+                                    AuthAnalytics.log(context, "signup_have_code_tap")
+                                    verificationCode = ""
+                                    verificationSeconds = 0
+                                    verificationRateLimited = false
+                                    showEmailVerificationDialog = true
+                                }
+                                .padding(top = 6.dp, bottom = 2.dp)
+                        )
+                    }
                     Spacer(Modifier.height(if (compact) 4.dp else 12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
@@ -574,6 +609,7 @@ fun SignupScreen(
                             .background(inputBackground)
                             .border(1.dp, fieldBorder, RoundedCornerShape(18.dp))
                             .pressScale(onClick = {
+                                AuthAnalytics.log(context, "signup_google_tap")
                                 scope.launch {
                                     when (val outcome = GoogleAuthManager(context).signIn()) {
                                         is GoogleSignInOutcome.Success ->
@@ -609,7 +645,10 @@ fun SignupScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(if (isDarkTheme) SurfaceAlt else Color(0xFFFFF5EC))
                             .border(1.dp, if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFFFE4CF), RoundedCornerShape(20.dp))
-                            .pressScale(onClick = onGuestContinue)
+                            .pressScale(onClick = {
+                                AuthAnalytics.log(context, "signup_guest_tap")
+                                onGuestContinue()
+                            })
                             .padding(horizontal = 12.dp, vertical = if (compact) 7.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -656,7 +695,10 @@ fun SignupScreen(
                             else Color(0xFFF1E7DD),
                             RoundedCornerShape(24.dp)
                         )
-                        .pressScale(onClick = onNavigateToLogin)
+                        .pressScale(onClick = {
+                            AuthAnalytics.log(context, "signup_login_tap")
+                            onNavigateToLogin()
+                        })
                         .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -687,6 +729,7 @@ fun SignupScreen(
             Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
             Row(
                 modifier = Modifier
+                    .widthIn(max = 520.dp)
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
                     .offset(y = (-38).dp),
@@ -714,6 +757,16 @@ fun SignupScreen(
             }
             Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
+
+        LanguagePickerChip(
+            contentColor = ink,
+            backgroundColor = cardBackground.copy(alpha = 0.92f),
+            borderColor = fieldBorder,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 6.dp, end = 14.dp)
+        )
     }
 
     // Network-loading overlay: show NagpurPulse branding immediately after
@@ -737,6 +790,7 @@ fun SignupScreen(
                 if (verificationCode.length == 6 && !uiState.isLoading) {
                     lastSubmittedCode = verificationCode
                     viewModel.verifySignupEmailOtp(email, verificationCode) {
+                        AuthAnalytics.log(context, "signup_verified")
                         showEmailVerificationDialog = false
                         onSignupSuccess()
                     }
@@ -1225,6 +1279,32 @@ private fun SignupEmailVerificationDialog(
                     }
 
                     Spacer(Modifier.height(18.dp))
+
+                    // ── Open the user's email app ──
+                    val dialogContext = LocalContext.current
+                    val noEmailAppMessage = stringResource(R.string.verify_no_email_app)
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(vc.neutral)
+                            .clickable(role = Role.Button) {
+                                if (!openEmailApp(dialogContext)) {
+                                    Toast.makeText(dialogContext, noEmailAppMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Email, contentDescription = null, tint = vc.orange, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.verify_open_email_app),
+                            color = vc.ink,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
 
                     // ── Resend / timer ──
                     if (seconds > 0) {

@@ -33,6 +33,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import android.content.Context
+import com.nagpurpulse.ui.locale.AppLocale
 
 private val pendingAuthRecovery = kotlinx.coroutines.flow.MutableStateFlow(false)
 
@@ -63,6 +65,10 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var userPreferencesRepository: UserPreferencesRepository
 
     // ── Deep link from cold-start tap on a notification ───────────────────────
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         val amoledMode = getSharedPreferences(

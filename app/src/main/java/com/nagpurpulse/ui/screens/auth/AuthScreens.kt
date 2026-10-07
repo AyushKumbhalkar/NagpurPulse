@@ -20,6 +20,7 @@ import javax.inject.Inject
 import android.content.Context
 import com.nagpurpulse.R
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Locale
 
 // ─── ViewModel ────────────────────────────────────────────────────────────────
 data class AuthUiState(
@@ -77,7 +78,7 @@ class AuthViewModel @Inject constructor(
             if (_uiState.value.isLoading) return@launch
             android.util.Log.d(AUTH_UI_LOG_TAG, "SIGNUP_VM_START: invoking repository signup")
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.signUp(email.trim(), password).fold(
+            authRepository.signUp(email.trim().lowercase(Locale.ROOT), password).fold(
                 onSuccess = {
                     android.util.Log.d(AUTH_UI_LOG_TAG, "SIGNUP_VM_SUCCESS: repository returned success; opening verification dialog")
                     _uiState.value = AuthUiState(isSuccess = true)
@@ -127,7 +128,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun verifySignupEmailOtp(email: String, token: String, onSuccess: () -> Unit) {
-        val normalizedEmail = email.trim()
+        val normalizedEmail = email.trim().lowercase(Locale.ROOT)
         val normalizedToken = token.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
             _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_valid_email))
@@ -156,7 +157,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun resendSignupEmailOtp(email: String, onComplete: (String?) -> Unit = {}) {
-        val normalizedEmail = email.trim()
+        val normalizedEmail = email.trim().lowercase(Locale.ROOT)
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
             val error = context.getString(R.string.auth_err_valid_email)
             _uiState.value = AuthUiState(error = error)
@@ -183,7 +184,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signIn(email: String, password: String, onSuccess: () -> Unit) {
-        val normalizedEmail = email.trim()
+        val normalizedEmail = email.trim().lowercase(Locale.ROOT)
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
             _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_valid_email))
             return
@@ -232,7 +233,7 @@ class AuthViewModel @Inject constructor(
 
 
     fun sendPasswordReset(email: String) {
-        val normalizedEmail = email.trim()
+        val normalizedEmail = email.trim().lowercase(Locale.ROOT)
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
             _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_enter_email_first))
             return
@@ -277,6 +278,8 @@ class AuthViewModel @Inject constructor(
                                 onExistingUser()
 
                             } else {
+                                // New Google account: store the Terms/Privacy acceptance shown on screen.
+                                authRepository.recordLegalConsent("google_signup")
                                 onNewUser()
                             }
                         },

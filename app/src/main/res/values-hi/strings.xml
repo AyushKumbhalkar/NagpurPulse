@@ -88,4 +88,11 @@
         <item>आसपास हैं।</item>
         <item>पूछ रहे हैं।</item>
     </string-array>
+
+    <!-- Signup extras: language chip, email typo hint, open email app, resume verification -->
+    <string name="language_picker_cd">भाषा बदलें</string>
+    <string name="email_suggest_prompt">क्या आपका मतलब %1$s है?</string>
+    <string name="verify_have_code">क्या आपके पास पहले से सत्यापन कोड है?</string>
+    <string name="verify_open_email_app">ईमेल ऐप खोलें</string>
+    <string name="verify_no_email_app">इस फ़ोन में कोई ईमेल ऐप नहीं मिला।</string>
 </resources>

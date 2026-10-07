@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.ksp)
     kotlin("plugin.serialization") version "2.0.0"
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 
 }
 
@@ -147,6 +148,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.7.2"))
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")

@@ -535,7 +535,10 @@ fun LoginScreen(
                         Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
+                    // Google sign-in can create a new account from this screen too.
+                    Spacer(Modifier.height(if (compact) 6.dp else 10.dp))
+                    LegalConsentText(textColor = muted, linkColor = OrangePrimary)
+                    Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
 
                     Row(
                         modifier = Modifier

@@ -112,6 +112,8 @@ import com.nagpurpulse.ui.theme.RedSubtle
 import com.nagpurpulse.ui.theme.TextSecondary
 import com.nagpurpulse.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 
 
 // ─── Cinematic city background ────────────────────────────────────────────────
@@ -476,7 +478,8 @@ fun PremiumInputField(
     autofillTypes: List<AutofillType> = emptyList(),
     onBlur: (() -> Unit)? = null,
     index: Int = 0,
-    containerColor: Color? = null
+    containerColor: Color? = null,
+    errorMessage: String? = null
 ) {
     var focused by remember { mutableStateOf(false) }
 
@@ -579,6 +582,10 @@ fun PremiumInputField(
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        // Lets TalkBack read the hint together with the field and announce its error.
+                        .semantics(mergeDescendants = true) {
+                            if (errorMessage != null) error(errorMessage)
+                        }
                         .onGloballyPositioned { coords ->
                             autofillNode?.boundingBox = coords.boundsInWindow()
                         }
