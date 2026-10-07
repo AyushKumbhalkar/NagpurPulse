@@ -89,7 +89,9 @@ class AuthRepository @Inject constructor(
             // Supabase silently "succeeds" for already-registered emails instead of throwing.
             // The tell-tale sign is that the returned user has an empty identities list.
             // A genuine new signup always has at least one identity entry.
-            if (signupUser != null && (signupUser.identities == null || signupUser.identities.isEmpty())) {
+            // Copy the public API property to a local val so Kotlin can safely smart-cast it.
+            val identities = signupUser?.identities
+            if (signupUser != null && (identities == null || identities.isEmpty())) {
                 android.util.Log.w(AUTH_LOG_TAG, "SIGNUP_DUPLICATE: empty identities list detected — email already registered")
                 // Clean up the ghost session Supabase created.
                 try { client.auth.signOut() } catch (_: Exception) {}
