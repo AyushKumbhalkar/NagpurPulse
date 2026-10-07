@@ -27,6 +27,8 @@ data class AuthUiState(
 )
 
 
+private const val AUTH_UI_LOG_TAG = "NP_AUTH_FLOW"
+
 private fun safeAuthError(e: Throwable, fallback: String): String {
     val message = e.message?.lowercase().orEmpty()
     return when {
@@ -64,13 +66,16 @@ class AuthViewModel @Inject constructor(
         }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
+            android.util.Log.d(AUTH_UI_LOG_TAG, "SIGNUP_VM_START: invoking repository signup")
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.signUp(email.trim(), password).fold(
                 onSuccess = {
+                    android.util.Log.d(AUTH_UI_LOG_TAG, "SIGNUP_VM_SUCCESS: repository returned success; opening verification dialog")
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
                 onFailure = { e ->
+                    android.util.Log.e(AUTH_UI_LOG_TAG, "SIGNUP_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
                     val message = e.message?.lowercase().orEmpty()
                     val emailAlreadyUsed = message.contains("user already registered") ||
                         message.contains("email already registered") ||
@@ -107,13 +112,16 @@ class AuthViewModel @Inject constructor(
         }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
+            android.util.Log.d(AUTH_UI_LOG_TAG, "OTP_VERIFY_VM_START: invoking repository verification")
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.verifySignupEmailOtp(normalizedEmail, normalizedToken).fold(
                 onSuccess = {
+                    android.util.Log.d(AUTH_UI_LOG_TAG, "OTP_VERIFY_VM_SUCCESS: verification succeeded; closing dialog")
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
                 onFailure = { e ->
+                    android.util.Log.e(AUTH_UI_LOG_TAG, "OTP_VERIFY_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
                     _uiState.value = AuthUiState(error = safeAuthError(e, "Invalid verification code. Please check the code and try again."))
                 }
             )
@@ -130,13 +138,16 @@ class AuthViewModel @Inject constructor(
         }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
+            android.util.Log.d(AUTH_UI_LOG_TAG, "OTP_RESEND_VM_START: invoking repository resend")
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.resendSignupEmailOtp(normalizedEmail).fold(
                 onSuccess = {
+                    android.util.Log.d(AUTH_UI_LOG_TAG, "OTP_RESEND_VM_SUCCESS: resend request accepted by Supabase")
                     _uiState.value = AuthUiState()
                     onComplete(null)
                 },
                 onFailure = { e ->
+                    android.util.Log.e(AUTH_UI_LOG_TAG, "OTP_RESEND_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
                     _uiState.value = AuthUiState(error = safeAuthError(e, "Could not resend the verification code. Please try again later."))
                     onComplete(safeAuthError(e, "Could not resend the verification code. Please try again later."))
                 }
