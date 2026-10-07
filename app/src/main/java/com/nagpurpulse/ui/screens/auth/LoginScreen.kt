@@ -197,13 +197,20 @@ fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ){
     val uiState by viewModel.uiState.collectAsState()
-    var email by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val loginPrefs = remember(context) {
+        context.getSharedPreferences("login_prefs", android.content.Context.MODE_PRIVATE)
+    }
+    var email by remember {
+        mutableStateOf(loginPrefs.getString("remembered_email", "").orEmpty())
+    }
     var password by remember { mutableStateOf("") }
+    var emailTouched by remember { mutableStateOf(false) }
+    var passwordTouched by remember { mutableStateOf(false) }
     var pwVisible by remember { mutableStateOf(false) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     var resetEmail by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val isDarkTheme = LocalIsDarkTheme.current
@@ -214,9 +221,25 @@ fun LoginScreen(
     val muted = if (isDarkTheme) SecondaryText else Color(0xFF64748B)
     val emailLooksValid = email.isNotBlank() &&
             android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+    val emailError = if (emailTouched && !emailLooksValid) {
+        stringResource(R.string.login_err_email_invalid)
+    } else null
+    val passwordError = if (passwordTouched && password.isBlank()) {
+        stringResource(R.string.auth_err_enter_password)
+    } else null
     val passwordFocusRequester = remember { FocusRequester() }
 
+    fun persistEmailIfValid() {
+        val normalized = email.trim().lowercase(java.util.Locale.ROOT)
+        if (android.util.Patterns.EMAIL_ADDRESS.matcher(normalized).matches()) {
+            loginPrefs.edit().putString("remembered_email", normalized).apply()
+        }
+    }
+
     fun submitLogin() {
+        emailTouched = true
+        passwordTouched = true
+        persistEmailIfValid()
         if (emailLooksValid && password.isNotBlank() && !uiState.isLoading) {
             viewModel.signIn(email.trim(), password, onLoginSuccess)
         }
@@ -260,6 +283,15 @@ fun LoginScreen(
                     .align(Alignment.BottomCenter)
             )
         }
+
+        LanguagePickerChip(
+            contentColor = if (isDarkTheme) PrimaryText else Color(0xFF334155),
+            backgroundColor = if (isDarkTheme) Surface.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.90f),
+            borderColor = if (isDarkTheme) OrangePrimary.copy(alpha = 0.35f) else Color(0xFFFFD7BE),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 16.dp)
+        )
 
         Column(
             modifier = Modifier
@@ -351,7 +383,14 @@ fun LoginScreen(
                     LoginFieldContainer {
                         PremiumInputField(
                             value = email,
-                            onValueChange = { email = it },
+                            onValueChange = {
+                                email = it
+                                if (android.util.Patterns.EMAIL_ADDRESS.matcher(it.trim()).matches()) {
+                                    loginPrefs.edit()
+                                        .putString("remembered_email", it.trim().lowercase(java.util.Locale.ROOT))
+                                        .apply()
+                                }
+                            },
                             placeholder = stringResource(R.string.login_email_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
@@ -359,16 +398,26 @@ fun LoginScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { passwordFocusRequester.requestFocus() }),
                             autofillTypes = listOf(AutofillType.EmailAddress),
+                            onBlur = {
+                                emailTouched = true
+                                persistEmailIfValid()
+                            },
+                            errorMessage = emailError,
                             index = 0,
                             containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
                     }
 
-                    if (email.isNotBlank() && !emailLooksValid) {
+                    AnimatedVisibility(
+                        visible = emailError != null,
+                        enter = fadeIn(tween(140)) + expandVertically(),
+                        exit = fadeOut(tween(100)) + shrinkVertically()
+                    ) {
                         Text(
-                            text = stringResource(R.string.login_err_email_invalid),
+                            text = emailError.orEmpty(),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
+                            lineHeight = 16.sp,
                             modifier = Modifier.padding(start = 10.dp, top = 4.dp)
                         )
                     }
@@ -403,8 +452,24 @@ fun LoginScreen(
                             keyboardActions = KeyboardActions(onDone = { submitLogin() }),
                             focusRequester = passwordFocusRequester,
                             autofillTypes = listOf(AutofillType.Password),
+                            onBlur = { passwordTouched = true },
+                            errorMessage = passwordError,
                             index = 1,
                             containerColor = cardBackground
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = passwordError != null,
+                        enter = fadeIn(tween(140)) + expandVertically(),
+                        exit = fadeOut(tween(100)) + shrinkVertically()
+                    ) {
+                        Text(
+                            text = passwordError.orEmpty(),
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            modifier = Modifier.padding(start = 10.dp, top = 4.dp)
                         )
                     }
 
@@ -463,11 +528,7 @@ fun LoginScreen(
                             .clip(RoundedCornerShape(40.dp))
                             .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
                             .pressScale(
-                                onClick = {
-                                    if (emailLooksValid && password.isNotBlank() && !uiState.isLoading) {
-                                        viewModel.signIn(email.trim(), password, onLoginSuccess)
-                                    }
-                                }
+                                onClick = { submitLogin() }
                             )
                             .height(buttonHeight),
                         contentAlignment = Alignment.Center
