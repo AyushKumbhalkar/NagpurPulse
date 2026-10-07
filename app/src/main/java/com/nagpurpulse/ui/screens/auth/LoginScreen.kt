@@ -83,6 +83,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import com.nagpurpulse.R
 import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
