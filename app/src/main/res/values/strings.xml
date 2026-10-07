@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Nagpur Pulse</string>
+    <string name="app_name" translatable="false">Nagpur Pulse</string>
 
     <string name="signup_email_hint">Email address</string>
     <string name="signup_password_hint">Password (8+ characters)</string>
@@ -20,4 +20,74 @@
     <string name="err_password_short">Password must be at least 8 characters</string>
     <string name="err_confirm_required">Confirm your password</string>
     <string name="err_password_mismatch">Passwords do not match</string>
+
+    <!-- Signup screen: dialogs, headline, consent, validation and auth messages -->
+    <string name="signup_subtitle">Create your account and join the conversations happening around Nagpur.</string>
+    <string name="signup_headline_prefix">Your people</string>
+    <string name="cd_hide_password">Hide password</string>
+    <string name="cd_show_password">Show password</string>
+    <string name="cd_hide_confirm_password">Hide confirm password</string>
+    <string name="cd_show_confirm_password">Show confirm password</string>
+    <string name="cd_continue_guest">Continue as guest</string>
+    <string name="cd_close">Close</string>
+    <string name="benefit_secure">Secure\n&amp; private</string>
+    <string name="benefit_part_of_nagpur">Be a part\nof Nagpur</string>
+    <string name="benefit_discussions">Interesting\ndiscussions</string>
+    <string name="loading_creating_account">Creating your account…</string>
+    <string name="loading_verifying_email">Verifying your email…</string>
+    <string name="loading_please_wait">Please wait</string>
+    <string name="verify_cd_icon">Email verification</string>
+    <string name="verify_title_ink">Verify your</string>
+    <string name="verify_title_accent">email</string>
+    <string name="verify_enter_code">Enter the 6-digit code we sent to</string>
+    <string name="verify_button">Verify &amp; Continue</string>
+    <string name="verify_button_loading">Verifying…</string>
+    <string name="verify_resend_in">Resend code in</string>
+    <string name="verify_retry_in">Code already sent. Retry in</string>
+    <string name="verify_resend_code">Resend code</string>
+    <string name="verify_change_email">Change email address</string>
+    <string name="used_cd_icon">Email already used</string>
+    <string name="used_title_ink">Email</string>
+    <string name="used_title_accent">already used</string>
+    <string name="used_body">This email address is already registered with NagpurPulse. Please log in to continue.</string>
+    <string name="used_go_login">Go to Login</string>
+    <string name="used_try_different">Try a different email</string>
+    <string name="legal_terms">Terms of Service</string>
+    <string name="legal_privacy">Privacy Policy</string>
+    <string name="legal_consent">By creating an account or continuing with Google, you confirm you are 18 or older and agree to our %1$s and %2$s.</string>
+    <string name="strength_weak">Weak</string>
+    <string name="strength_fair">Fair</string>
+    <string name="strength_good">Good</string>
+    <string name="strength_strong">Strong</string>
+    <string name="strength_cd">Password strength: %1$s</string>
+    <string name="password_tip">Tip: use 12+ characters with letters, numbers and symbols.</string>
+    <string name="auth_err_invalid_credentials">Invalid email or password.</string>
+    <string name="auth_err_weak_password">That password is too easy to guess. Try a longer one with letters, numbers and symbols.</string>
+    <string name="auth_err_rate_limit">Too many attempts. Please wait a moment and try again.</string>
+    <string name="auth_err_network">Unable to connect right now. Check your internet connection and try again.</string>
+    <string name="auth_err_password_min8">Password must be at least 8 characters.</string>
+    <string name="auth_err_create_failed">Unable to create your account. Please try again.</string>
+    <string name="auth_err_valid_email">Enter a valid email address.</string>
+    <string name="auth_err_enter_code">Enter the 6-digit verification code.</string>
+    <string name="auth_err_invalid_code">Invalid verification code. Please check the code and try again.</string>
+    <string name="auth_err_resend_failed">Could not resend the verification code. Please try again later.</string>
+    <string name="auth_err_enter_password">Enter your password.</string>
+    <string name="auth_err_sign_in_failed">Unable to sign in. Please try again.</string>
+    <string name="auth_err_google_failed">Google sign-in failed. Please try again.</string>
+    <string name="auth_err_enter_email_first">Enter a valid email address first</string>
+    <string name="auth_err_reset_failed">Unable to send the reset email. Please try again later.</string>
+    <string name="google_err_no_internet">No internet connection. Check your connection and try again.</string>
+    <string name="google_err_no_account">No Google account found on this phone. Add one in Settings, then try again.</string>
+    <string name="google_err_unavailable">Google sign-in isn\'t available on this phone. Update Google Play services and try again.</string>
+    <string name="google_err_interrupted">Google sign-in was interrupted. Please try again.</string>
+
+    <string-array name="signup_headline_phrases">
+        <item>are here.</item>
+        <item>are online.</item>
+        <item>are talking.</item>
+        <item>are joining.</item>
+        <item>are active.</item>
+        <item>are around.</item>
+        <item>are asking.</item>
+    </string-array>
 </resources>
