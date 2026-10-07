@@ -545,26 +545,44 @@ fun NagpurPulseNavGraph(
             Screen.Home.route,
             enterTransition = { tabEnter(this) }, exitTransition = { tabExit(this) },
             popEnterTransition = { tabEnter(this) }, popExitTransition = { tabExit(this) }) {
-            HomeScreen(
-                navController = navController,
-                onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) },
-                onCreatePost = {
-                    if (authRepository.isLoggedIn()) {
-                        navController.navigate(Screen.CreatePost.route)
-                    } else {
-                        showLoginDialog = true
+            // Fail closed for a restored/unexpected navigation state. Guests are
+            // explicitly allowed to browse Home, but an unverified or otherwise
+            // unauthenticated email/password session must never render the feed.
+            if (!authRepository.isLoggedIn() && !authRepository.isGuest) {
+                LaunchedEffect(Unit) {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                        launchSingleTop = true
                     }
-                },
+                }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                HomeScreen(
+                    navController = navController,
+                    onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) },
+                    onCreatePost = {
+                        if (authRepository.isLoggedIn()) {
+                            navController.navigate(Screen.CreatePost.route)
+                        } else {
+                            showLoginDialog = true
+                        }
+                    },
 
-                onProfileClick = {
-                    if (authRepository.isLoggedIn()) {
-                        navController.navigate(Screen.Profile.route)
-                    } else {
-                        showLoginDialog = true
-                    }
-                },
-                onNotifications = { navController.navigate(Screen.Notifications.route) }
-            )
+                    onProfileClick = {
+                        if (authRepository.isLoggedIn()) {
+                            navController.navigate(Screen.Profile.route)
+                        } else {
+                            showLoginDialog = true
+                        }
+                    },
+                    onNotifications = { navController.navigate(Screen.Notifications.route) }
+                )
+            }
         }
 
         composable(
