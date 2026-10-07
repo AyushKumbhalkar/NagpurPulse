@@ -168,6 +168,7 @@ fun SignupScreen(
     var submitAttempted by remember { mutableStateOf(false) }
     var showEmailVerificationDialog by rememberSaveable { mutableStateOf(false) }
     var showEmailAlreadyUsedDialog by remember { mutableStateOf(false) }
+    var showGoogleExistingDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
     var verificationSeconds by remember { mutableStateOf(48) }
     var verificationRateLimited by remember { mutableStateOf(false) }
@@ -339,7 +340,9 @@ fun SignupScreen(
                 .fillMaxSize()
                 .navigationBarsPadding()
                 .imePadding()
-                .verticalScroll(rememberScrollState())
+                .then(
+                    if (maxHeight < 760.dp) Modifier.verticalScroll(rememberScrollState()) else Modifier
+                )
                 .padding(top = pageTop, bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -616,7 +619,7 @@ fun SignupScreen(
                                             viewModel.signInWithGoogleToken(
                                                 idToken = outcome.idToken,
                                                 nonce = outcome.rawNonce,
-                                                onExistingUser = onExistingGoogleUser,
+                                                onExistingUser = { showGoogleExistingDialog = true },
                                                 onNewUser = onSignupSuccess
                                             )
                                         GoogleSignInOutcome.Cancelled -> Unit
@@ -811,6 +814,18 @@ fun SignupScreen(
             },
             onDismiss = {
                 if (!uiState.isLoading) showEmailVerificationDialog = false
+            }
+        )
+    }
+
+    if (showGoogleExistingDialog) {
+        SignupGoogleExistingDialog(
+            onContinue = {
+                showGoogleExistingDialog = false
+                onExistingGoogleUser()
+            },
+            onDismiss = {
+                if (!uiState.isLoading) showGoogleExistingDialog = false
             }
         )
     }
@@ -1933,11 +1948,11 @@ private fun SignupAnimatedHeadline(
         while (true) {
             val phrase = phrases[currentIndex]
 
-            // Start the new phrase completely empty.
-            animatedText = ""
+            // Keep one character visible during locale changes so the headline
+            // never collapses to zero height and makes the whole screen flicker.
+            animatedText = phrase.take(1)
 
-            // Type EVERY character continuously until the whole phrase is visible.
-            for (index in phrase.indices) {
+            for (index in 1 until phrase.length) {
                 animatedText = phrase.substring(0, index + 1)
                 delay(75L)
             }
@@ -1958,8 +1973,12 @@ private fun SignupAnimatedHeadline(
         }
     }
 
-    Text(
-        text = buildAnnotatedString {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(if (compact) 68.dp else 76.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            text = buildAnnotatedString {
             withStyle(
                 SpanStyle(
                     color = ink,
@@ -1983,8 +2002,9 @@ private fun SignupAnimatedHeadline(
         lineHeight = if (compact) 32.sp else 36.sp,
         fontWeight = FontWeight.ExtraBold,
         letterSpacing = (-0.7).sp,
-        maxLines = 2
-    )
+            maxLines = 2
+        )
+    }
 }
 
 @Composable
