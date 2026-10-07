@@ -104,9 +104,6 @@
 
     <!-- Login screen -->
     <string name="login_headline_prefix">Your people </string>
-    <string name="login_headline_phrases">
-        <!-- Placeholder; use login_headline_phrases_array below. -->
-    </string>
     <string-array name="login_headline_phrases">
         <item>are here.</item>
         <item>are online.</item>
