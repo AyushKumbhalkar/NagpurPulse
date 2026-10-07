@@ -541,7 +541,7 @@ fun LoginScreen(
                                     loginPrefs.edit().putBoolean("keep_signed_in", keepSignedIn).apply()
                                     if (!keepSignedIn) loginPrefs.edit().remove("remembered_email").apply()
                                 }
-                                .padding(vertical = 7.dp, end = 8.dp),
+                                .padding(start = 0.dp, top = 7.dp, end = 8.dp, bottom = 7.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
