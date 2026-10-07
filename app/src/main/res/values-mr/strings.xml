@@ -95,4 +95,7 @@
     <string name="verify_have_code">तुमच्याकडे आधीच सत्यापन कोड आहे का?</string>
     <string name="verify_open_email_app">ईमेल अ‍ॅप उघडा</string>
     <string name="verify_no_email_app">या फोनमध्ये ईमेल अ‍ॅप आढळले नाही.</string>
+    <string name="google_existing_title">पुन्हा स्वागत आहे!</string>
+    <string name="google_existing_body">हे Google खाते आधीच NagpurPulse वर नोंदणीकृत आहे. तुमचे खाते तयार आहे.</string>
+    <string name="google_existing_continue">NagpurPulse वर जा</string>
 </resources>
