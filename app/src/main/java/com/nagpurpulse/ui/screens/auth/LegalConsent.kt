@@ -3,6 +3,7 @@ package com.nagpurpulse.ui.screens.auth
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -76,17 +77,22 @@ fun LegalConsentText(
     }
 
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val touchPadding = 14.dp
+    val largeText = density.fontScale > 1.3f
+    var textSize by remember(fullText, density.fontScale) { mutableStateOf(12) }
+    val touchPadding = 4.dp
     val paddingPx = with(density) { touchPadding.toPx() }
     val openUrl: (String) -> Unit = { url -> runCatching { uriHandler.openUri(url) } }
 
     BasicText(
         text = annotated,
-        onTextLayout = { layout = it },
+        onTextLayout = {
+            layout = it
+            if (!largeText && it.hasVisualOverflow && textSize > 9) textSize--
+        },
         style = TextStyle(
             color = textColor,
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
+            fontSize = textSize.sp,
+            lineHeight = (textSize + 2).sp,
             textAlign = TextAlign.Center
         ),
         modifier = modifier
@@ -109,8 +115,8 @@ fun LegalConsentText(
                         ?.let { openUrl(it.second) }
                 }
             }
+            .then(if (largeText) Modifier.heightIn(min = 48.dp) else Modifier.height(48.dp))
             .padding(vertical = touchPadding)
-            .heightIn(min = 48.dp)
             .semantics {
                 customActions = listOf(
                     CustomAccessibilityAction(termsLabel) { openUrl(LegalLinks.TERMS_URL); true },

@@ -9,13 +9,22 @@
 
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
+import androidx.compose.ui.res.stringResource
+
+import androidx.compose.ui.semantics.contentDescription
+
+import androidx.compose.material.icons.filled.Close
+
 
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
@@ -39,8 +48,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -64,15 +71,11 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -480,7 +483,9 @@ fun PremiumInputField(
     index: Int = 0,
     containerColor: Color? = null,
     errorMessage: String? = null,
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    enabled: Boolean = true,
+    clearEmail: Boolean = false
 ) {
     var focused by remember { mutableStateOf(false) }
 
@@ -497,143 +502,57 @@ fun PremiumInputField(
         )
     }
     autofillNode?.let { autofillTree += it }
-    val borderAlpha by animateFloatAsState(
-        if (focused) 1f else 0.3f,
-        tween(200), label = "border"
-    )
-    val bgAlpha by animateFloatAsState(
-        if (focused) 1f else 0.85f,
-        tween(200), label = "bg"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                (containerColor ?: MaterialTheme.colorScheme.surface).copy(alpha = bgAlpha)
-            )
-            .border(
-                width = if (focused) 1.6.dp else 1.2.dp,
-                brush = Brush.linearGradient(
-                    colors =
-                        if (focused) {
-                            listOf(
-                                Color(0xFFFFA54B),
-                                OrangePrimary,
-                                Color(0xFFFFA54B)
-                            )
-                        } else {
-                            listOf(
-                                Color(0x33FF8C1A),
-                                Color(0x66FF8C1A),
-                                Color(0x33FF8C1A)
-                            )
-                        }
-                ),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .shadow(
-                elevation = if (focused) 10.dp else 3.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = OrangePrimary.copy(alpha = 0.25f),
-                spotColor = OrangePrimary.copy(alpha = 0.25f)
-            )
+    val colors = com.nagpurpulse.ui.theme.authPalette()
+    val shape = RoundedCornerShape(20.dp)
+    val clearLabel = stringResource(com.nagpurpulse.R.string.auth_clear_email)
+    Row(
+        Modifier.fillMaxWidth().height(56.dp).clip(shape)
+            .background(containerColor ?: colors.sand)
+            .border(if (focused || errorMessage != null) 2.dp else 1.dp,
+                if (errorMessage != null) colors.error else if (focused) colors.accent else colors.outline.copy(alpha = 0.5f), shape)
+            .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Focus glow
-        if (focused) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color.Transparent,
-                                OrangePrimary.copy(0.6f),
-                                OrangePrimary.copy(0.9f),
-                                OrangePrimary.copy(0.6f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides colors.ink) {
+            Box(Modifier.size(20.dp)) { leadingIcon() }
         }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 0.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(26.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                leadingIcon()
-            }
-            Spacer(Modifier.width(12.dp))
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        // Lets TalkBack read the hint together with the field and announce its error.
-                        .semantics(mergeDescendants = true) {
-                            if (errorMessage != null) error(errorMessage)
-                        }
-                        .onGloballyPositioned { coords ->
-                            autofillNode?.boundingBox = coords.boundsInWindow()
-                        }
-                        .onFocusChanged { state ->
-                            val hadFocus = focused
-                            focused = state.isFocused
-                            // Fires only when the user actually leaves the field
-                            // (not for the initial "unfocused" callback).
-                            if (hadFocus && !state.isFocused) onBlur?.invoke()
-                            autofillNode?.let { node ->
-                                if (state.isFocused) autofill?.requestAutofillForNode(node)
-                                else autofill?.cancelAutofillForNode(node)
-                            }
-                        },
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
-                        )
-                    }
-                    BasicTextField(
-                        value = value,
-                        onValueChange = onValueChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        visualTransformation = visualTransformation,
-                        keyboardOptions = keyboardOptions,
-                        keyboardActions = keyboardActions,
-                        cursorBrush = SolidColor(OrangePrimary)
-                    )
+        Spacer(Modifier.width(12.dp))
+        BasicTextField(
+            value = value, onValueChange = onValueChange, enabled = enabled,
+            singleLine = true, visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
+            textStyle = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = 15.sp),
+            cursorBrush = SolidColor(colors.accent),
+            modifier = Modifier.weight(1f).height(56.dp)
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .semantics {
+                    contentDescription = placeholder
+                    if (errorMessage != null) error(errorMessage)
                 }
-                trailingIcon?.invoke()
+                .onGloballyPositioned { autofillNode?.boundingBox = it.boundsInWindow() }
+                .onFocusChanged { state ->
+                    val hadFocus = focused
+                    focused = state.isFocused
+                    if (hadFocus && !state.isFocused) onBlur?.invoke()
+                    autofillNode?.let { node ->
+                        if (state.isFocused) autofill?.requestAutofillForNode(node)
+                        else autofill?.cancelAutofillForNode(node)
+                    }
+                },
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (value.isEmpty()) Text(placeholder, color = colors.muted, fontSize = 14.sp, maxLines = 1)
+                    inner()
+                }
             }
-        }
+        )
+        if (clearEmail && focused && value.isNotEmpty()) {
+            androidx.compose.material3.IconButton(onClick = { onValueChange("") }, enabled = enabled, modifier = Modifier.size(48.dp)) {
+                Icon(androidx.compose.material.icons.Icons.Filled.Close, clearLabel, tint = colors.ink)
+            }
+        } else trailingIcon?.invoke()
     }
 }
-
 
 // ─── Premium CTA button ───────────────────────────────────────────────────────
 @Composable

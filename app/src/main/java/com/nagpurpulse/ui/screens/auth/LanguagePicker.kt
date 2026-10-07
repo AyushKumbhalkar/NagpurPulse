@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -65,6 +66,7 @@ fun LanguagePickerChip(
                 .clip(RoundedCornerShape(50))
                 .background(backgroundColor)
                 .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(50))
+                .heightIn(min = 48.dp)
                 .clickable(role = Role.Button, onClickLabel = description) { expanded = true }
                 .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically

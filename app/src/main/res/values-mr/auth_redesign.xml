@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_or">किंवा</string>
+    <string name="auth_clear_email">ईमेल पत्ता पुसा</string>
+    <string name="auth_online">ऑनलाइन आहेत.</string>
+    <string name="auth_talking">गप्पा मारत आहेत.</string>
+    <string name="auth_signup_subtitle">नागपूरमधील गप्पांमध्ये सामील व्हा.</string>
+    <string name="auth_continue_email">ईमेलने पुढे जा</string>
+    <string name="auth_explore_guest">पाहुणे म्हणून पाहा</string>
+    <string name="auth_login_footer">आधीच खाते आहे? लॉग इन करा</string>
+    <string name="auth_signup_footer">NagpurPulse वर नवीन आहात? नोंदणी करा</string>
+    <string name="auth_change_email">ईमेल बदला</string>
+    <string name="auth_offline">तुम्ही ऑफलाइन आहात. जोडणी तपासा.</string>
+    <string name="auth_get_started">सुरू करा</string>
+    <string name="auth_city">तुमचे शहर,</string>
+    <string name="auth_together">एकत्र.</string>
+    <string name="auth_welcome_subtitle">प्रश्न विचारा, नव्या गोष्टी शेअर करा आणि नागपुरात तुमच्या आसपास काय घडते ते जाणून घ्या.</string>
+    <string name="auth_topic_traffic">सीताबर्डी वाहतूक</string>
+    <string name="auth_topic_poha">झणझणीत तर्री पोहे</string>
+    <string name="auth_topic_sunset">फुटाळा सूर्यास्त</string>
+    <string name="auth_live_count">आत्ता %1$d नागपूरकर गप्पा मारत आहेत</string>
+</resources>

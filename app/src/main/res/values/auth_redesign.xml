@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_or">or</string>
+    <string name="auth_clear_email">Clear email address</string>
+    <string name="auth_online">are online.</string>
+    <string name="auth_talking">are talking.</string>
+    <string name="auth_signup_subtitle">Join the conversations happening around Nagpur.</string>
+    <string name="auth_continue_email">Continue with email</string>
+    <string name="auth_explore_guest">Explore as guest</string>
+    <string name="auth_login_footer">Already have an account? Log in</string>
+    <string name="auth_signup_footer">New to NagpurPulse? Sign up</string>
+    <string name="auth_change_email">Change email</string>
+    <string name="auth_offline">You’re offline. Check your connection.</string>
+    <string name="auth_get_started">Get Started</string>
+    <string name="auth_city">Your city,</string>
+    <string name="auth_together">together.</string>
+    <string name="auth_welcome_subtitle">Ask questions, share finds and discover what’s happening around you in Nagpur.</string>
+    <string name="auth_topic_traffic">Sitabuldi traffic</string>
+    <string name="auth_topic_poha">Best tarri poha</string>
+    <string name="auth_topic_sunset">Futala sunset</string>
+    <string name="auth_live_count">%1$d Nagpurians talking right now</string>
+</resources>
