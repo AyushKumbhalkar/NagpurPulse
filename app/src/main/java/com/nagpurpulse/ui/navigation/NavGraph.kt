@@ -248,7 +248,9 @@ fun NagpurPulseNavGraph(
                             // A restored session may belong to a user who closed the app
                             // before finishing onboarding. Resume onboarding rather than
                             // sending an incomplete profile directly to the feed.
-                            onboardingOriginRoute = Screen.Signup.route
+                            // The splash screen is the entry point for a restored session,
+                            // so the onboarding flow itself is the back-stack origin.
+                            onboardingOriginRoute = Screen.Identity.route
                             selectedGender = null
                             selectedUsername = null
                             selectedAvatar = null
@@ -379,8 +381,24 @@ fun NagpurPulseNavGraph(
             popExitTransition = { ExitTransition.None }) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                    // A verified account may exist without having finished the
+                    // identity/username/profile-picture flow. Never send such a
+                    // user directly to Home after a later sign-in.
+                    onboardingScope.launch {
+                        if (authRepository.hasCompletedOnboarding()) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
+                        } else {
+                            onboardingOriginRoute = Screen.Login.route
+                            selectedGender = null
+                            selectedUsername = null
+                            selectedAvatar = null
+                            profileSaveError = null
+                            navController.navigate(Screen.Identity.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
+                        }
                     }
                 },
                 onGoogleNewUser = {
@@ -422,8 +440,23 @@ fun NagpurPulseNavGraph(
                     navController.navigate(Screen.Identity.route)
                 },
                 onExistingGoogleUser = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Signup.route) { inclusive = true }
+                    // Existing Google users also pass through the same onboarding
+                    // completion check so interrupted profiles can resume safely.
+                    onboardingScope.launch {
+                        if (authRepository.hasCompletedOnboarding()) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Signup.route) { inclusive = true }
+                            }
+                        } else {
+                            onboardingOriginRoute = Screen.Login.route
+                            selectedGender = null
+                            selectedUsername = null
+                            selectedAvatar = null
+                            profileSaveError = null
+                            navController.navigate(Screen.Identity.route) {
+                                popUpTo(Screen.Signup.route) { inclusive = true }
+                            }
+                        }
                     }
                 }
             )
