@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.content.Context
+import com.nagpurpulse.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 // ─── ViewModel ────────────────────────────────────────────────────────────────
 data class AuthUiState(
@@ -30,26 +33,27 @@ data class AuthUiState(
 
 private const val AUTH_UI_LOG_TAG = "NP_AUTH_FLOW"
 
-private fun safeAuthError(e: Throwable, fallback: String): String {
+private fun safeAuthError(context: Context, e: Throwable, fallback: String): String {
     val message = e.message?.lowercase().orEmpty()
     return when {
         message.contains("invalid login") || message.contains("invalid credentials") ||
                 message.contains("email not confirmed") || message.contains("invalid password") ->
-            "Invalid email or password."
+            context.getString(R.string.auth_err_invalid_credentials)
         (message.contains("weak") && message.contains("password")) ||
                 message.contains("password should") || message.contains("pwned") ->
-            "That password is too easy to guess. Try a longer one with letters, numbers and symbols."
+            context.getString(R.string.auth_err_weak_password)
         message.contains("rate limit") || message.contains("too many requests") ->
-            "Too many attempts. Please wait a moment and try again."
+            context.getString(R.string.auth_err_rate_limit)
         message.contains("network") || message.contains("timeout") ->
-            "Unable to connect right now. Check your internet connection and try again."
+            context.getString(R.string.auth_err_network)
         else -> fallback
     }
 }
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
@@ -66,7 +70,7 @@ class AuthViewModel @Inject constructor(
         onRateLimited: (Int) -> Unit = {}
     ) {
         if (password.length < 8) {
-            _uiState.value = AuthUiState(error = "Password must be at least 8 characters.")
+            _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_password_min8))
             return
         }
         viewModelScope.launch {
@@ -114,7 +118,7 @@ class AuthViewModel @Inject constructor(
                         _uiState.value = if (e is EmailConfirmationRequiredException) {
                             AuthUiState(infoMessage = e.message)
                         } else {
-                            AuthUiState(error = safeAuthError(e, "Unable to create your account. Please try again."))
+                            AuthUiState(error = safeAuthError(context, e, context.getString(R.string.auth_err_create_failed)))
                         }
                     }
                 }
@@ -126,11 +130,11 @@ class AuthViewModel @Inject constructor(
         val normalizedEmail = email.trim()
         val normalizedToken = token.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
-            _uiState.value = AuthUiState(error = "Enter a valid email address.")
+            _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_valid_email))
             return
         }
         if (!normalizedToken.matches(Regex("\\d{6}"))) {
-            _uiState.value = AuthUiState(error = "Enter the 6-digit verification code.")
+            _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_enter_code))
             return
         }
         viewModelScope.launch {
@@ -145,7 +149,7 @@ class AuthViewModel @Inject constructor(
                 },
                 onFailure = { e ->
                     android.util.Log.e(AUTH_UI_LOG_TAG, "OTP_VERIFY_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
-                    _uiState.value = AuthUiState(error = safeAuthError(e, "Invalid verification code. Please check the code and try again."))
+                    _uiState.value = AuthUiState(error = safeAuthError(context, e, context.getString(R.string.auth_err_invalid_code)))
                 }
             )
         }
@@ -154,7 +158,7 @@ class AuthViewModel @Inject constructor(
     fun resendSignupEmailOtp(email: String, onComplete: (String?) -> Unit = {}) {
         val normalizedEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
-            val error = "Enter a valid email address."
+            val error = context.getString(R.string.auth_err_valid_email)
             _uiState.value = AuthUiState(error = error)
             onComplete(error)
             return
@@ -171,8 +175,8 @@ class AuthViewModel @Inject constructor(
                 },
                 onFailure = { e ->
                     android.util.Log.e(AUTH_UI_LOG_TAG, "OTP_RESEND_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
-                    _uiState.value = AuthUiState(error = safeAuthError(e, "Could not resend the verification code. Please try again later."))
-                    onComplete(safeAuthError(e, "Could not resend the verification code. Please try again later."))
+                    _uiState.value = AuthUiState(error = safeAuthError(context, e, context.getString(R.string.auth_err_resend_failed)))
+                    onComplete(safeAuthError(context, e, context.getString(R.string.auth_err_resend_failed)))
                 }
             )
         }
@@ -181,11 +185,11 @@ class AuthViewModel @Inject constructor(
     fun signIn(email: String, password: String, onSuccess: () -> Unit) {
         val normalizedEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
-            _uiState.value = AuthUiState(error = "Enter a valid email address.")
+            _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_valid_email))
             return
         }
         if (password.isBlank()) {
-            _uiState.value = AuthUiState(error = "Enter your password.")
+            _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_enter_password))
             return
         }
         viewModelScope.launch {
@@ -196,7 +200,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState(isSuccess = true)
                     onSuccess()
                 },
-                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(e, "Unable to sign in. Please try again.")) }
+                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(context, e, context.getString(R.string.auth_err_sign_in_failed))) }
             )
         }
     }
@@ -219,7 +223,7 @@ class AuthViewModel @Inject constructor(
                     onFailure = { e ->
                         _uiState.value =
                             AuthUiState(
-                                error = safeAuthError(e, "Google sign-in failed. Please try again.")
+                                error = safeAuthError(context, e, context.getString(R.string.auth_err_google_failed))
                             )
                     }
                 )
@@ -230,7 +234,7 @@ class AuthViewModel @Inject constructor(
     fun sendPasswordReset(email: String) {
         val normalizedEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
-            _uiState.value = AuthUiState(error = "Enter a valid email address first")
+            _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_enter_email_first))
             return
         }
         viewModelScope.launch {
@@ -238,7 +242,7 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState(isLoading = true)
             authRepository.sendPasswordReset(normalizedEmail).fold(
                 onSuccess = { _uiState.value = AuthUiState(forgotPasswordSent = true) },
-                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(e, "Unable to send the reset email. Please try again later.")) }
+                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(context, e, context.getString(R.string.auth_err_reset_failed))) }
             )
         }
     }
@@ -281,7 +285,7 @@ class AuthViewModel @Inject constructor(
 
                         _uiState.value =
                             AuthUiState(
-                                error = safeAuthError(e, "Google sign-in failed. Please try again.")
+                                error = safeAuthError(context, e, context.getString(R.string.auth_err_google_failed))
                             )
                     }
                 )
