@@ -34,18 +34,21 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.nagpurpulse.R
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Password strength
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Order matters: the enum is compared with <= / >= in the UI. */
-enum class PasswordStrength(val label: String, val filledSegments: Int) {
-    Empty("", 0),
-    Weak("Weak", 1),
-    Fair("Fair", 2),
-    Good("Good", 3),
-    Strong("Strong", 4)
+enum class PasswordStrength(@StringRes val labelRes: Int, val filledSegments: Int) {
+    Empty(0, 0),
+    Weak(R.string.strength_weak, 1),
+    Fair(R.string.strength_fair, 2),
+    Good(R.string.strength_good, 3),
+    Strong(R.string.strength_strong, 4)
 }
 
 private val CommonPasswords = setOf(
@@ -120,12 +123,14 @@ fun PasswordStrengthMeter(
         animationSpec = tween(220),
         label = "password-strength-color"
     )
+    val strengthLabel = if (strength.labelRes != 0) stringResource(strength.labelRes) else ""
+    val strengthDescription = stringResource(R.string.strength_cd, strengthLabel)
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clearAndSetSemantics {
-                contentDescription = "Password strength: ${strength.label}"
+                contentDescription = strengthDescription
                 liveRegion = LiveRegionMode.Polite
             },
         verticalAlignment = Alignment.CenterVertically
@@ -146,7 +151,7 @@ fun PasswordStrengthMeter(
         }
         Spacer(Modifier.width(10.dp))
         Text(
-            text = strength.label,
+            text = strengthLabel,
             color = activeColor,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold
@@ -212,7 +217,7 @@ internal fun StrengthSection(
         val hint = when {
             errorMessage != null -> errorMessage
             strength != PasswordStrength.Empty && strength <= PasswordStrength.Fair ->
-                "Tip: use 12+ characters with letters, numbers and symbols."
+                stringResource(R.string.password_tip)
             else -> null
         }
         AnimatedContent(
