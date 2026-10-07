@@ -65,6 +65,10 @@
     <string name="strength_strong">Strong</string>
     <string name="strength_cd">Password strength: %1$s</string>
     <string name="password_tip">Tip: use 12+ characters with letters, numbers and symbols.</string>
+    <string name="auth_err_login_cooldown">Too many failed attempts. Please wait %1$d seconds before trying again.</string>
+    <string name="auth_err_email_not_confirmed">Please verify your email before signing in. We can send the verification code again.</string>
+    <string name="login_email_not_confirmed_hint">Your email is not verified yet. Verify it first, then sign in.</string>
+    <string name="login_resend_verification">Send verification code again</string>
     <string name="auth_err_invalid_credentials">Invalid email or password.</string>
     <string name="auth_err_weak_password">That password is too easy to guess. Try a longer one with letters, numbers and symbols.</string>
     <string name="auth_err_rate_limit">Too many attempts. Please wait a moment and try again.</string>
