@@ -1142,6 +1142,17 @@ private fun SignupEmailVerificationDialog(
 
                     Spacer(Modifier.height(10.dp))
 
+                    Text(
+                        text = stringResource(R.string.verify_email_delivery_note),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = vc.muted.copy(alpha = 0.88f),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
                     // Email shown as a chip: long addresses ellipsize instead of breaking the layout.
                     Row(
                         modifier = Modifier
