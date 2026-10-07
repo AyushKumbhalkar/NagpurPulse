@@ -116,6 +116,11 @@
         <item>पूछ रहे हैं।</item>
     </string-array>
     <string name="login_welcome_back">वापसी पर स्वागत है</string>
+    <string name="login_brand_tagline">शहर • लोग • अपडेट्स</string>
+    <string name="login_hero_body">नागपुर से जुड़े रहें — समाचार, लोग, कार्यक्रम और बहुत कुछ।</string>
+    <string name="login_card_subtitle">NagpurPulse पर जारी रखने के लिए लॉग इन करें</string>
+    <string name="login_keep_signed_in">मुझे साइन इन रखें</string>
+    <string name="login_legal_consent">जारी रखकर, आप पुष्टि करते हैं कि आपकी आयु 18 वर्ष या अधिक है और आप हमारी %1$s और %2$s से सहमत हैं।</string>
     <string name="login_email_hint">ईमेल पता</string>
     <string name="login_password_hint">पासवर्ड</string>
     <string name="login_err_email_invalid">मान्य ईमेल पता दर्ज करें</string>

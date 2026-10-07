@@ -117,7 +117,12 @@
         <item>are around.</item>
         <item>are asking.</item>
     </string-array>
-    <string name="login_welcome_back">WELCOME BACK</string>
+    <string name="login_welcome_back">Welcome Back</string>
+    <string name="login_brand_tagline">CITY • PEOPLE • UPDATES</string>
+    <string name="login_hero_body">Stay connected with Nagpur — News, People, Events and More.</string>
+    <string name="login_card_subtitle">Login to continue to NagpurPulse</string>
+    <string name="login_keep_signed_in">Keep me signed in</string>
+    <string name="login_legal_consent">By continuing, you confirm you are 18 or older and agree to our %1$s and %2$s.</string>
     <string name="login_email_hint">Email address</string>
     <string name="login_password_hint">Password</string>
     <string name="login_err_email_invalid">Enter a valid email address</string>

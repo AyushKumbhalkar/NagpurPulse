@@ -39,6 +39,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +57,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Email
@@ -79,6 +82,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -95,6 +99,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.offset
@@ -188,6 +193,55 @@ private fun LoginAnimatedHeadline(
     )
 }
 
+/** Static two-line treatment from the approved login reference. */
+@Composable
+private fun LoginHeroHeadline(
+    compact: Boolean,
+    ink: Color,
+    orange: Color
+) {
+    val prefix = stringResource(R.string.login_headline_prefix).trim()
+    val accent = stringArrayResource(R.array.login_headline_phrases).first()
+
+    Column {
+        Text(
+            text = prefix,
+            color = ink,
+            fontSize = if (compact) 34.sp else 40.sp,
+            lineHeight = if (compact) 37.sp else 43.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-1).sp,
+            maxLines = 1
+        )
+        Text(
+            text = accent,
+            color = orange,
+            fontSize = if (compact) 34.sp else 40.sp,
+            lineHeight = if (compact) 37.sp else 43.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-1).sp,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(3.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Box(
+                Modifier
+                    .width(88.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(orange)
+            )
+            Box(
+                Modifier
+                    .width(34.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(orange.copy(alpha = 0.75f))
+            )
+        }
+    }
+}
+
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -201,8 +255,17 @@ fun LoginScreen(
     val loginPrefs = remember(context) {
         context.getSharedPreferences("login_prefs", android.content.Context.MODE_PRIVATE)
     }
+    var keepSignedIn by remember {
+        mutableStateOf(loginPrefs.getBoolean("keep_signed_in", true))
+    }
     var email by remember {
-        mutableStateOf(loginPrefs.getString("remembered_email", "").orEmpty())
+        mutableStateOf(
+            if (loginPrefs.getBoolean("keep_signed_in", true)) {
+                loginPrefs.getString("remembered_email", "").orEmpty()
+            } else {
+                ""
+            }
+        )
     }
     var password by remember { mutableStateOf("") }
     var emailTouched by remember { mutableStateOf(false) }
@@ -231,168 +294,157 @@ fun LoginScreen(
     } else null
     val passwordFocusRequester = remember { FocusRequester() }
 
-    fun persistEmailIfValid() {
+    fun persistLoginPreference() {
         val normalized = email.trim().lowercase(java.util.Locale.ROOT)
-        if (android.util.Patterns.EMAIL_ADDRESS.matcher(normalized).matches()) {
-            loginPrefs.edit().putString("remembered_email", normalized).apply()
-        }
+        loginPrefs.edit().apply {
+            putBoolean("keep_signed_in", keepSignedIn)
+            if (keepSignedIn && android.util.Patterns.EMAIL_ADDRESS.matcher(normalized).matches()) {
+                putString("remembered_email", normalized)
+            } else {
+                remove("remembered_email")
+            }
+        }.apply()
     }
 
     fun submitLogin() {
         emailTouched = true
         passwordTouched = true
-        persistEmailIfValid()
+        persistLoginPreference()
         if (emailLooksValid && password.isNotBlank() && !uiState.isLoading) {
             viewModel.signIn(email.trim(), password, onLoginSuccess)
         }
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val compact = maxHeight < 800.dp
-        val pageTop = 40.dp
-        val logoHeight = 48.dp
-        val cardPaddingV = if (compact) 10.dp else 20.dp
-        val fieldGap = if (compact) 8.dp else 14.dp
-        val buttonHeight = if (compact) 50.dp else 58.dp
+        val compact = maxHeight < 790.dp
+        val heroHeight = if (compact) 282.dp else 316.dp
+        val cardPadding = if (compact) 16.dp else 20.dp
+        val buttonHeight = if (compact) 52.dp else 58.dp
+        val fieldGap = if (compact) 9.dp else 12.dp
 
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
-
-        // Match SignupScreen auth artwork exactly.
-        if (!isDarkTheme) {
-            Image(
-                painter = painterResource(R.drawable.auth_screen_header),
-                contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1774f / 850f)
-                    .alpha(0.70f)
-                    .offset(y = 0.dp)
-                    .align(Alignment.TopCenter)
-            )
-        }
-
-        if (!isDarkTheme) {
-            Image(
-                painter = painterResource(R.drawable.auth_screen_foooter),
-                contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(2048f / 682f)
-                    .alpha(0.70f)
-                    .offset(y = 19.dp)
-                    .align(Alignment.BottomCenter)
-            )
-        }
-
-        LanguagePickerChip(
-            contentColor = if (isDarkTheme) PrimaryText else Color(0xFF334155),
-            backgroundColor = if (isDarkTheme) Surface.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.90f),
-            borderColor = if (isDarkTheme) OrangePrimary.copy(alpha = 0.35f) else Color(0xFFFFD7BE),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 12.dp, end = 16.dp)
-        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
-                .imePadding()
-                .padding(top = pageTop, bottom = 4.dp),
+                .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(heroHeight)
             ) {
-                Image(
-                    painter = painterResource(if (isDarkTheme) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
-                    contentDescription = "NagpurPulse",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.height(logoHeight)
-                )
-
-                Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = (-19).dp)
-                        .padding(horizontal = 36.dp)
-                ) {
-                    LoginAnimatedHeadline(
-                        compact = compact,
-                        ink = ink,
-                        orange = Color(0xFFFF7518)
+                if (!isDarkTheme) {
+                    Image(
+                        painter = painterResource(R.drawable.nagpur_metro_header),
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                        alignment = Alignment.BottomCenter,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
                     )
                 }
 
-                Spacer(Modifier.height(if (compact) 8.dp else 8.dp))
-
-                // Keep the original centered "WELCOME BACK" treatment,
-                // while reserving exactly the same header-slot height as Signup.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = (-19).dp)
-                        .height(if (compact) 42.dp else 46.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(28.dp)
-                                .height(3.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(OrangePrimary)
-                        )
-                        Spacer(Modifier.width(9.dp))
-                        Text(
-                            stringResource(R.string.login_welcome_back),
-                            color = OrangePrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.6.sp
-                        )
-                        Spacer(Modifier.width(9.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(28.dp)
-                                .height(3.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(OrangePrimary)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
-
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = (-19).dp)
-                        .padding(horizontal = 18.dp)
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(pageBackground)
-                        .border(1.dp, pageBackground, RoundedCornerShape(32.dp))
-                        .padding(horizontal = 18.dp, vertical = cardPaddingV)
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 26.dp)
                 ) {
+                    Image(
+                        painter = painterResource(
+                            if (isDarkTheme) R.drawable.nagpurpulse_logo_dark
+                            else R.drawable.nagpurpulse_logo
+                        ),
+                        contentDescription = "NagpurPulse",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier
+                            .width(if (compact) 188.dp else 210.dp)
+                            .height(if (compact) 48.dp else 54.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.login_brand_tagline),
+                        color = muted,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.4.sp,
+                        modifier = Modifier.padding(start = 42.dp, top = 1.dp)
+                    )
+
+                    Spacer(Modifier.weight(1f))
+
+                    LoginHeroHeadline(
+                        compact = compact,
+                        ink = ink,
+                        orange = OrangePrimary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.login_hero_body),
+                        color = muted,
+                        fontSize = if (compact) 13.sp else 14.sp,
+                        lineHeight = if (compact) 18.sp else 20.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.widthIn(max = 245.dp)
+                    )
+                }
+
+                LanguagePickerChip(
+                    contentColor = if (isDarkTheme) PrimaryText else Color(0xFF0F172A),
+                    backgroundColor = if (isDarkTheme) Surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.95f),
+                    borderColor = if (isDarkTheme) OrangePrimary.copy(alpha = 0.35f) else Color(0xFFFFD8C1),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 8.dp, end = 14.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .offset(y = (-10).dp)
+                    .padding(horizontal = 18.dp)
+                    .widthIn(max = 520.dp)
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(28.dp),
+                        ambientColor = OrangePrimary.copy(alpha = 0.10f),
+                        spotColor = OrangePrimary.copy(alpha = 0.12f)
+                    )
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(cardBackground)
+                    .border(
+                        1.dp,
+                        if (isDarkTheme) OrangePrimary.copy(alpha = 0.22f) else Color(0xFFFFE6D5),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .padding(cardPadding)
+            ) {
+                    Text(
+                        text = stringResource(R.string.login_welcome_back),
+                        color = ink,
+                        fontSize = if (compact) 27.sp else 30.sp,
+                        lineHeight = if (compact) 32.sp else 35.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.login_card_subtitle),
+                        color = muted,
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp
+                    )
+                    Spacer(Modifier.height(if (compact) 14.dp else 18.dp))
+
                     LoginFieldContainer {
                         PremiumInputField(
                             value = email,
-                            onValueChange = {
-                                email = it
-                                if (android.util.Patterns.EMAIL_ADDRESS.matcher(it.trim()).matches()) {
-                                    loginPrefs.edit()
-                                        .putString("remembered_email", it.trim().lowercase(java.util.Locale.ROOT))
-                                        .apply()
-                                }
-                            },
+                            onValueChange = { email = it },
                             placeholder = stringResource(R.string.login_email_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
@@ -402,11 +454,10 @@ fun LoginScreen(
                             autofillTypes = listOf(AutofillType.EmailAddress),
                             onBlur = {
                                 emailTouched = true
-                                persistEmailIfValid()
                             },
                             errorMessage = emailError,
                             index = 0,
-                            containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
+                            containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFFCFA)
                         )
                     }
 
@@ -457,7 +508,7 @@ fun LoginScreen(
                             onBlur = { passwordTouched = true },
                             errorMessage = passwordError,
                             index = 1,
-                            containerColor = cardBackground
+                            containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFFCFA)
                         )
                     }
 
@@ -475,18 +526,57 @@ fun LoginScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(if (compact) 3.dp else 10.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 10.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        contentAlignment = Alignment.CenterEnd
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    keepSignedIn = !keepSignedIn
+                                    loginPrefs.edit().putBoolean("keep_signed_in", keepSignedIn).apply()
+                                    if (!keepSignedIn) loginPrefs.edit().remove("remembered_email").apply()
+                                }
+                                .padding(vertical = 7.dp, end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(if (keepSignedIn) OrangePrimary else Color.Transparent)
+                                    .border(
+                                        1.4.dp,
+                                        if (keepSignedIn) OrangePrimary else muted.copy(alpha = 0.55f),
+                                        RoundedCornerShape(5.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (keepSignedIn) {
+                                    Icon(
+                                        Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.login_keep_signed_in),
+                                color = ink,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         Text(
                             stringResource(R.string.login_forgot_password),
                             color = OrangePrimary,
-                            fontSize = 16.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.pressScale(
                                 onClick = {
@@ -498,7 +588,7 @@ fun LoginScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(4.dp))
                     AnimatedErrorMessage(
                         uiState.error?.let {
                             if (uiState.loginCooldownSeconds > 0) {
@@ -574,12 +664,12 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(if (compact) 7.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(40.dp))
+                            .clip(RoundedCornerShape(30.dp))
                             .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
                             .pressScale(
                                 onClick = { submitLogin() }
@@ -602,7 +692,7 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(if (compact) 7.dp else 16.dp))
+                    Spacer(Modifier.height(if (compact) 11.dp else 15.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -619,12 +709,12 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(if (compact) 44.dp else 48.dp)
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(24.dp))
                             .background(inputBackground)
                             .border(
                                 1.dp,
                                 if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB),
-                                RoundedCornerShape(18.dp)
+                                RoundedCornerShape(24.dp)
                             )
                             .pressScale(onClick = {
                                 scope.launch {
@@ -656,20 +746,17 @@ fun LoginScreen(
                         Text(stringResource(R.string.login_continue_google), color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
-                    // Google sign-in can create a new account from this screen too.
-                    Spacer(Modifier.height(if (compact) 6.dp else 10.dp))
-                    LegalConsentText(textColor = muted, linkColor = OrangePrimary)
-                    Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 9.dp else 12.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(22.dp))
                             .background(if (isDarkTheme) SurfaceAlt else Color(0xFFFFF5EC))
                             .border(
                                 1.dp,
                                 if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFFFE4CF),
-                                RoundedCornerShape(20.dp)
+                                RoundedCornerShape(22.dp)
                             )
                             .pressScale(onClick = {
                                 AuthAnalytics.log(context, "login_guest_tap")
@@ -694,76 +781,56 @@ fun LoginScreen(
                         }
                         Icon(Icons.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_continue_guest), tint = OrangePrimary, modifier = Modifier.size(20.dp))
                     }
-                }
+                    Spacer(Modifier.height(if (compact) 11.dp else 14.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .pressScale(onClick = onNavigateToSignup)
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.login_no_account),
+                            color = muted,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            stringResource(R.string.signup_create_account),
+                            color = OrangePrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("→", color = OrangePrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    LegalConsentText(
+                        textColor = muted,
+                        linkColor = OrangePrimary,
+                        modifier = Modifier.padding(top = 2.dp),
+                        textRes = R.string.login_legal_consent
+                    )
             }
 
-            // Match the Create Account screen exactly: the footer CTA starts
-            // after the same guest-card spacing and uses the same -38.dp visual lift.
-            Spacer(Modifier.height(if (compact) 27.dp else 31.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-38).dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(Modifier.height(0.dp))
-                Row(
+            if (!isDarkTheme) {
+                Image(
+                    painter = painterResource(R.drawable.nagpur_footer_transparent),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                    alignment = Alignment.BottomCenter,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(
-                            if (isDarkTheme) SurfaceAlt.copy(alpha = 0.92f)
-                            else Color.White.copy(alpha = 0.90f)
-                        )
-                        .border(
-                            1.dp,
-                            if (isDarkTheme) OrangePrimary.copy(alpha = 0.16f)
-                            else Color(0xFFF1E7DD),
-                            RoundedCornerShape(24.dp)
-                        )
-                        .pressScale(onClick = onNavigateToSignup)
-                        .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(stringResource(R.string.login_no_account), color = muted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.width(7.dp))
-                    Text(stringResource(R.string.signup_create_account), color = Color(0xFFFF7518), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.width(4.dp))
-                    Text("→", color = Color(0xFFFF7518), fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                }
+                        .fillMaxWidth()
+                        .aspectRatio(1949f / 807f)
+                        .offset(y = (-2).dp)
+                )
+            } else {
+                Spacer(Modifier.height(28.dp))
             }
-
-            // Explicit visual separation between the login CTA and the benefit row.
-            Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .offset(y = (-38).dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SignupBenefit(
-                    icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
-                    title = stringResource(R.string.login_benefit_secure),
-                    background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
-                    modifier = Modifier.weight(1f)
-                )
-                SignupBenefit(
-                    icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
-                    title = stringResource(R.string.login_benefit_nagpur),
-                    background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
-                    modifier = Modifier.weight(1f)
-                )
-                SignupBenefit(
-                    icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
-                    title = stringResource(R.string.login_benefit_discussions),
-                    background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
     }
 
@@ -907,14 +974,7 @@ fun LoginScreen(
 @Composable
 private fun LoginFieldContainer(content: @Composable () -> Unit) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .border(
-                width = 0.75.dp,
-                color = Color(0xFFFF7518),
-                shape = RoundedCornerShape(18.dp)
-            )
+        modifier = Modifier.fillMaxWidth()
     ) {
         content()
     }

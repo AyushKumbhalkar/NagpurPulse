@@ -116,6 +116,11 @@
         <item>विचारत आहेत.</item>
     </string-array>
     <string name="login_welcome_back">पुन्हा स्वागत आहे</string>
+    <string name="login_brand_tagline">शहर • माणसं • अपडेट्स</string>
+    <string name="login_hero_body">नागपूरशी जोडलेले राहा — बातम्या, माणसं, कार्यक्रम आणि बरेच काही.</string>
+    <string name="login_card_subtitle">NagpurPulse वर पुढे जाण्यासाठी लॉग इन करा</string>
+    <string name="login_keep_signed_in">मला साइन इन ठेवा</string>
+    <string name="login_legal_consent">पुढे जाऊन, तुम्ही पुष्टी करता की तुमचे वय 18 किंवा अधिक आहे आणि तुम्ही आमच्या %1$s आणि %2$s यांना सहमत आहात.</string>
     <string name="login_email_hint">ईमेल पत्ता</string>
     <string name="login_password_hint">पासवर्ड</string>
     <string name="login_err_email_invalid">वैध ईमेल पत्ता टाका</string>

@@ -27,7 +27,8 @@ object LegalLinks {
 fun LegalConsentText(
     textColor: Color,
     linkColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textRes: Int = R.string.legal_consent
 ) {
     val uriHandler = LocalUriHandler.current
     val linkStyle = SpanStyle(
@@ -38,7 +39,7 @@ fun LegalConsentText(
 
     val termsLabel = stringResource(R.string.legal_terms)
     val privacyLabel = stringResource(R.string.legal_privacy)
-    val fullText = stringResource(R.string.legal_consent, termsLabel, privacyLabel)
+    val fullText = stringResource(textRes, termsLabel, privacyLabel)
 
     val annotated = buildAnnotatedString {
         append(fullText)
