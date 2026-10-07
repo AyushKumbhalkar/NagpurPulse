@@ -45,7 +45,7 @@ fun SplashScreen(onFinished: () -> Unit) {
 
     val t = rememberInfiniteTransition(label = "splash")
     val glowAlpha by t.animateFloat(0.3f, 0.9f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
-    val ringRotation by t.animateFloat(0f, 360f, infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart), label = "orbit")
+
 
     val logoScale by animateFloatAsState(if (logoVisible) 1f else 0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow), label = "logo_scale")
     val exitAlpha by animateFloatAsState(if (exitAnim) 0f else 1f, tween(500, easing = FastOutSlowInEasing), label = "exit_alpha")
@@ -55,7 +55,7 @@ fun SplashScreen(onFinished: () -> Unit) {
         delay(300); textVisible = true
         delay(200); tagVisible  = true
         delay(1200); exitAnim   = true
-        delay(550); onFinished()
+        delay(700); onFinished()
     }
 
     Box(
@@ -108,7 +108,7 @@ fun SplashScreen(onFinished: () -> Unit) {
 
             AnimatedVisibility(textVisible, enter = fadeIn(tween(500)) + slideInVertically { 30 }) {
                 Text(buildAnnotatedString {
-                    withStyle(SpanStyle(color = PrimaryText, fontWeight = FontWeight.Black, fontSize = brandFontSize)) { append("Nagpur ") }
+                    withStyle(SpanStyle(color = PrimaryText, fontWeight = FontWeight.Black, fontSize = brandFontSize)) { append("Nagpur") }
                     withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.Black, fontSize = brandFontSize)) { append("Pulse") }
                 })
             }

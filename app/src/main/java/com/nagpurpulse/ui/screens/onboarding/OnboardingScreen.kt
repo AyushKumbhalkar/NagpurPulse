@@ -49,6 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.delay
+import com.nagpurpulse.ui.theme.Background
+import com.nagpurpulse.ui.theme.LocalIsDarkTheme
+import com.nagpurpulse.ui.theme.PrimaryText
+import com.nagpurpulse.ui.theme.SecondaryText
+import com.nagpurpulse.ui.components.pressScale
 
 private val WelcomeCream = Color(0xFFFFF9F2)
 private val WelcomeOrange = Color(0xFFFF5A00)
@@ -97,6 +102,7 @@ fun OnboardingScreen(
     val bodySize = if (screenWidth < 360) 14.sp else 15.sp
 
     var contentVisible by remember { mutableStateOf(false) }
+    val isDark = LocalIsDarkTheme.current
 
     LaunchedEffect(Unit) {
         delay(100)
