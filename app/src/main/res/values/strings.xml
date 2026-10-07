@@ -51,6 +51,9 @@
     <string name="used_title_accent">already used</string>
     <string name="used_body">This email address is already registered with NagpurPulse. Please log in to continue.</string>
     <string name="used_go_login">Go to Login</string>
+    <string name="google_existing_title">Welcome back!</string>
+    <string name="google_existing_body">This Google account is already registered with NagpurPulse. Welcome back — your account is ready.</string>
+    <string name="google_existing_continue">Continue to NagpurPulse</string>
     <string name="used_try_different">Try a different email</string>
     <string name="legal_terms">Terms of Service</string>
     <string name="legal_privacy">Privacy Policy</string>
