@@ -195,6 +195,30 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    /** Records the currently authenticated user's acceptance of the current legal versions. */
+    suspend fun recordLegalConsent(source: String): Result<Unit> {
+        val userId = currentUserId
+            ?: return Result.failure(IllegalStateException("No authenticated user is available to record legal consent"))
+
+        return try {
+            client.postgrest["user_consents"].upsert(
+                mapOf(
+                    "user_id" to userId,
+                    "terms_version" to LegalVersions.TERMS,
+                    "privacy_version" to LegalVersions.PRIVACY,
+                    "source" to source,
+                    "app_version" to BuildConfig.VERSION_NAME
+                )
+            ) {
+                onConflict = "user_id,terms_version,privacy_version"
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.w(AUTH_LOG_TAG, "Could not record legal consent")
+            Result.failure(e)
+        }
+    }
+
     private suspend fun registerFcmTokenForCurrentUser() {
         val userId = currentUserId ?: return
         try {
