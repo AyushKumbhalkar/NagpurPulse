@@ -267,14 +267,13 @@ class AuthViewModel @Inject constructor(
                     onSuccess =
                         {
 
-                            val completed =
-                                authRepository
-                                    .hasCompletedOnboarding()
+                            val existingAccount =
+                                authRepository.hasExistingProfileForCurrentUser()
 
                             _uiState.value =
                                 AuthUiState(isSuccess = true)
 
-                            if (completed) {
+                            if (existingAccount) {
                                 onExistingUser()
 
                             } else {
