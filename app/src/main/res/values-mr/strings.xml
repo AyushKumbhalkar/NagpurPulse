@@ -124,9 +124,9 @@
     <string name="login_continue_guest">पाहुणा म्हणून सुरू ठेवा</string>
     <string name="login_guest_subtitle">खात्याशिवाय पहा</string>
     <string name="login_no_account">तुमचे खाते नाही का?</string>
-    <string name="login_benefit_secure">सुरक्षित\nआणि खाजगी</string>
-    <string name="login_benefit_nagpur">नागपूरचा\nभाग बना</string>
-    <string name="login_benefit_discussions">रोचक\nचर्चा</string>
+    <string name="login_benefit_secure">सुरक्षित&#10;आणि खाजगी</string>
+    <string name="login_benefit_nagpur">नागपूरचा&#10;भाग बना</string>
+    <string name="login_benefit_discussions">रोचक&#10;चर्चा</string>
     <string name="login_reset_title">पासवर्ड रीसेट करा</string>
     <string name="login_reset_body">तुमच्या NagpurPulse खात्याशी जोडलेला ईमेल पत्ता टाका. आम्ही तुम्हाला सुरक्षित रीसेट लिंक पाठवू.</string>
     <string name="login_cancel">रद्द करा</string>
