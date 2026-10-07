@@ -3,6 +3,10 @@ package com.nagpurpulse.ui.screens.auth
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -67,6 +71,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -82,6 +87,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.rotate
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.OrangePrimary
@@ -589,6 +595,14 @@ fun SignupScreen(
         }
     }
 
+    // Network-loading overlay: show NagpurPulse branding immediately after
+    // Create Account is pressed, so the user never sees a blank waiting period.
+    if (uiState.isLoading && !showEmailVerificationDialog) {
+        NagpurPulseLoadingOverlay(
+            message = "Creating your account…"
+        )
+    }
+
     if (showEmailVerificationDialog) {
         SignupEmailVerificationDialog(
             email = email,
@@ -1019,7 +1033,114 @@ private fun SignupEmailVerificationDialog(
                         modifier = Modifier.size(22.dp)
                     )
                 }
+
+                if (isLoading) {
+                    NagpurPulseLoadingOverlay(
+                        message = "Verifying your email…",
+                        inDialog = true
+                    )
+                }
+
             }
+        }
+    }
+}
+
+@Composable
+private fun NagpurPulseLoadingOverlay(
+    message: String,
+    inDialog: Boolean = false
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "nagpurpulse-loading")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "logo-ring-rotation"
+    )
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "logo-pulse"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                if (inDialog) Color(0xAFFFFCF7) else Color(0xCCFFF9F2)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(if (inDialog) 86.dp else 92.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(Color.White)
+                    .border(
+                        width = 1.dp,
+                        color = Color(0xFFFFD6B8),
+                        shape = RoundedCornerShape(26.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(5.dp)
+                        .rotate(rotation)
+                ) {
+                    drawArc(
+                        color = Color(0xFFF4511E),
+                        startAngle = -55f,
+                        sweepAngle = 105f,
+                        useCenter = false,
+                        style = Stroke(
+                            width = 3.5.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    )
+                }
+
+                Image(
+                    painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
+                    contentDescription = "NagpurPulse",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier
+                        .size(if (inDialog) 46.dp else 50.dp)
+                        .then(Modifier.rotate((pulse - 1f) * 2.5f))
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            Text(
+                text = message,
+                color = Color(0xFF142033),
+                fontSize = if (inDialog) 14.sp else 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "Please wait",
+                color = Color(0xFF64748B),
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
