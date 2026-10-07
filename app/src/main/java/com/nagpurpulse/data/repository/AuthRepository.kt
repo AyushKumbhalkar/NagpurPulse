@@ -50,7 +50,7 @@ class AuthRepository @Inject constructor(
         val confirmed = user?.emailConfirmedAt != null
         android.util.Log.d(
             AUTH_LOG_TAG,
-            "SESSION_CHECK: sessionUserPresent=\${user != null}, emailConfirmed=\${confirmed}"
+            "SESSION_CHECK: sessionUserPresent=${user != null}, emailConfirmed=$confirmed"
         )
         return user != null && confirmed
     }
