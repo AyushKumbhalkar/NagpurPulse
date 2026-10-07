@@ -82,7 +82,7 @@
     <string name="auth_err_reset_failed">Unable to send the reset email. Please try again later.</string>
     <string name="google_err_no_internet">No internet connection. Check your connection and try again.</string>
     <string name="google_err_no_account">No Google account found on this phone. Add one in Settings, then try again.</string>
-    <string name="google_err_unavailable">Google sign-in isn't available on this phone. Update Google Play services and try again.</string>
+    <string name="google_err_unavailable">Google sign-in isn\'t available on this phone. Update Google Play services and try again.</string>
     <string name="google_err_interrupted">Google sign-in was interrupted. Please try again.</string>
 
     <string-array name="signup_headline_phrases">
@@ -125,7 +125,7 @@
     <string name="login_continue_google">Continue with Google</string>
     <string name="login_continue_guest">Continue as Guest</string>
     <string name="login_guest_subtitle">Explore without an account</string>
-    <string name="login_no_account">Don't have an account?</string>
+    <string name="login_no_account">Don\'t have an account?</string>
     <string name="login_benefit_secure">Secure&#10;&amp; private</string>
     <string name="login_benefit_nagpur">Be a part&#10;of Nagpur</string>
     <string name="login_benefit_discussions">Interesting&#10;discussions</string>
