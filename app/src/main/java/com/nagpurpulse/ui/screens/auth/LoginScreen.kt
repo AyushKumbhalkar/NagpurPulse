@@ -625,19 +625,19 @@ fun LoginScreen(
             ) {
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
-                    title = "Secure\n& private",
+                    title = stringResource(R.string.login_benefit_secure),
                     background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
-                    title = "Be a part\nof Nagpur",
+                    title = stringResource(R.string.login_benefit_nagpur),
                     background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
-                    title = "Interesting\ndiscussions",
+                    title = stringResource(R.string.login_benefit_discussions),
                     background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
                 )
