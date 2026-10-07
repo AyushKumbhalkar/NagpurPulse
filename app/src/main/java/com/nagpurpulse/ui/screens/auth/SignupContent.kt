@@ -53,7 +53,7 @@ internal fun SignupContent(
         if (!passwordStep && !spec.keyboard && online && error == null && emailError == null && passwordError == null && confirmError == null) {
             AuthHeadline(stringResource(R.string.signup_headline_prefix), stringResource(R.string.auth_online),
                 spec.tier == AuthHeightTier.Compact)
-            AuthFitText(stringResource(R.string.auth_signup_subtitle), Modifier.fillMaxWidth().height(32.dp), maxSize = 12, maxLines = 2)
+            AuthFitText(stringResource(R.string.auth_signup_subtitle), Modifier.fillMaxWidth().height(32.dp), maxSize = 12, minSize = 8, maxLines = 2)
             if (spec.tier != AuthHeightTier.Compact) Spacer(Modifier.height(spec.gap))
         }
         if (!passwordStep) {

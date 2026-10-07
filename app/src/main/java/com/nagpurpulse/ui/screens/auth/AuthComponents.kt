@@ -541,7 +541,7 @@ fun PremiumInputField(
                 },
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) Text(placeholder, color = colors.muted, fontSize = 14.sp, maxLines = 1)
+                    if (value.isEmpty()) AuthFitText(placeholder, color = colors.muted, maxSize = 14, minSize = 9)
                     inner()
                 }
             }
