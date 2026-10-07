@@ -14,6 +14,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.nagpurpulse.R
 
 /** Single place to change the legal page URLs. */
 object LegalLinks {
@@ -34,16 +36,24 @@ fun LegalConsentText(
         textDecoration = TextDecoration.Underline
     )
 
+    val termsLabel = stringResource(R.string.legal_terms)
+    val privacyLabel = stringResource(R.string.legal_privacy)
+    val fullText = stringResource(R.string.legal_consent, termsLabel, privacyLabel)
+
     val annotated = buildAnnotatedString {
-        append("By creating an account or continuing with Google, you confirm you are 18 or older and agree to our ")
-        pushStringAnnotation(tag = "URL", annotation = LegalLinks.TERMS_URL)
-        withStyle(linkStyle) { append("Terms of Service") }
-        pop()
-        append(" and ")
-        pushStringAnnotation(tag = "URL", annotation = LegalLinks.PRIVACY_URL)
-        withStyle(linkStyle) { append("Privacy Policy") }
-        pop()
-        append(".")
+        append(fullText)
+        // Links are located by their label, so word order can differ per language.
+        listOf(
+            termsLabel to LegalLinks.TERMS_URL,
+            privacyLabel to LegalLinks.PRIVACY_URL
+        ).forEach { (label, url) ->
+            val start = fullText.indexOf(label)
+            if (start >= 0) {
+                val end = start + label.length
+                addStyle(linkStyle, start, end)
+                addStringAnnotation(tag = "URL", annotation = url, start = start, end = end)
+            }
+        }
     }
 
     ClickableText(
