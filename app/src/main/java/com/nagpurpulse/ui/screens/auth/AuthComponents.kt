@@ -474,6 +474,7 @@ fun PremiumInputField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     autofillTypes: List<AutofillType> = emptyList(),
+    onBlur: (() -> Unit)? = null,
     index: Int = 0,
     containerColor: Color? = null
 ) {
@@ -582,7 +583,11 @@ fun PremiumInputField(
                             autofillNode?.boundingBox = coords.boundsInWindow()
                         }
                         .onFocusChanged { state ->
+                            val hadFocus = focused
                             focused = state.isFocused
+                            // Fires only when the user actually leaves the field
+                            // (not for the initial "unfocused" callback).
+                            if (hadFocus && !state.isFocused) onBlur?.invoke()
                             autofillNode?.let { node ->
                                 if (state.isFocused) autofill?.requestAutofillForNode(node)
                                 else autofill?.cancelAutofillForNode(node)

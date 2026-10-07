@@ -220,7 +220,7 @@ fun LoginScreen(
     val ink = if (isDarkTheme) PrimaryText else Color(0xFF111827)
     val muted = if (isDarkTheme) SecondaryText else Color(0xFF64748B)
     val emailLooksValid = email.isNotBlank() &&
-        android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+            android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
@@ -508,15 +508,17 @@ fun LoginScreen(
                             )
                             .pressScale(onClick = {
                                 scope.launch {
-                                    try {
-                                        val token = GoogleAuthManager(context).getGoogleIdToken()
-                                        viewModel.signInWithGoogleToken(
-                                            idToken = token,
-                                            onExistingUser = onLoginSuccess,
-                                            onNewUser = onGoogleNewUser
-                                        )
-                                    } catch (_: Exception) {
-                                        viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
+                                    when (val outcome = GoogleAuthManager(context).signIn()) {
+                                        is GoogleSignInOutcome.Success ->
+                                            viewModel.signInWithGoogleToken(
+                                                idToken = outcome.idToken,
+                                                nonce = outcome.rawNonce,
+                                                onExistingUser = onLoginSuccess,
+                                                onNewUser = onGoogleNewUser
+                                            )
+                                        GoogleSignInOutcome.Cancelled -> Unit
+                                        is GoogleSignInOutcome.Failure ->
+                                            viewModel.showError(outcome.message)
                                     }
                                 }
                             })
@@ -634,7 +636,7 @@ fun LoginScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-                Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
     }
 

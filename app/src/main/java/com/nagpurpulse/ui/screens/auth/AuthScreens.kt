@@ -34,8 +34,11 @@ private fun safeAuthError(e: Throwable, fallback: String): String {
     val message = e.message?.lowercase().orEmpty()
     return when {
         message.contains("invalid login") || message.contains("invalid credentials") ||
-            message.contains("email not confirmed") || message.contains("invalid password") ->
+                message.contains("email not confirmed") || message.contains("invalid password") ->
             "Invalid email or password."
+        (message.contains("weak") && message.contains("password")) ||
+                message.contains("password should") || message.contains("pwned") ->
+            "That password is too easy to guess. Try a longer one with letters, numbers and symbols."
         message.contains("rate limit") || message.contains("too many requests") ->
             "Too many attempts. Please wait a moment and try again."
         message.contains("network") || message.contains("timeout") ->
@@ -80,10 +83,10 @@ class AuthViewModel @Inject constructor(
                     android.util.Log.e(AUTH_UI_LOG_TAG, "SIGNUP_VM_ERROR: type=${e::class.java.simpleName}, message=${e.message}", e)
                     val message = e.message?.lowercase().orEmpty()
                     val emailAlreadyUsed = e is EmailAlreadyUsedException ||
-                        message.contains("user already registered") ||
-                        message.contains("email already registered") ||
-                        message.contains("email address is already registered") ||
-                        message.contains("already exists")
+                            message.contains("user already registered") ||
+                            message.contains("email already registered") ||
+                            message.contains("email address is already registered") ||
+                            message.contains("already exists")
 
                     val rateLimitSeconds = Regex("(\\d+)\\s*seconds?", RegexOption.IGNORE_CASE)
                         .find(e.message.orEmpty())
@@ -94,8 +97,8 @@ class AuthViewModel @Inject constructor(
 
                     if (rateLimitSeconds != null &&
                         (message.contains("for security purposes") ||
-                            message.contains("rate limit") ||
-                            message.contains("too many requests"))
+                                message.contains("rate limit") ||
+                                message.contains("too many requests"))
                     ) {
                         // Supabase intentionally blocks repeated signup-confirmation requests
                         // for a short cooldown. Re-open the verification dialog so the user
@@ -200,13 +203,14 @@ class AuthViewModel @Inject constructor(
 
     fun signInWithGoogleToken(
         idToken: String,
+        nonce: String? = null,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.value = AuthUiState(isLoading = true)
 
-            authRepository.signInWithGoogleToken(idToken)
+            authRepository.signInWithGoogleToken(idToken, nonce)
                 .fold(
                     onSuccess = {
                         _uiState.value = AuthUiState(isSuccess = true)
@@ -242,6 +246,7 @@ class AuthViewModel @Inject constructor(
 
     fun signInWithGoogleToken(
         idToken: String,
+        nonce: String? = null,
         onExistingUser: () -> Unit,
         onNewUser: () -> Unit
     ) {
@@ -251,26 +256,26 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState(isLoading = true)
 
             authRepository
-                .signInWithGoogleToken(idToken)
+                .signInWithGoogleToken(idToken, nonce)
                 .fold(
 
                     onSuccess =
                         {
 
-                        val completed =
-                            authRepository
-                                .hasCompletedOnboarding()
+                            val completed =
+                                authRepository
+                                    .hasCompletedOnboarding()
 
-                        _uiState.value =
-                            AuthUiState(isSuccess = true)
+                            _uiState.value =
+                                AuthUiState(isSuccess = true)
 
-                        if (completed) {
-                            onExistingUser()
+                            if (completed) {
+                                onExistingUser()
 
-                        } else {
-                            onNewUser()
-                        }
-                    },
+                            } else {
+                                onNewUser()
+                            }
+                        },
 
                     onFailure = { e ->
 
@@ -298,12 +303,3 @@ fun authTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLabelColor       = OrangePrimary,
     unfocusedLabelColor     = TextSecondary
 )
-
-
-
-
-
-
-
-
-

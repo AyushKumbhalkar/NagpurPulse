@@ -147,7 +147,8 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun signInWithGoogleToken(
-        idToken: String
+        idToken: String,
+        nonce: String? = null
     ): Result<Unit> {
 
         return try {
@@ -155,6 +156,8 @@ class AuthRepository @Inject constructor(
             client.auth.signInWith(IDToken) {
                 this.idToken = idToken
                 provider = Google
+                // Raw nonce; Supabase hashes it and compares with the token's claim.
+                this.nonce = nonce
             }
 
             registerFcmTokenForCurrentUser()
@@ -535,12 +538,12 @@ class AuthRepository @Inject constructor(
                 .decodeSingle<Profile>()
 
             val matches = (hideComments == null || saved.hideComments == hideComments) &&
-                (hidePosts == null || saved.hidePosts == hidePosts) &&
-                (hideProfile == null || saved.hideProfile == hideProfile) &&
-                (allowDms == null || saved.allowDms == allowDms) &&
-                (showOnlineStatus == null || saved.showOnlineStatus == showOnlineStatus) &&
-                (incognitoMode == null || saved.incognitoMode == incognitoMode) &&
-                (hideFromSearch == null || saved.hideFromSearch == hideFromSearch)
+                    (hidePosts == null || saved.hidePosts == hidePosts) &&
+                    (hideProfile == null || saved.hideProfile == hideProfile) &&
+                    (allowDms == null || saved.allowDms == allowDms) &&
+                    (showOnlineStatus == null || saved.showOnlineStatus == showOnlineStatus) &&
+                    (incognitoMode == null || saved.incognitoMode == incognitoMode) &&
+                    (hideFromSearch == null || saved.hideFromSearch == hideFromSearch)
 
             if (!matches) {
                 return Result.failure(IllegalStateException("Privacy settings could not be verified after saving"))

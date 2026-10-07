@@ -35,7 +35,7 @@ fun LegalConsentText(
     )
 
     val annotated = buildAnnotatedString {
-        append("By creating an account or continuing with Google, you agree to our ")
+        append("By creating an account or continuing with Google, you confirm you are 18 or older and agree to our ")
         pushStringAnnotation(tag = "URL", annotation = LegalLinks.TERMS_URL)
         withStyle(linkStyle) { append("Terms of Service") }
         pop()

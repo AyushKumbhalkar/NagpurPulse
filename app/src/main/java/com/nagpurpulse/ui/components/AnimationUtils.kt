@@ -23,7 +23,11 @@ import androidx.compose.ui.unit.dp
 import com.nagpurpulse.ui.theme.SurfaceTwo
 import com.nagpurpulse.ui.theme.SurfaceThree
 
-// ── Press-scale ───────────────────────────────────────────────────────────────
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+
 fun Modifier.pressScale(
     pressedScale: Float = 0.96f,
     onClick: () -> Unit
@@ -34,8 +38,13 @@ fun Modifier.pressScale(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
         label = "press_scale"
     )
+    val click = onClick
     this
         .scale(scale)
+        .semantics(mergeDescendants = true) {
+            role = Role.Button
+            onClick(label = null) { click(); true }
+        }
         .pointerInput(onClick) {
             detectTapGestures(
                 onPress = { pressed = true; tryAwaitRelease(); pressed = false },

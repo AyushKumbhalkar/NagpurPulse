@@ -46,6 +46,15 @@ android {
             "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "your-anon-key-here")}\""
         )
 
+        // Google "Web application" OAuth client ID (used as the server client ID for
+        // Credential Manager). Not a secret. Override per build in local.properties:
+        //   GOOGLE_WEB_CLIENT_ID=xxxx.apps.googleusercontent.com
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "249353068594-0tpbik5v3pl7470gt2ppbqdjq1d7ih12.apps.googleusercontent.com")}\""
+        )
+
         buildConfigField(
             "String",
             "OPENWEATHER_API_KEY",

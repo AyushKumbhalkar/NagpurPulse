@@ -6,6 +6,7 @@
 
 package com.nagpurpulse.ui.screens.auth
 
+androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -156,6 +157,12 @@ fun SignupScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    // Validation UX: errors appear after the user leaves a field, or after they
+    // tap Create Account / press Done - never while they are still typing.
+    var emailTouched by rememberSaveable { mutableStateOf(false) }
+    var passwordTouched by remember { mutableStateOf(false) }
+    var confirmTouched by remember { mutableStateOf(false) }
+    var submitAttempted by remember { mutableStateOf(false) }
     var showEmailVerificationDialog by rememberSaveable { mutableStateOf(false) }
     var showEmailAlreadyUsedDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
@@ -167,6 +174,7 @@ fun SignupScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    val hapticFeedback = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val autofillManager = remember(context) {
         context.getSystemService(android.view.autofill.AutofillManager::class.java)
@@ -201,13 +209,39 @@ fun SignupScreen(
     val emailLooksValid = email.isNotBlank() &&
             android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
+    val emailError: String? = when {
+        !(emailTouched || submitAttempted) -> null
+        email.isBlank() -> "Enter your email address"
+        !emailLooksValid -> "Enter a valid email address"
+        else -> null
+    }
+    val passwordError: String? = when {
+        !(passwordTouched || submitAttempted) -> null
+        password.isEmpty() -> "Enter a password"
+        password.length < 8 -> "Password must be at least 8 characters"
+        else -> null
+    }
+    val confirmError: String? = when {
+        confirmPassword.isEmpty() ->
+            if (confirmTouched || submitAttempted) "Confirm your password" else null
+        password != confirmPassword &&
+                (confirmTouched || submitAttempted || confirmPassword.length >= password.length) ->
+            "Passwords do not match"
+        else -> null
+    }
+
     // Single submit path used by both the Create Account button and the
     // keyboard "Done" key on the confirm-password field.
     fun submitSignup() {
-        if (emailLooksValid && password.length >= 8 &&
-            confirmPassword.isNotBlank() && password == confirmPassword &&
-            !uiState.isLoading
-        ) {
+        submitAttempted = true
+        val formValid = emailLooksValid && password.length >= 8 &&
+                confirmPassword.isNotBlank() && password == confirmPassword
+        if (!formValid) {
+            // Errors are now visible under each field; give a small nudge too.
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            return
+        }
+        if (!uiState.isLoading) {
             viewModel.signUp(
                 email = email.trim(),
                 password = password,
@@ -298,6 +332,7 @@ fun SignupScreen(
                 .fillMaxSize()
                 .navigationBarsPadding()
                 .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(top = pageTop, bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -358,7 +393,7 @@ fun SignupScreen(
                         PremiumInputField(
                             value = email,
                             onValueChange = { email = it },
-                            placeholder = "Email address",
+                            placeholder = stringResource(R.string.signup_email_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
@@ -372,25 +407,22 @@ fun SignupScreen(
                                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
                             autofillTypes = listOf(AutofillType.EmailAddress),
+                            onBlur = { emailTouched = true },
                             index = 0,
                             containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
                     }
-                    if (email.isNotBlank() && !emailLooksValid) {
-                        Text(
-                            text = "Enter a valid email address",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(start = 10.dp, top = 4.dp)
-                        )
-                    }
+                    AuthFieldMessage(
+                        message = emailError,
+                        color = MaterialTheme.colorScheme.error
+                    )
                     Spacer(Modifier.height(fieldGap))
 
                     SignupFieldContainer {
                         PremiumInputField(
                             value = password,
                             onValueChange = { password = it },
-                            placeholder = "Password",
+                            placeholder = "Password (8+ characters)",
                             leadingIcon = {
                                 Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
@@ -418,8 +450,23 @@ fun SignupScreen(
                                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
                             autofillTypes = listOf(AutofillType.NewPassword),
+                            onBlur = { passwordTouched = true },
                             index = 1,
                             containerColor = cardBackground
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = password.isNotEmpty() || passwordError != null,
+                        enter = fadeIn(tween(140)) + expandVertically(),
+                        exit = fadeOut(tween(100)) + shrinkVertically()
+                    ) {
+                        StrengthSection(
+                            password = password,
+                            email = email,
+                            trackColor = muted.copy(alpha = 0.25f),
+                            hintColor = muted,
+                            errorColor = MaterialTheme.colorScheme.error,
+                            errorMessage = passwordError
                         )
                     }
                     Spacer(Modifier.height(if (compact) 3.dp else 10.dp))
@@ -460,26 +507,16 @@ fun SignupScreen(
                                 }
                             ),
                             autofillTypes = listOf(AutofillType.NewPassword),
+                            onBlur = { confirmTouched = true },
                             index = 2,
                             containerColor = cardBackground
                         )
                     }
 
-                    if (password.isNotEmpty() && password.length < 8) {
-                        Text(
-                            text = "Password must be at least 8 characters",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(start = 10.dp, top = 7.dp)
-                        )
-                    } else if (confirmPassword.isNotEmpty() && password != confirmPassword) {
-                        Text(
-                            text = "Passwords do not match",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(start = 10.dp, top = 7.dp)
-                        )
-                    }
+                    AuthFieldMessage(
+                        message = confirmError,
+                        color = MaterialTheme.colorScheme.error
+                    )
                     Spacer(Modifier.height(10.dp))
                     AnimatedErrorMessage(uiState.error)
                     uiState.infoMessage?.let { message ->
@@ -537,15 +574,17 @@ fun SignupScreen(
                             .border(1.dp, fieldBorder, RoundedCornerShape(18.dp))
                             .pressScale(onClick = {
                                 scope.launch {
-                                    try {
-                                        val token = GoogleAuthManager(context).getGoogleIdToken()
-                                        viewModel.signInWithGoogleToken(
-                                            idToken = token,
-                                            onExistingUser = onExistingGoogleUser,
-                                            onNewUser = onSignupSuccess
-                                        )
-                                    } catch (_: Exception) {
-                                        viewModel.showError("Google sign-in was cancelled or failed. Please try again.")
+                                    when (val outcome = GoogleAuthManager(context).signIn()) {
+                                        is GoogleSignInOutcome.Success ->
+                                            viewModel.signInWithGoogleToken(
+                                                idToken = outcome.idToken,
+                                                nonce = outcome.rawNonce,
+                                                onExistingUser = onExistingGoogleUser,
+                                                onNewUser = onSignupSuccess
+                                            )
+                                        GoogleSignInOutcome.Cancelled -> Unit
+                                        is GoogleSignInOutcome.Failure ->
+                                            viewModel.showError(outcome.message)
                                     }
                                 }
                             })
@@ -730,6 +769,8 @@ fun SignupScreen(
             onTryDifferentEmail = {
                 showEmailAlreadyUsedDialog = false
                 email = ""
+                emailTouched = false
+                submitAttempted = false
             },
             onDismiss = {
                 if (!uiState.isLoading) showEmailAlreadyUsedDialog = false
@@ -742,21 +783,91 @@ fun SignupScreen(
 //  VERIFY-EMAIL DIALOG (redesigned)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Single source of truth for the dialog palette (easy to theme later). */
-private object VerifyColors {
-    val Card = Color(0xFFFFFCF7)
-    val Ink = Color(0xFF142033)
-    val Muted = Color(0xFF64748B)
-    val Orange = Color(0xFFF4511E)
-    val OrangeSoft = Color(0xFFFFF1E6)
-    val OrangeLine = Color(0xFFFFCBAA)
-    val OrangeFilled = Color(0xFFFFA36B)
-    val GradientStart = Color(0xFFFF941F)
-    val GradientEnd = Color(0xFFFF3D1F)
-    val Error = Color(0xFFD93025)
-    val ErrorSoft = Color(0xFFFFF1F0)
-    val Neutral = Color(0xFFF6F1EA)
-}
+/** Single source of truth for the dialog palette. Light and dark variants. */
+private data class VerifyPalette(
+    val card: Color,
+    val ink: Color,
+    val muted: Color,
+    val orange: Color,
+    val orangeSoft: Color,
+    val orangeLine: Color,
+    val orangeFilled: Color,
+    val gradientStart: Color,
+    val gradientEnd: Color,
+    val error: Color,
+    val errorSoft: Color,
+    val neutral: Color,
+    val artFill: Color,
+    val artStroke: Color,
+    val artGlow: Color,
+    val pillBorder: Color,
+    val iconNeutral: Color,
+    val fieldActive: Color,
+    val fieldIdle: Color,
+    val closeBg: Color,
+    val scrim: Color,
+    val scrimDialog: Color,
+    val overlayCard: Color,
+    val overlayRing: Color
+)
+
+private val LightVerifyPalette = VerifyPalette(
+    card = Color(0xFFFFFCF7),
+    ink = Color(0xFF142033),
+    muted = Color(0xFF64748B),
+    orange = Color(0xFFF4511E),
+    orangeSoft = Color(0xFFFFF1E6),
+    orangeLine = Color(0xFFFFCBAA),
+    orangeFilled = Color(0xFFFFA36B),
+    gradientStart = Color(0xFFFF941F),
+    gradientEnd = Color(0xFFFF3D1F),
+    error = Color(0xFFD93025),
+    errorSoft = Color(0xFFFFF1F0),
+    neutral = Color(0xFFF6F1EA),
+    artFill = Color(0xFFFFE5CF),
+    artStroke = Color(0xFFF4B07D),
+    artGlow = Color(0xFFFFE2CC),
+    pillBorder = Color(0xFFFFE0C8),
+    iconNeutral = Color(0xFF4B5563),
+    fieldActive = Color.White,
+    fieldIdle = Color(0xFFFFFBF7),
+    closeBg = Color(0xFFFFF7EF),
+    scrim = Color(0xCCFFF9F2),
+    scrimDialog = Color(0xAFFFFCF7),
+    overlayCard = Color.White,
+    overlayRing = Color(0xFFFFD6B8)
+)
+
+private val DarkVerifyPalette = VerifyPalette(
+    card = Color(0xFF181818),
+    ink = Color(0xFFF2F2F7),
+    muted = Color(0xFF9A9AA2),
+    orange = Color(0xFFFF7A45),
+    orangeSoft = Color(0xFF2B1A10),
+    orangeLine = Color(0xFF5A3420),
+    orangeFilled = Color(0xFFB5582C),
+    gradientStart = Color(0xFFFF941F),
+    gradientEnd = Color(0xFFFF3D1F),
+    error = Color(0xFFFF6B60),
+    errorSoft = Color(0xFF3A1A18),
+    neutral = Color(0xFF242426),
+    artFill = Color(0xFF2E1D12),
+    artStroke = Color(0xFF7A4A2A),
+    artGlow = Color(0xFF3A2314),
+    pillBorder = Color(0xFF4A2D1A),
+    iconNeutral = Color(0xFFB0B0B8),
+    fieldActive = Color(0xFF202022),
+    fieldIdle = Color(0xFF1C1C1E),
+    closeBg = Color(0xFF262626),
+    scrim = Color(0xCC080808),
+    scrimDialog = Color(0xB3000000),
+    overlayCard = Color(0xFF1C1C1E),
+    overlayRing = Color(0xFF5A3420)
+)
+
+@Composable
+private fun rememberVerifyPalette(): VerifyPalette =
+    if (LocalIsDarkTheme.current) DarkVerifyPalette else LightVerifyPalette
 
 @Composable
 private fun SignupEmailVerificationDialog(
@@ -772,6 +883,7 @@ private fun SignupEmailVerificationDialog(
     onChangeEmail: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val vc = rememberVerifyPalette()
     val hapticFeedback = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
@@ -845,7 +957,7 @@ private fun SignupEmailVerificationDialog(
                     .width(cardWidth)
                     .heightIn(max = maxHeight * 0.92f)
                     .clip(cardShape)
-                    .background(VerifyColors.Card)
+                    .background(vc.card)
             ) {
                 // ── Decorative layer: never affects layout ──
                 Box(modifier = Modifier.matchParentSize()) {
@@ -865,7 +977,7 @@ private fun SignupEmailVerificationDialog(
                             lineTo(size.width, 0f)
                             close()
                         }
-                        drawPath(fill, brush = SolidColor(Color(0xFFFFE5CF)))
+                        drawPath(fill, brush = SolidColor(vc.artFill))
 
                         val line = Path().apply {
                             moveTo(size.width * 0.60f, 0f)
@@ -877,7 +989,7 @@ private fun SignupEmailVerificationDialog(
                         }
                         drawPath(
                             line,
-                            brush = SolidColor(Color(0xFFF4B07D)),
+                            brush = SolidColor(vc.artStroke),
                             style = Stroke(width = 1.2.dp.toPx())
                         )
                     }
@@ -914,7 +1026,7 @@ private fun SignupEmailVerificationDialog(
                                 .fillMaxSize()
                                 .background(
                                     Brush.radialGradient(
-                                        listOf(Color(0xFFFFE2CC), Color(0x00FFE2CC))
+                                        listOf(vc.artGlow, vc.artGlow.copy(alpha = 0f))
                                     ),
                                     CircleShape
                                 )
@@ -933,10 +1045,10 @@ private fun SignupEmailVerificationDialog(
 
                     Text(
                         text = buildAnnotatedString {
-                            withStyle(SpanStyle(color = VerifyColors.Ink, fontWeight = FontWeight.ExtraBold)) {
+                            withStyle(SpanStyle(color = vc.ink, fontWeight = FontWeight.ExtraBold)) {
                                 append("Verify your ")
                             }
-                            withStyle(SpanStyle(color = VerifyColors.Orange, fontWeight = FontWeight.ExtraBold)) {
+                            withStyle(SpanStyle(color = vc.orange, fontWeight = FontWeight.ExtraBold)) {
                                 append("email")
                             }
                         },
@@ -952,7 +1064,7 @@ private fun SignupEmailVerificationDialog(
                     Text(
                         "Enter the 6-digit code we sent to",
                         modifier = Modifier.fillMaxWidth(),
-                        color = VerifyColors.Muted,
+                        color = vc.muted,
                         fontSize = 15.sp,
                         lineHeight = 21.sp,
                         textAlign = TextAlign.Center
@@ -964,22 +1076,22 @@ private fun SignupEmailVerificationDialog(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(VerifyColors.OrangeSoft)
-                            .border(1.dp, Color(0xFFFFE0C8), RoundedCornerShape(50))
+                            .background(vc.orangeSoft)
+                            .border(1.dp, vc.pillBorder, RoundedCornerShape(50))
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Filled.Email,
                             contentDescription = null,
-                            tint = VerifyColors.Orange,
+                            tint = vc.orange,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             email,
                             modifier = Modifier.weight(1f, fill = false),
-                            color = VerifyColors.Ink,
+                            color = vc.ink,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -1048,14 +1160,14 @@ private fun SignupEmailVerificationDialog(
                             Icon(
                                 Icons.Filled.ErrorOutline,
                                 contentDescription = null,
-                                tint = VerifyColors.Error,
+                                tint = vc.error,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 error.orEmpty(),
                                 modifier = Modifier.weight(1f, fill = false),
-                                color = VerifyColors.Error,
+                                color = vc.error,
                                 fontSize = 13.sp,
                                 lineHeight = 18.sp,
                                 textAlign = TextAlign.Center
@@ -1085,7 +1197,7 @@ private fun SignupEmailVerificationDialog(
                             .clip(RoundedCornerShape(50))
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(VerifyColors.GradientStart, VerifyColors.GradientEnd)
+                                    listOf(vc.gradientStart, vc.gradientEnd)
                                 )
                             )
                             .pressScale(onClick = onVerify),
@@ -1118,23 +1230,23 @@ private fun SignupEmailVerificationDialog(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(VerifyColors.Neutral)
+                                .background(vc.neutral)
                                 .padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 Icons.Filled.Schedule,
                                 contentDescription = null,
-                                tint = VerifyColors.Muted,
+                                tint = vc.muted,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = buildAnnotatedString {
-                                    withStyle(SpanStyle(color = VerifyColors.Muted)) {
+                                    withStyle(SpanStyle(color = vc.muted)) {
                                         append(if (rateLimited) "Code already sent. Retry in " else "Resend code in ")
                                     }
-                                    withStyle(SpanStyle(color = VerifyColors.Orange, fontWeight = FontWeight.Bold)) {
+                                    withStyle(SpanStyle(color = vc.orange, fontWeight = FontWeight.Bold)) {
                                         // mm:ss, so 75s shows 01:15 (the old code showed 00:75)
                                         append("%02d:%02d".format(seconds / 60, seconds % 60))
                                     }
@@ -1146,7 +1258,7 @@ private fun SignupEmailVerificationDialog(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(VerifyColors.OrangeSoft)
+                                .background(vc.orangeSoft)
                                 .pressScale(onClick = onResend)
                                 .padding(horizontal = 18.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -1154,13 +1266,13 @@ private fun SignupEmailVerificationDialog(
                             Icon(
                                 Icons.Filled.Refresh,
                                 contentDescription = null,
-                                tint = VerifyColors.Orange,
+                                tint = vc.orange,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 "Resend code",
-                                color = VerifyColors.Orange,
+                                color = vc.orange,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1180,13 +1292,13 @@ private fun SignupEmailVerificationDialog(
                         Icon(
                             Icons.Filled.Edit,
                             contentDescription = null,
-                            tint = VerifyColors.Muted,
+                            tint = vc.muted,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "Change email address",
-                            color = VerifyColors.Muted,
+                            color = vc.muted,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -1207,13 +1319,13 @@ private fun SignupEmailVerificationDialog(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(VerifyColors.OrangeSoft),
+                            .background(vc.orangeSoft),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Filled.Close,
                             contentDescription = "Close",
-                            tint = Color(0xFF4B5563),
+                            tint = vc.iconNeutral,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -1239,21 +1351,22 @@ private fun RowScope.OtpDigitBox(
     isActive: Boolean,
     isError: Boolean
 ) {
+    val vc = rememberVerifyPalette()
     val borderColor by animateColorAsState(
         targetValue = when {
-            isError -> VerifyColors.Error
-            isActive -> VerifyColors.Orange
-            digit != null -> VerifyColors.OrangeFilled
-            else -> VerifyColors.OrangeLine
+            isError -> vc.error
+            isActive -> vc.orange
+            digit != null -> vc.orangeFilled
+            else -> vc.orangeLine
         },
         animationSpec = tween(160),
         label = "otp-border"
     )
     val background by animateColorAsState(
         targetValue = when {
-            isError -> VerifyColors.ErrorSoft
-            isActive || digit != null -> Color.White
-            else -> Color(0xFFFFFBF7)
+            isError -> vc.errorSoft
+            isActive || digit != null -> vc.fieldActive
+            else -> vc.fieldIdle
         },
         animationSpec = tween(160),
         label = "otp-background"
@@ -1277,7 +1390,7 @@ private fun RowScope.OtpDigitBox(
         when {
             digit != null -> Text(
                 text = digit.toString(),
-                color = if (isError) VerifyColors.Error else VerifyColors.Ink,
+                color = if (isError) vc.error else vc.ink,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.graphicsLayer {
@@ -1292,6 +1405,7 @@ private fun RowScope.OtpDigitBox(
 
 @Composable
 private fun OtpCursor() {
+    val vc = rememberVerifyPalette()
     val transition = rememberInfiniteTransition(label = "otp-cursor")
     val cursorAlpha by transition.animateFloat(
         initialValue = 1f,
@@ -1307,7 +1421,7 @@ private fun OtpCursor() {
             .width(2.dp)
             .height(26.dp)
             .alpha(cursorAlpha)
-            .background(VerifyColors.Orange, RoundedCornerShape(2.dp))
+            .background(vc.orange, RoundedCornerShape(2.dp))
     )
 }
 
@@ -1320,6 +1434,7 @@ private fun NagpurPulseLoadingOverlay(
     message: String,
     inDialog: Boolean = false
 ) {
+    val vc = rememberVerifyPalette()
     val infiniteTransition = rememberInfiniteTransition(label = "nagpurpulse-loading")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -1344,7 +1459,7 @@ private fun NagpurPulseLoadingOverlay(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                if (inDialog) Color(0xAFFFFCF7) else Color(0xCCFFF9F2)
+                if (inDialog) vc.scrimDialog else vc.scrim
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -1356,10 +1471,10 @@ private fun NagpurPulseLoadingOverlay(
                 modifier = Modifier
                     .size(if (inDialog) 86.dp else 92.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(Color.White)
+                    .background(vc.overlayCard)
                     .border(
                         width = 1.dp,
-                        color = Color(0xFFFFD6B8),
+                        color = vc.overlayRing,
                         shape = RoundedCornerShape(26.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -1371,7 +1486,7 @@ private fun NagpurPulseLoadingOverlay(
                         .rotate(rotation)
                 ) {
                     drawArc(
-                        color = Color(0xFFF4511E),
+                        color = vc.orange,
                         startAngle = -55f,
                         sweepAngle = 105f,
                         useCenter = false,
@@ -1396,7 +1511,7 @@ private fun NagpurPulseLoadingOverlay(
 
             Text(
                 text = message,
-                color = Color(0xFF142033),
+                color = vc.ink,
                 fontSize = if (inDialog) 14.sp else 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
@@ -1406,7 +1521,7 @@ private fun NagpurPulseLoadingOverlay(
 
             Text(
                 text = "Please wait",
-                color = Color(0xFF64748B),
+                color = vc.muted,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center
             )
@@ -1424,6 +1539,7 @@ private fun SignupEmailAlreadyUsedDialog(
     onTryDifferentEmail: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val vc = rememberVerifyPalette()
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(
@@ -1463,7 +1579,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     .width(popupWidth)
                     .height(popupHeight)
                     .clip(RoundedCornerShape(30.dp))
-                    .background(Color(0xFFFFFCF7))
+                    .background(vc.card)
             ) {
                 // BACKGROUND LAYER: these decorations never participate in the
                 // foreground Column's measurement or push its content.
@@ -1485,7 +1601,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     }
                     drawPath(
                         fill,
-                        brush = SolidColor(Color(0xFFFFE5CF))
+                        brush = SolidColor(vc.artFill)
                     )
 
                     val line = Path().apply {
@@ -1498,7 +1614,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     }
                     drawPath(
                         line,
-                        brush = SolidColor(Color(0xFFF4B07D)),
+                        brush = SolidColor(vc.artStroke),
                         style = Stroke(
                             width = (popupWidth * 0.0027f).toPx()
                         )
@@ -1544,7 +1660,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         text = buildAnnotatedString {
                             withStyle(
                                 SpanStyle(
-                                    color = Color(0xFF142033),
+                                    color = vc.ink,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                             ) {
@@ -1552,7 +1668,7 @@ private fun SignupEmailAlreadyUsedDialog(
                             }
                             withStyle(
                                 SpanStyle(
-                                    color = Color(0xFFF4511E),
+                                    color = vc.orange,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                             ) {
@@ -1571,7 +1687,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     Text(
                         text = "This email address is already registered with NagpurPulse. Please log in to continue.",
                         modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF64748B),
+                        color = vc.muted,
                         fontSize = bodySize,
                         lineHeight = bodyLineHeight,
                         textAlign = TextAlign.Center
@@ -1668,10 +1784,10 @@ private fun SignupEmailAlreadyUsedDialog(
                             .fillMaxWidth()
                             .height(56.dp)
                             .clip(RoundedCornerShape(60.dp))
-                            .background(Color(0xFFFFFBF7))
+                            .background(vc.fieldIdle)
                             .border(
                                 width = 1.dp,
-                                color = Color(0xFFFFCBAA),
+                                color = vc.orangeLine,
                                 shape = RoundedCornerShape(60.dp)
                             )
                             .clickable(
@@ -1682,7 +1798,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     ) {
                         Text(
                             "Try a different email",
-                            color = Color(0xFF142033),
+                            color = vc.ink,
                             fontSize = if (compactWidth) 18.sp else 19.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -1699,14 +1815,14 @@ private fun SignupEmailAlreadyUsedDialog(
                         .padding(top = 10.dp, end = 10.dp)
                         .size(48.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(Color(0xFFFFF7EF))
+                        .background(vc.closeBg)
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Filled.Close,
                         contentDescription = "Close",
-                        tint = Color(0xFF4B5563),
+                        tint = vc.iconNeutral,
                         modifier = Modifier.size(22.dp)
                     )
                 }

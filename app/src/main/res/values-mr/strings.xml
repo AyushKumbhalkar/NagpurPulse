@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="signup_email_hint">ईमेल पत्ता</string>
+    <string name="signup_password_hint">पासवर्ड (किमान ८ अक्षरे)</string>
+    <string name="signup_confirm_hint">पासवर्डची खात्री करा</string>
+    <string name="signup_create_account">खाते तयार करा</string>
+    <string name="signup_creating_account">खाते तयार होत आहे…</string>
+    <string name="signup_continue_google">Google सह सुरू ठेवा</string>
+    <string name="signup_or_continue_with">किंवा याद्वारे सुरू ठेवा</string>
+    <string name="signup_have_account">आधीपासून खाते आहे का?</string>
+    <string name="signup_log_in">लॉग इन करा</string>
+    <string name="signup_guest_title">पाहुणा म्हणून सुरू ठेवा</string>
+    <string name="signup_guest_subtitle">खात्याशिवाय पहा</string>
+
+    <string name="err_email_required">ईमेल पत्ता टाका</string>
+    <string name="err_email_invalid">वैध ईमेल पत्ता टाका</string>
+    <string name="err_password_required">पासवर्ड टाका</string>
+    <string name="err_password_short">पासवर्ड किमान ८ अक्षरांचा असावा</string>
+    <string name="err_confirm_required">तुमच्या पासवर्डची खात्री करा</string>
+    <string name="err_password_mismatch">पासवर्ड जुळत नाहीत</string>
+</resources>
