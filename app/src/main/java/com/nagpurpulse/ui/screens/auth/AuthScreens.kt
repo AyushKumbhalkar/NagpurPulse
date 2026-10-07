@@ -28,7 +28,10 @@ data class AuthUiState(
     val error: String? = null,
     val isSuccess: Boolean = false,
     val forgotPasswordSent: Boolean = false,
-    val infoMessage: String? = null
+    val infoMessage: String? = null,
+    val emailVerificationRequired: Boolean = false,
+    val loginCooldownSeconds: Int = 0,
+    val failedLoginAttempts: Int = 0
 )
 
 
@@ -58,6 +61,19 @@ class AuthViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
+
+    private var failedLoginAttempts = 0
+
+    private suspend fun startLoginCooldown(seconds: Int) {
+        for (remaining in seconds downTo 1) {
+            _uiState.value = _uiState.value.copy(
+                loginCooldownSeconds = remaining,
+                failedLoginAttempts = failedLoginAttempts
+            )
+            kotlinx.coroutines.delay(1000L)
+        }
+        _uiState.value = _uiState.value.copy(loginCooldownSeconds = 0)
+    }
 
     fun showError(message: String) {
         _uiState.value = AuthUiState(error = message)
@@ -193,15 +209,57 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_enter_password))
             return
         }
+        if (_uiState.value.loginCooldownSeconds > 0) {
+            _uiState.value = _uiState.value.copy(
+                error = context.getString(
+                    R.string.auth_err_login_cooldown,
+                    _uiState.value.loginCooldownSeconds
+                )
+            )
+            return
+        }
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
-            _uiState.value = AuthUiState(isLoading = true)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                emailVerificationRequired = false
+            )
+            AuthAnalytics.log(context, "login_submit")
             authRepository.signIn(normalizedEmail, password).fold(
                 onSuccess = {
+                    failedLoginAttempts = 0
                     _uiState.value = AuthUiState(isSuccess = true)
+                    AuthAnalytics.log(context, "login_success")
                     onSuccess()
                 },
-                onFailure = { e -> _uiState.value = AuthUiState(error = safeAuthError(context, e, context.getString(R.string.auth_err_sign_in_failed))) }
+                onFailure = { e ->
+                    if (e is EmailConfirmationRequiredException ||
+                        e.message?.contains("email not confirmed", ignoreCase = true) == true
+                    ) {
+                        _uiState.value = AuthUiState(
+                            error = context.getString(R.string.auth_err_email_not_confirmed),
+                            emailVerificationRequired = true
+                        )
+                        AuthAnalytics.log(context, "login_failed", "reason" to "email_not_confirmed")
+                    } else {
+                        failedLoginAttempts++
+                        val nextState = AuthUiState(
+                            error = safeAuthError(
+                                context,
+                                e,
+                                context.getString(R.string.auth_err_sign_in_failed)
+                            ),
+                            failedLoginAttempts = failedLoginAttempts
+                        )
+                        _uiState.value = nextState
+                        AuthAnalytics.log(context, "login_failed", "reason" to "credentials_or_server")
+                        if (failedLoginAttempts >= 5) {
+                            failedLoginAttempts = 0
+                            startLoginCooldown(30)
+                        }
+                    }
+                }
             )
         }
     }
@@ -233,6 +291,7 @@ class AuthViewModel @Inject constructor(
 
 
     fun sendPasswordReset(email: String) {
+        AuthAnalytics.log(context, "login_forgot_password_submit")
         val normalizedEmail = email.trim().lowercase(Locale.ROOT)
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
             _uiState.value = AuthUiState(error = context.getString(R.string.auth_err_enter_email_first))
