@@ -2,30 +2,34 @@ package com.nagpurpulse.ui.screens.auth
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,20 +40,26 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.Image
-import com.nagpurpulse.R
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -68,36 +78,49 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.rotate
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.nagpurpulse.R
 import com.nagpurpulse.ui.components.pressScale
-import com.nagpurpulse.ui.theme.OrangePrimary
-import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import com.nagpurpulse.ui.theme.Background
-import com.nagpurpulse.ui.theme.Surface
-import com.nagpurpulse.ui.theme.SurfaceAlt
+import com.nagpurpulse.ui.theme.LocalIsDarkTheme
+import com.nagpurpulse.ui.theme.OrangePrimary
 import com.nagpurpulse.ui.theme.PrimaryText
 import com.nagpurpulse.ui.theme.SecondaryText
+import com.nagpurpulse.ui.theme.Surface
+import com.nagpurpulse.ui.theme.SurfaceAlt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -125,18 +148,24 @@ fun SignupScreen(
     var verificationCode by remember { mutableStateOf("") }
     var verificationSeconds by remember { mutableStateOf(48) }
     var verificationRateLimited by remember { mutableStateOf(false) }
+    // Remembers the last code that was auto-submitted so the same wrong code
+    // can never be sent to the server again and again.
+    var lastSubmittedCode by remember { mutableStateOf("") }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     // Automatically verify as soon as the sixth digit is entered.
     // A failed verification clears the code so the user can immediately retry.
     LaunchedEffect(verificationCode, uiState.isLoading) {
+        if (verificationCode.length < 6) lastSubmittedCode = ""
         if (showEmailVerificationDialog &&
             verificationCode.length == 6 &&
+            verificationCode != lastSubmittedCode &&
             !uiState.isLoading
         ) {
             delay(120L)
             if (verificationCode.length == 6 && !uiState.isLoading) {
+                lastSubmittedCode = verificationCode
                 viewModel.verifySignupEmailOtp(email, verificationCode) {
                     showEmailVerificationDialog = false
                     onSignupSuccess()
@@ -188,7 +217,7 @@ fun SignupScreen(
             Image(
                 painter = painterResource(R.drawable.auth_screen_header),
                 contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1774f / 850f)
@@ -204,7 +233,7 @@ fun SignupScreen(
             Image(
                 painter = painterResource(R.drawable.auth_screen_foooter),
                 contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                contentScale = ContentScale.FillBounds,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(2048f / 682f)
@@ -230,42 +259,42 @@ fun SignupScreen(
             ) {
                 Image(
                     painter = painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
-                contentDescription = "NagpurPulse",
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                modifier = Modifier.height(logoHeight)
-            )
-            // Keep the animated headline directly on the same page background as LoginScreen.
-            // Login and Signup therefore feel like the same screen when navigating between them.
-            Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-19).dp)
-                    .padding(horizontal = 36.dp)
-            ) {
-                SignupAnimatedHeadline(
-                    compact = compact,
-                    ink = ink,
-                    orange = SignupOrange
+                    contentDescription = "NagpurPulse",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.height(logoHeight)
                 )
-            }
-            Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-19).dp)
-                    .padding(horizontal = 36.dp)
-            ) {
-                Text(
-                    text = "Create your account and join the conversations happening around Nagpur.",
-                    color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
-                    fontSize = if (compact) 15.sp else 16.sp,
-                    lineHeight = if (compact) 21.sp else 23.sp
-                )
-            }
-            Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                // Keep the animated headline directly on the same page background as LoginScreen.
+                // Login and Signup therefore feel like the same screen when navigating between them.
+                Spacer(Modifier.height(if (compact) 59.dp else 82.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-19).dp)
+                        .padding(horizontal = 36.dp)
+                ) {
+                    SignupAnimatedHeadline(
+                        compact = compact,
+                        ink = ink,
+                        orange = SignupOrange
+                    )
+                }
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-19).dp)
+                        .padding(horizontal = 36.dp)
+                ) {
+                    Text(
+                        text = "Create your account and join the conversations happening around Nagpur.",
+                        color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
+                        fontSize = if (compact) 15.sp else 16.sp,
+                        lineHeight = if (compact) 21.sp else 23.sp
+                    )
+                }
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
 
-            Column(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .offset(y = (-19).dp)
@@ -283,7 +312,7 @@ fun SignupScreen(
                             leadingIcon = {
                                 Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email
                             ),
                             index = 0,
@@ -471,8 +500,8 @@ fun SignupScreen(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(id = com.nagpurpulse.R.drawable.ic_google),
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_google),
                             contentDescription = "Google",
                             modifier = Modifier.size(19.dp)
                         )
@@ -524,44 +553,42 @@ fun SignupScreen(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        if (isDarkTheme) SurfaceAlt.copy(alpha = 0.92f)
-                        else Color.White.copy(alpha = 0.90f)
+                        .background(
+                            if (isDarkTheme) SurfaceAlt.copy(alpha = 0.92f)
+                            else Color.White.copy(alpha = 0.90f)
+                        )
+                        .border(
+                            1.dp,
+                            if (isDarkTheme) OrangePrimary.copy(alpha = 0.16f)
+                            else Color(0xFFF1E7DD),
+                            RoundedCornerShape(24.dp)
+                        )
+                        .pressScale(onClick = onNavigateToLogin)
+                        .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Already have an account?",
+                        color = muted,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                     )
-                    .border(
-                        1.dp,
-                        if (isDarkTheme) OrangePrimary.copy(alpha = 0.16f)
-                        else Color(0xFFF1E7DD),
-                        RoundedCornerShape(24.dp)
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        "Log in",
+                        color = SignupOrange,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
                     )
-                    .pressScale(onClick = onNavigateToLogin)
-                    .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    "Already have an account?",
-                    color = muted,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.width(7.dp))
-                Text(
-                    "Log in",
-                    color = SignupOrange,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "→",
-                    color = SignupOrange,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "→",
+                        color = SignupOrange,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             // Explicit visual separation between the login CTA and the benefit row.
             Spacer(Modifier.height(if (compact) 28.dp else 32.dp))
@@ -592,7 +619,7 @@ fun SignupScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-                Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+            Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
     }
 
@@ -615,6 +642,7 @@ fun SignupScreen(
             onCodeChange = { verificationCode = it },
             onVerify = {
                 if (verificationCode.length == 6 && !uiState.isLoading) {
+                    lastSubmittedCode = verificationCode
                     viewModel.verifySignupEmailOtp(email, verificationCode) {
                         showEmailVerificationDialog = false
                         onSignupSuccess()
@@ -657,6 +685,26 @@ fun SignupScreen(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  VERIFY-EMAIL DIALOG (redesigned)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Single source of truth for the dialog palette (easy to theme later). */
+private object VerifyColors {
+    val Card = Color(0xFFFFFCF7)
+    val Ink = Color(0xFF142033)
+    val Muted = Color(0xFF64748B)
+    val Orange = Color(0xFFF4511E)
+    val OrangeSoft = Color(0xFFFFF1E6)
+    val OrangeLine = Color(0xFFFFCBAA)
+    val OrangeFilled = Color(0xFFFFA36B)
+    val GradientStart = Color(0xFFFF941F)
+    val GradientEnd = Color(0xFFFF3D1F)
+    val Error = Color(0xFFD93025)
+    val ErrorSoft = Color(0xFFFFF1F0)
+    val Neutral = Color(0xFFF6F1EA)
+}
+
 @Composable
 private fun SignupEmailVerificationDialog(
     email: String,
@@ -671,20 +719,29 @@ private fun SignupEmailVerificationDialog(
     onChangeEmail: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Keep OTP error animation state inside the verification dialog itself.
-    // This avoids leaking a local animation value from SignupScreen into this
-    // separate composable.
     val hapticFeedback = LocalHapticFeedback.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
+    var otpFocused by remember { mutableStateOf(false) }
     var otpShake by remember { mutableStateOf(0) }
     val otpShakeOffset = remember { Animatable(0f) }
 
+    // Open the keyboard automatically (and again after a failed attempt).
+    LaunchedEffect(isLoading) {
+        if (!isLoading) {
+            delay(280L)
+            runCatching { focusRequester.requestFocus() }
+            keyboardController?.show()
+        }
+    }
+
+    // Shake + haptic on error.
     LaunchedEffect(error) {
         if (!error.isNullOrBlank()) {
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
             otpShake++
         }
     }
-
     LaunchedEffect(otpShake) {
         if (otpShake == 0) return@LaunchedEffect
         otpShakeOffset.snapTo(0f)
@@ -694,6 +751,18 @@ private fun SignupEmailVerificationDialog(
         otpShakeOffset.animateTo(6f, tween(45))
         otpShakeOffset.animateTo(0f, tween(45))
     }
+
+    // Gentle floating envelope.
+    val floatTransition = rememberInfiniteTransition(label = "verify-float")
+    val floatY by floatTransition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "envelope-float"
+    )
 
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
@@ -707,212 +776,263 @@ private fun SignupEmailVerificationDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val popupWidth = maxWidth * 0.86f
-            val popupHeight = maxHeight * 0.84f
-            val horizontalPadding = minOf(popupWidth * 0.062f, 28.dp)
-            val compactWidth = popupWidth < 330.dp
-            val compactHeight = popupHeight < 620.dp
-            val illustrationSize = minOf(
-                popupWidth * 0.34f,
-                if (compactHeight) 132.dp else 154.dp
-            )
-            val titleSize = if (compactWidth || compactHeight) 29.sp else 31.sp
-            val bodySize = if (compactWidth || compactHeight) 15.sp else 16.sp
-            val bodyLineHeight = if (compactWidth || compactHeight) 21.sp else 22.sp
-            val sectionGap = if (compactHeight) 10.dp else 14.dp
-            val actionGap = if (compactHeight) 16.dp else 22.dp
+            val cardShape = RoundedCornerShape(32.dp)
+            val cardWidth = minOf(maxWidth * 0.92f, 400.dp)
+            val compactWidth = cardWidth < 330.dp
+            val compactHeight = maxHeight < 700.dp
+            val hPad = if (compactWidth) 18.dp else 24.dp
+            val illustration = if (compactHeight) 84.dp else 100.dp
+            val otpGap = if (compactWidth) 6.dp else 9.dp
+            val canVerify = code.length == 6 && !isLoading
+            val hasError = !error.isNullOrBlank()
 
+            // Card HEIGHT WRAPS ITS CONTENT (no more dead space at the bottom).
             Box(
                 modifier = Modifier
-                    .width(popupWidth)
-                    .height(popupHeight)
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(Color(0xFFFFFCF7))
+                    .width(cardWidth)
+                    .heightIn(max = maxHeight * 0.92f)
+                    .clip(cardShape)
+                    .background(VerifyColors.Card)
             ) {
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(popupHeight * 0.20f)
-                        .align(Alignment.TopCenter)
-                ) {
-                    val fill = Path().apply {
-                        moveTo(size.width * 0.48f, 0f)
-                        cubicTo(
-                            size.width * 0.66f, size.height * 0.08f,
-                            size.width * 0.80f, size.height * 0.04f,
-                            size.width, size.height * 0.30f
-                        )
-                        lineTo(size.width, 0f)
-                        close()
-                    }
-                    drawPath(fill, brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFFE5CF)))
+                // ── Decorative layer: never affects layout ──
+                Box(modifier = Modifier.matchParentSize()) {
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(96.dp)
+                            .align(Alignment.TopCenter)
+                    ) {
+                        val fill = Path().apply {
+                            moveTo(size.width * 0.48f, 0f)
+                            cubicTo(
+                                size.width * 0.66f, size.height * 0.08f,
+                                size.width * 0.80f, size.height * 0.04f,
+                                size.width, size.height * 0.30f
+                            )
+                            lineTo(size.width, 0f)
+                            close()
+                        }
+                        drawPath(fill, brush = SolidColor(Color(0xFFFFE5CF)))
 
-                    val line = Path().apply {
-                        moveTo(size.width * 0.60f, 0f)
-                        cubicTo(
-                            size.width * 0.74f, size.height * 0.13f,
-                            size.width * 0.87f, size.height * 0.08f,
-                            size.width, size.height * 0.36f
+                        val line = Path().apply {
+                            moveTo(size.width * 0.60f, 0f)
+                            cubicTo(
+                                size.width * 0.74f, size.height * 0.13f,
+                                size.width * 0.87f, size.height * 0.08f,
+                                size.width, size.height * 0.36f
+                            )
+                        }
+                        drawPath(
+                            line,
+                            brush = SolidColor(Color(0xFFF4B07D)),
+                            style = Stroke(width = 1.2.dp.toPx())
                         )
                     }
-                    drawPath(
-                        line,
-                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFF4B07D)),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = (popupWidth * 0.0027f).toPx()
-                        )
+
+                    // Only the bottom 84dp of the wave artwork is shown (cropped, not stretched).
+                    Image(
+                        painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.BottomCenter,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(84.dp)
+                            .align(Alignment.BottomCenter)
+                            .alpha(0.85f)
                     )
                 }
 
-                Image(
-                    painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(2048f / 682f)
-                        .align(Alignment.BottomCenter)
-                )
-
+                // ── Foreground content ──
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(
-                            start = horizontalPadding,
-                            end = horizontalPadding,
-                            top = 42.dp,
-                            bottom = 30.dp
-                        ),
+                        .padding(start = hPad, end = hPad, top = 30.dp, bottom = 26.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(Modifier.height(8.dp))
+                    // Illustration with soft glow
+                    Box(
+                        modifier = Modifier.size(illustration + 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(Color(0xFFFFE2CC), Color(0x00FFE2CC))
+                                    ),
+                                    CircleShape
+                                )
+                        )
+                        Image(
+                            painter = painterResource(R.drawable.verify_email),
+                            contentDescription = "Email verification",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(illustration)
+                                .offset(y = floatY.dp)
+                        )
+                    }
 
-                    Image(
-                        painter = painterResource(R.drawable.verify_email),
-                        contentDescription = "Email verification",
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                        modifier = Modifier.size(illustrationSize)
-                    )
-
-                    Spacer(Modifier.height(sectionGap))
+                    Spacer(Modifier.height(4.dp))
 
                     Text(
                         text = buildAnnotatedString {
-                            withStyle(
-                                SpanStyle(
-                                    color = Color(0xFF142033),
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            ) {
+                            withStyle(SpanStyle(color = VerifyColors.Ink, fontWeight = FontWeight.ExtraBold)) {
                                 append("Verify your ")
                             }
-                            withStyle(
-                                SpanStyle(
-                                    color = Color(0xFFF4511E),
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            ) {
+                            withStyle(SpanStyle(color = VerifyColors.Orange, fontWeight = FontWeight.ExtraBold)) {
                                 append("email")
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        fontSize = titleSize,
-                        lineHeight = 36.sp,
+                        fontSize = if (compactWidth) 26.sp else 29.sp,
+                        lineHeight = 34.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 2
                     )
 
-                    Spacer(Modifier.height(sectionGap))
+                    Spacer(Modifier.height(8.dp))
 
                     Text(
-                        "We’ve sent a 6-digit verification code to",
+                        "Enter the 6-digit code we sent to",
                         modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF64748B),
-                        fontSize = bodySize,
-                        lineHeight = bodyLineHeight,
+                        color = VerifyColors.Muted,
+                        fontSize = 15.sp,
+                        lineHeight = 21.sp,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(10.dp))
 
-                    Text(
-                        email,
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF142033),
-                        fontSize = if (compactWidth) 16.sp else 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        softWrap = true
-                    )
+                    // Email shown as a chip: long addresses ellipsize instead of breaking the layout.
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(VerifyColors.OrangeSoft)
+                            .border(1.dp, Color(0xFFFFE0C8), RoundedCornerShape(50))
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Email,
+                            contentDescription = null,
+                            tint = VerifyColors.Orange,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            email,
+                            modifier = Modifier.weight(1f, fill = false),
+                            color = VerifyColors.Ink,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
 
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(22.dp))
 
-                    Text(
-                        "Enter the code below to continue.",
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF64748B),
-                        fontSize = bodySize,
-                        lineHeight = bodyLineHeight,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(if (compactHeight) 12.dp else 16.dp))
-
+                    // ── OTP input ──
                     BasicTextField(
                         value = code,
-                        onValueChange = { onCodeChange(it.filter(Char::isDigit).take(6)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        onValueChange = { if (!isLoading) onCodeChange(it.filter(Char::isDigit).take(6)) },
+                        readOnly = isLoading,
                         singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { onVerify() }),
+                        textStyle = TextStyle(color = Color.Transparent),
+                        cursorBrush = SolidColor(Color.Transparent),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (compactHeight) 68.dp else 74.dp)
-                            .offset(x = otpShakeOffset.value.dp),
-                        decorationBox = {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.spacedBy(if (compactWidth) 5.dp else 7.dp)
-                            ) {
-                                repeat(6) { index ->
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(Color(0xFFFFFBF7))
-                                            .border(
-                                                width = 1.5.dp,
-                                                color = Color(0xFFFFCBAA),
-                                                shape = RoundedCornerShape(14.dp)
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            code.getOrNull(index)?.toString() ?: "",
-                                            color = Color(0xFF142033),
-                                            fontSize = if (compactWidth) 23.sp else 25.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
+                            .offset(x = otpShakeOffset.value.dp)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { otpFocused = it.isFocused },
+                        decorationBox = { innerTextField ->
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(otpGap)
+                                ) {
+                                    repeat(6) { index ->
+                                        OtpDigitBox(
+                                            digit = code.getOrNull(index),
+                                            isActive = otpFocused && !isLoading && index == code.length,
+                                            isError = hasError && code.isEmpty()
                                         )
                                     }
+                                }
+                                // The REAL text field must be composed, otherwise taps never focus it
+                                // and the keyboard never opens. It sits invisibly over the boxes.
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .alpha(0f)
+                                ) {
+                                    innerTextField()
                                 }
                             }
                         }
                     )
 
-                    Spacer(Modifier.height(actionGap))
+                    // Error sits directly under the boxes, where the eye already is.
+                    AnimatedVisibility(
+                        visible = hasError,
+                        enter = fadeIn(tween(160)) + expandVertically(),
+                        exit = fadeOut(tween(120)) + shrinkVertically()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(top = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.ErrorOutline,
+                                contentDescription = null,
+                                tint = VerifyColors.Error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                error.orEmpty(),
+                                modifier = Modifier.weight(1f, fill = false),
+                                color = VerifyColors.Error,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
 
+                    Spacer(Modifier.height(22.dp))
+
+                    // ── Primary button: dimmed until all 6 digits are entered ──
+                    val buttonAlpha by animateFloatAsState(
+                        targetValue = if (canVerify) 1f else 0.55f,
+                        animationSpec = tween(180),
+                        label = "verify-button-alpha"
+                    )
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .clip(RoundedCornerShape(60.dp))
+                            .shadow(
+                                elevation = if (canVerify) 10.dp else 0.dp,
+                                shape = RoundedCornerShape(50),
+                                ambientColor = Color(0x66FF5A1F),
+                                spotColor = Color(0x99FF5A1F)
+                            )
+                            .alpha(buttonAlpha)
+                            .clip(RoundedCornerShape(50))
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
+                                    listOf(VerifyColors.GradientStart, VerifyColors.GradientEnd)
                                 )
                             )
                             .pressScale(onClick = onVerify),
@@ -925,7 +1045,7 @@ private fun SignupEmailVerificationDialog(
                             Text(
                                 if (isLoading) "Verifying…" else "Verify & Continue",
                                 color = Color.White,
-                                fontSize = if (compactWidth) 19.sp else 21.sp,
+                                fontSize = if (compactWidth) 18.sp else 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.width(10.dp))
@@ -938,114 +1058,209 @@ private fun SignupEmailVerificationDialog(
                         }
                     }
 
-                    if (!error.isNullOrBlank()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            error,
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    if (seconds > 0) {
-                        Text(
-                            text = if (rateLimited) {
-                                buildAnnotatedString {
-                                    withStyle(SpanStyle(color = Color(0xFF64748B))) {
-                                        append("A verification request was already sent. Please wait ")
-                                    }
-                                    withStyle(
-                                        SpanStyle(
-                                            color = Color(0xFFF4511E),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    ) {
-                                        append("00:" + seconds.toString().padStart(2, '0'))
-                                    }
-                                }
-                            } else {
-                                buildAnnotatedString {
-                                    withStyle(SpanStyle(color = Color(0xFF64748B))) {
-                                        append("Didn’t receive the code? Resend in ")
-                                    }
-                                    withStyle(
-                                        SpanStyle(
-                                            color = Color(0xFFF4511E),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    ) {
-                                        append("00:" + seconds.toString().padStart(2, '0'))
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            fontSize = 15.sp,
-                            lineHeight = 21.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    } else {
-                        Text(
-                            "Resend",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pressScale(onClick = onResend),
-                            color = Color(0xFFF4511E),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Text(
-                        "Change email address",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pressScale(onClick = onChangeEmail),
-                        color = Color(0xFFF4511E),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-
                     Spacer(Modifier.height(18.dp))
+
+                    // ── Resend / timer ──
+                    if (seconds > 0) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(VerifyColors.Neutral)
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Schedule,
+                                contentDescription = null,
+                                tint = VerifyColors.Muted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = buildAnnotatedString {
+                                    withStyle(SpanStyle(color = VerifyColors.Muted)) {
+                                        append(if (rateLimited) "Code already sent. Retry in " else "Resend code in ")
+                                    }
+                                    withStyle(SpanStyle(color = VerifyColors.Orange, fontWeight = FontWeight.Bold)) {
+                                        // mm:ss, so 75s shows 01:15 (the old code showed 00:75)
+                                        append("%02d:%02d".format(seconds / 60, seconds % 60))
+                                    }
+                                },
+                                fontSize = 14.sp
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(VerifyColors.OrangeSoft)
+                                .pressScale(onClick = onResend)
+                                .padding(horizontal = 18.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Refresh,
+                                contentDescription = null,
+                                tint = VerifyColors.Orange,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Resend code",
+                                color = VerifyColors.Orange,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // ── Secondary action ──
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .pressScale(onClick = onChangeEmail)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = null,
+                            tint = VerifyColors.Muted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Change email address",
+                            color = VerifyColors.Muted,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
+                // ── Close button: 48dp touch target, 34dp visual ──
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(top = 8.dp, end = 8.dp)
                         .size(48.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color(0xFFFFF7EF))
+                        .clip(CircleShape)
                         .pressScale(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close",
-                        tint = Color(0xFF777777),
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(VerifyColors.OrangeSoft),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Close",
+                            tint = Color(0xFF4B5563),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
                 if (isLoading) {
-                    NagpurPulseLoadingOverlay(
-                        message = "Verifying your email…",
-                        inDialog = true
-                    )
+                    Box(modifier = Modifier.matchParentSize().clip(cardShape)) {
+                        NagpurPulseLoadingOverlay(
+                            message = "Verifying your email…",
+                            inDialog = true
+                        )
+                    }
                 }
-
             }
         }
     }
 }
+
+/** One OTP cell: empty / active (cursor) / filled / error. */
+@Composable
+private fun RowScope.OtpDigitBox(
+    digit: Char?,
+    isActive: Boolean,
+    isError: Boolean
+) {
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isError -> VerifyColors.Error
+            isActive -> VerifyColors.Orange
+            digit != null -> VerifyColors.OrangeFilled
+            else -> VerifyColors.OrangeLine
+        },
+        animationSpec = tween(160),
+        label = "otp-border"
+    )
+    val background by animateColorAsState(
+        targetValue = when {
+            isError -> VerifyColors.ErrorSoft
+            isActive || digit != null -> Color.White
+            else -> Color(0xFFFFFBF7)
+        },
+        animationSpec = tween(160),
+        label = "otp-background"
+    )
+    val pop by animateFloatAsState(
+        targetValue = if (digit != null) 1f else 0.6f,
+        animationSpec = tween(140),
+        label = "otp-pop"
+    )
+    val shape = RoundedCornerShape(14.dp)
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .aspectRatio(0.80f)
+            .clip(shape)
+            .background(background)
+            .border(if (isActive || isError) 2.dp else 1.5.dp, borderColor, shape),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            digit != null -> Text(
+                text = digit.toString(),
+                color = if (isError) VerifyColors.Error else VerifyColors.Ink,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = pop
+                    scaleY = pop
+                }
+            )
+            isActive -> OtpCursor()
+        }
+    }
+}
+
+@Composable
+private fun OtpCursor() {
+    val transition = rememberInfiniteTransition(label = "otp-cursor")
+    val cursorAlpha by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(520),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cursor-alpha"
+    )
+    Box(
+        modifier = Modifier
+            .width(2.dp)
+            .height(26.dp)
+            .alpha(cursorAlpha)
+            .background(VerifyColors.Orange, RoundedCornerShape(2.dp))
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOADING OVERLAY (unchanged)
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun NagpurPulseLoadingOverlay(
@@ -1066,7 +1281,7 @@ private fun NagpurPulseLoadingOverlay(
         initialValue = 0.92f,
         targetValue = 1.04f,
         animationSpec = infiniteRepeatable(
-            animation = tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            animation = tween(700, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "logo-pulse"
@@ -1117,7 +1332,7 @@ private fun NagpurPulseLoadingOverlay(
                 Image(
                     painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
                     contentDescription = "NagpurPulse",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(if (inDialog) 46.dp else 50.dp)
                         .then(Modifier.rotate((pulse - 1f) * 2.5f))
@@ -1145,6 +1360,10 @@ private fun NagpurPulseLoadingOverlay(
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EMAIL-ALREADY-USED DIALOG (unchanged)
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun SignupEmailAlreadyUsedDialog(
@@ -1213,7 +1432,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     }
                     drawPath(
                         fill,
-                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFFE5CF))
+                        brush = SolidColor(Color(0xFFFFE5CF))
                     )
 
                     val line = Path().apply {
@@ -1226,8 +1445,8 @@ private fun SignupEmailAlreadyUsedDialog(
                     }
                     drawPath(
                         line,
-                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFF4B07D)),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        brush = SolidColor(Color(0xFFF4B07D)),
+                        style = Stroke(
                             width = (popupWidth * 0.0027f).toPx()
                         )
                     )
@@ -1236,7 +1455,7 @@ private fun SignupEmailAlreadyUsedDialog(
                 Image(
                     painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
                     contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+                    contentScale = ContentScale.FillBounds,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(2048f / 682f)
@@ -1262,7 +1481,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     Image(
                         painter = painterResource(R.drawable.email_alert),
                         contentDescription = "Email already used",
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier.size(illustrationSize)
                     )
 
@@ -1342,7 +1561,7 @@ private fun SignupEmailAlreadyUsedDialog(
                                     topLeft = androidx.compose.ui.geometry.Offset(w * 0.52f, h * 0.10f),
                                     size = androidx.compose.ui.geometry.Size(w * 0.38f, h * 0.80f),
                                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.05f),
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    style = Stroke(
                                         width = stroke
                                     )
                                 )
@@ -1442,6 +1661,10 @@ private fun SignupEmailAlreadyUsedDialog(
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HEADLINE + SMALL HELPERS (unchanged)
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun SignupAnimatedHeadline(
@@ -1582,7 +1805,7 @@ private fun SignupBenefit(
     ) {
         Box(
             modifier = Modifier
-                .size(if (LocalIsDarkTheme.current) 32.dp else 32.dp)
+                .size(32.dp)
                 .clip(RoundedCornerShape(50))
                 .background(background),
             contentAlignment = Alignment.Center
