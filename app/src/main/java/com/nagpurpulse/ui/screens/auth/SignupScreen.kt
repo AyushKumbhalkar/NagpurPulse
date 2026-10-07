@@ -6,7 +6,6 @@
 
 package com.nagpurpulse.ui.screens.auth
 
-androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -108,6 +107,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -211,22 +211,22 @@ fun SignupScreen(
 
     val emailError: String? = when {
         !(emailTouched || submitAttempted) -> null
-        email.isBlank() -> "Enter your email address"
-        !emailLooksValid -> "Enter a valid email address"
+        email.isBlank() -> stringResource(R.string.err_email_required)
+        !emailLooksValid -> stringResource(R.string.err_email_invalid)
         else -> null
     }
     val passwordError: String? = when {
         !(passwordTouched || submitAttempted) -> null
-        password.isEmpty() -> "Enter a password"
-        password.length < 8 -> "Password must be at least 8 characters"
+        password.isEmpty() -> stringResource(R.string.err_password_required)
+        password.length < 8 -> stringResource(R.string.err_password_short)
         else -> null
     }
     val confirmError: String? = when {
         confirmPassword.isEmpty() ->
-            if (confirmTouched || submitAttempted) "Confirm your password" else null
+            if (confirmTouched || submitAttempted) stringResource(R.string.err_confirm_required) else null
         password != confirmPassword &&
                 (confirmTouched || submitAttempted || confirmPassword.length >= password.length) ->
-            "Passwords do not match"
+            stringResource(R.string.err_password_mismatch)
         else -> null
     }
 
@@ -422,7 +422,7 @@ fun SignupScreen(
                         PremiumInputField(
                             value = password,
                             onValueChange = { password = it },
-                            placeholder = "Password (8+ characters)",
+                            placeholder = stringResource(R.string.signup_password_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
@@ -475,7 +475,7 @@ fun SignupScreen(
                         PremiumInputField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            placeholder = "Confirm password",
+                            placeholder = stringResource(R.string.signup_confirm_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
@@ -544,7 +544,7 @@ fun SignupScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Text(
-                                text = if (uiState.isLoading) "Creating account…" else "Create Account",
+                                text = stringResource(if (uiState.isLoading) R.string.signup_creating_account else R.string.signup_create_account),
                                 color = Color.White,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold
@@ -560,7 +560,7 @@ fun SignupScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
 
-                        Text("  or continue with  ", color = muted, fontSize = 12.sp)
+                        Text("  ${stringResource(R.string.signup_or_continue_with)}  ", color = muted, fontSize = 12.sp)
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
                     }
                     Spacer(Modifier.height(if (compact) 6.dp else 14.dp))
@@ -598,7 +598,7 @@ fun SignupScreen(
                             modifier = Modifier.size(19.dp)
                         )
                         Spacer(Modifier.size(9.dp))
-                        Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.signup_continue_google), color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
@@ -623,8 +623,8 @@ fun SignupScreen(
                         }
                         Spacer(Modifier.size(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Continue as Guest", color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Explore without an account", color = muted, fontSize = 12.sp, lineHeight = 16.sp)
+                            Text(stringResource(R.string.signup_guest_title), color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.signup_guest_subtitle), color = muted, fontSize = 12.sp, lineHeight = 16.sp)
                         }
                         Icon(Icons.Filled.ArrowForward, contentDescription = "Continue as guest", tint = SignupOrange, modifier = Modifier.size(20.dp))
                     }
@@ -661,14 +661,14 @@ fun SignupScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "Already have an account?",
+                        stringResource(R.string.signup_have_account),
                         color = muted,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.width(7.dp))
                     Text(
-                        "Log in",
+                        stringResource(R.string.signup_log_in),
                         color = SignupOrange,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold
