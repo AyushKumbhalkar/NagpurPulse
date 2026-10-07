@@ -101,4 +101,43 @@
     <string name="verify_have_code">Already have a verification code?</string>
     <string name="verify_open_email_app">Open email app</string>
     <string name="verify_no_email_app">No email app found on this phone.</string>
+
+    <!-- Login screen -->
+    <string name="login_headline_prefix">Your people </string>
+    <string name="login_headline_phrases">
+        <!-- Placeholder; use login_headline_phrases_array below. -->
+    </string>
+    <string-array name="login_headline_phrases">
+        <item>are here.</item>
+        <item>are online.</item>
+        <item>are talking.</item>
+        <item>are joining.</item>
+        <item>are active.</item>
+        <item>are around.</item>
+        <item>are asking.</item>
+    </string-array>
+    <string name="login_welcome_back">WELCOME BACK</string>
+    <string name="login_email_hint">Email address</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_err_email_invalid">Enter a valid email address</string>
+    <string name="login_forgot_password">Forgot password?</string>
+    <string name="login_reset_sent">Reset email sent! Check your inbox.</string>
+    <string name="login_button">Login</string>
+    <string name="login_signing_in">Signing in…</string>
+    <string name="login_or_continue_with">or continue with</string>
+    <string name="login_continue_google">Continue with Google</string>
+    <string name="login_continue_guest">Continue as Guest</string>
+    <string name="login_guest_subtitle">Explore without an account</string>
+    <string name="login_no_account">Don't have an account?</string>
+    <string name="login_benefit_secure">Secure
+&amp; private</string>
+    <string name="login_benefit_nagpur">Be a part
+of Nagpur</string>
+    <string name="login_benefit_discussions">Interesting
+discussions</string>
+    <string name="login_reset_title">Reset your password</string>
+    <string name="login_reset_body">Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.</string>
+    <string name="login_cancel">Cancel</string>
+    <string name="login_reset_link">Send reset link</string>
+
 </resources>
