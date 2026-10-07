@@ -18,6 +18,7 @@ import com.nagpurpulse.BuildConfig
 import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlinx.coroutines.CancellationException
+import com.nagpurpulse.R
 
 /** What happened when the user tried to sign in with Google. */
 sealed interface GoogleSignInOutcome {
@@ -40,7 +41,7 @@ class GoogleAuthManager(
     suspend fun signIn(): GoogleSignInOutcome {
         if (!isOnline()) {
             return GoogleSignInOutcome.Failure(
-                "No internet connection. Check your connection and try again."
+                context.getString(R.string.google_err_no_internet)
             )
         }
 
@@ -73,7 +74,7 @@ class GoogleAuthManager(
                     rawNonce = rawNonce
                 )
             } else {
-                GoogleSignInOutcome.Failure("Google sign-in failed. Please try again.")
+                GoogleSignInOutcome.Failure(context.getString(R.string.auth_err_google_failed))
             }
         } catch (e: CancellationException) {
             // Never swallow coroutine cancellation (screen closed, etc.).
@@ -82,23 +83,23 @@ class GoogleAuthManager(
             GoogleSignInOutcome.Cancelled
         } catch (_: NoCredentialException) {
             GoogleSignInOutcome.Failure(
-                "No Google account found on this phone. Add one in Settings, then try again."
+                context.getString(R.string.google_err_no_account)
             )
         } catch (_: GetCredentialProviderConfigurationException) {
             GoogleSignInOutcome.Failure(
-                "Google sign-in isn't available on this phone. Update Google Play services and try again."
+                context.getString(R.string.google_err_unavailable)
             )
         } catch (_: GetCredentialInterruptedException) {
-            GoogleSignInOutcome.Failure("Google sign-in was interrupted. Please try again.")
+            GoogleSignInOutcome.Failure(context.getString(R.string.google_err_interrupted))
         } catch (_: GoogleIdTokenParsingException) {
-            GoogleSignInOutcome.Failure("Google sign-in failed. Please try again.")
+            GoogleSignInOutcome.Failure(context.getString(R.string.auth_err_google_failed))
         } catch (_: GetCredentialException) {
             GoogleSignInOutcome.Failure(
-                if (isOnline()) "Google sign-in failed. Please try again."
-                else "No internet connection. Check your connection and try again."
+                if (isOnline()) context.getString(R.string.auth_err_google_failed)
+                else context.getString(R.string.google_err_no_internet)
             )
         } catch (_: Exception) {
-            GoogleSignInOutcome.Failure("Google sign-in failed. Please try again.")
+            GoogleSignInOutcome.Failure(context.getString(R.string.auth_err_google_failed))
         }
     }
 
