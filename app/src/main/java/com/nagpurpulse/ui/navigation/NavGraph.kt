@@ -390,7 +390,6 @@ fun NagpurPulseNavGraph(
                                 popUpTo(Screen.Login.route) { inclusive = true }
                             }
                         } else {
-                            onboardingOriginRoute = Screen.Login.route
                             selectedGender = null
                             selectedUsername = null
                             selectedAvatar = null
