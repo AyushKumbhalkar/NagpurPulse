@@ -213,6 +213,8 @@ fun LoginScreen(
 
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) { AuthAnalytics.log(context, "login_view") }
+
     val isDarkTheme = LocalIsDarkTheme.current
     val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
     val cardBackground = if (isDarkTheme) Surface else Color(0xFFFEFEFF)
