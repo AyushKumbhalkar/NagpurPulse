@@ -98,4 +98,5 @@
     <string name="google_existing_title">पुन्हा स्वागत आहे!</string>
     <string name="google_existing_body">हे Google खाते आधीच NagpurPulse वर नोंदणीकृत आहे. तुमचे खाते तयार आहे.</string>
     <string name="google_existing_continue">NagpurPulse वर जा</string>
+    <string name="verify_email_delivery_note">हा ईमेल पत्ता बरोबर असल्यास, सत्यापन कोड याच पत्त्यावर पाठवला आहे.</string>
 </resources>
