@@ -58,7 +58,8 @@ class AuthViewModel @Inject constructor(
         email: String,
         password: String,
         onSuccess: () -> Unit,
-        onEmailAlreadyUsed: () -> Unit = {}
+        onEmailAlreadyUsed: () -> Unit = {},
+        onRateLimited: (Int) -> Unit = {}
     ) {
         if (password.length < 8) {
             _uiState.value = AuthUiState(error = "Password must be at least 8 characters.")
@@ -82,7 +83,24 @@ class AuthViewModel @Inject constructor(
                         message.contains("email address is already registered") ||
                         message.contains("already exists")
 
-                    if (emailAlreadyUsed) {
+                    val rateLimitSeconds = Regex("(\\d+)\\s*seconds?", RegexOption.IGNORE_CASE)
+                        .find(e.message.orEmpty())
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        ?.toIntOrNull()
+                        ?.coerceIn(1, 300)
+
+                    if (rateLimitSeconds != null &&
+                        (message.contains("for security purposes") ||
+                            message.contains("rate limit") ||
+                            message.contains("too many requests"))
+                    ) {
+                        // Supabase intentionally blocks repeated signup-confirmation requests
+                        // for a short cooldown. Re-open the verification dialog so the user
+                        // understands what happened instead of showing a generic error.
+                        _uiState.value = AuthUiState()
+                        onRateLimited(rateLimitSeconds)
+                    } else if (emailAlreadyUsed) {
                         // Do not expose the raw Supabase error in the signup form.
                         // Show the dedicated, user-friendly duplicate-email dialog instead.
                         _uiState.value = AuthUiState()
