@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.animation.ExperimentalAnimationApi::class)
+
 // this is the AuthComponents.kt file
 //java/com/nagpurpulse/ui/screens/auth/AuthComponents.kt
 
