@@ -90,7 +90,7 @@ class AuthRepository @Inject constructor(
             // Supabase silently "succeeds" for already-registered emails instead of throwing.
             // The tell-tale sign is that the returned user has an empty identities list.
             // A genuine new signup always has at least one identity entry.
-            if (signupUser != null && signupUser.identities?.isEmpty() == true) {
+            if (signupUser != null && (signupUser.identities == null || signupUser.identities.isEmpty())) {
                 android.util.Log.w(AUTH_LOG_TAG, "SIGNUP_DUPLICATE: empty identities list detected — email already registered")
                 // Clean up the ghost session Supabase created.
                 try { client.auth.signOut() } catch (_: Exception) {}
@@ -145,6 +145,18 @@ class AuthRepository @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun hasExistingProfileForCurrentUser(): Boolean {
+        val userId = currentUserId ?: return false
+        return try {
+            client.postgrest["profiles"]
+                .select { filter { eq("id", userId) } }
+                .decodeList<JsonObject>()
+                .isNotEmpty()
+        } catch (_: Exception) {
+            false
         }
     }
 
