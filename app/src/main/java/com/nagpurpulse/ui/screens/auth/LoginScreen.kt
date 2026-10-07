@@ -488,6 +488,7 @@ fun LoginScreen(
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.pressScale(
                                 onClick = {
+                                    AuthAnalytics.log(context, "login_forgot_password_tap")
                                     resetEmail = email
                                     showForgotPasswordDialog = true
                                 }
@@ -496,7 +497,15 @@ fun LoginScreen(
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    AnimatedErrorMessage(uiState.error)
+                    AnimatedErrorMessage(
+                        uiState.error?.let {
+                            if (uiState.loginCooldownSeconds > 0) {
+                                stringResource(R.string.auth_err_login_cooldown, uiState.loginCooldownSeconds)
+                            } else {
+                                it
+                            }
+                        }
+                    )
 
                     AnimatedVisibility(
                         visible = uiState.forgotPasswordSent,
@@ -517,6 +526,49 @@ fun LoginScreen(
                                 color = GreenSuccess,
                                 fontSize = 13.sp
                             )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = uiState.emailVerificationRequired,
+                        enter = fadeIn(tween(180)) + expandVertically(),
+                        exit = fadeOut(tween(120)) + shrinkVertically()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(if (isDarkTheme) SurfaceAlt else Color(0xFFFFF5EC))
+                                .border(
+                                    1.dp,
+                                    OrangePrimary.copy(alpha = 0.25f),
+                                    RoundedCornerShape(18.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.login_email_not_confirmed_hint),
+                                    color = muted,
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
+                                )
+                                Spacer(Modifier.height(7.dp))
+                                Text(
+                                    text = stringResource(R.string.login_resend_verification),
+                                    color = OrangePrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.pressScale(
+                                        onClick = {
+                                            AuthAnalytics.log(context, "login_resend_verification_tap")
+                                            scope.launch {
+                                                viewModel.resendSignupEmailOtp(email) {}
+                                            }
+                                        }
+                                    )
+                                )
+                            }
                         }
                     }
 
@@ -574,6 +626,7 @@ fun LoginScreen(
                             )
                             .pressScale(onClick = {
                                 scope.launch {
+                                    AuthAnalytics.log(context, "login_google_tap")
                                     when (val outcome = GoogleAuthManager(context).signIn()) {
                                         is GoogleSignInOutcome.Success ->
                                             viewModel.signInWithGoogleToken(
@@ -616,7 +669,10 @@ fun LoginScreen(
                                 if (isDarkTheme) OrangePrimary.copy(alpha = 0.20f) else Color(0xFFFFE4CF),
                                 RoundedCornerShape(20.dp)
                             )
-                            .pressScale(onClick = onGuestContinue)
+                            .pressScale(onClick = {
+                                AuthAnalytics.log(context, "login_guest_tap")
+                                onGuestContinue()
+                            })
                             .padding(horizontal = 12.dp, vertical = if (compact) 7.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
