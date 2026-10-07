@@ -395,9 +395,10 @@ fun NagpurPulseNavGraph(
                             selectedUsername = null
                             selectedAvatar = null
                             profileSaveError = null
-                            navController.navigate(Screen.Identity.route) {
-                                popUpTo(Screen.Login.route) { inclusive = true }
-                            }
+                            // Keep Identity as the onboarding back-stack origin so the
+                            // final profile save can clear the interrupted setup flow cleanly.
+                            onboardingOriginRoute = Screen.Identity.route
+                            navController.navigate(Screen.Identity.route)
                         }
                     }
                 },
@@ -453,9 +454,10 @@ fun NagpurPulseNavGraph(
                             selectedUsername = null
                             selectedAvatar = null
                             profileSaveError = null
-                            navController.navigate(Screen.Identity.route) {
-                                popUpTo(Screen.Signup.route) { inclusive = true }
-                            }
+                            // Keep Identity as the onboarding back-stack origin so the
+                            // final profile save can clear the interrupted setup flow cleanly.
+                            onboardingOriginRoute = Screen.Identity.route
+                            navController.navigate(Screen.Identity.route)
                         }
                     }
                 }
