@@ -18,7 +18,7 @@ internal fun LoginContent(
     onEmail: (String) -> Unit = {}, onPassword: (String) -> Unit = {},
     onEmailBlur: () -> Unit = {}, onPasswordBlur: () -> Unit = {},
     onLogin: () -> Unit = {}, onForgot: () -> Unit = {}, onGoogle: () -> Unit = {},
-    onSignup: () -> Unit = {}, onResend: () -> Unit = {}
+    onSignup: () -> Unit = {}, onResend: () -> Unit = {}, onGuest: () -> Unit = {}
 ) {
     val passwordFocus = remember { FocusRequester() }
     val focus = LocalFocusManager.current
@@ -33,8 +33,12 @@ internal fun LoginContent(
         footer = { _ ->
             AuthOr()
             AuthAction(stringResource(R.string.login_continue_google), loading, google = true, onClick = onGoogle)
-            AuthLink(stringResource(R.string.auth_signup_footer), enabled = !loading,
-                modifier = Modifier.fillMaxWidth(), onClick = onSignup)
+            Row(Modifier.fillMaxWidth()) {
+                AuthLink(stringResource(R.string.auth_signup_footer), enabled = !loading,
+                    modifier = Modifier.weight(2f), onClick = onSignup)
+                AuthLink(stringResource(R.string.auth_explore_guest), enabled = !loading,
+                    modifier = Modifier.weight(1f), onClick = onGuest)
+            }
         }
     ) { spec ->
         if (!spec.keyboard && online && error == null && emailError == null && passwordError == null && !verificationRequired) {

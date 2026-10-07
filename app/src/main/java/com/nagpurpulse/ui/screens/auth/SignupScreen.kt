@@ -258,7 +258,7 @@ fun SignupScreen(
             }
         },
         onGuest = { AuthAnalytics.log(context, "signup_guest_tap"); onGuestContinue() },
-        onLogin = onNavigateToLogin,
+        onLogin = { AuthAnalytics.log(context, "signup_login_tap"); onNavigateToLogin() },
         onHaveCode = {
             AuthAnalytics.log(context, "signup_have_code_tap")
             verificationCode = ""; verificationSeconds = 0

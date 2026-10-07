@@ -143,4 +143,3 @@ private fun SignupMRPreview() {
 private fun LoginMRPreview() {
     NagpurPulseTheme { LoginContent() }
 }
-

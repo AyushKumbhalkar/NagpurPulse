@@ -137,7 +137,10 @@ fun LoginScreen(
         onEmail = { email = it }, onPassword = { password = it },
         onEmailBlur = { emailTouched = true }, onPasswordBlur = { passwordTouched = true },
         onLogin = { submitLogin() },
-        onForgot = { resetEmail = email; showForgotPasswordDialog = true },
+        onForgot = {
+            AuthAnalytics.log(context, "login_forgot_password_tap")
+            resetEmail = email; showForgotPasswordDialog = true
+        },
         onResend = {
             AuthAnalytics.log(context, "login_resend_verification_tap")
             viewModel.resendSignupEmailOtp(email) {}
@@ -155,7 +158,8 @@ fun LoginScreen(
                 } } finally { googleBusy = false }
             }
         },
-        onSignup = onNavigateToSignup
+        onSignup = onNavigateToSignup,
+        onGuest = { AuthAnalytics.log(context, "login_guest_tap"); onGuestContinue() }
     )
 
     if (showForgotPasswordDialog) {

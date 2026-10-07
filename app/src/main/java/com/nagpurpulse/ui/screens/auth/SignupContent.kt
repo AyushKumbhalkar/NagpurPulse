@@ -41,7 +41,7 @@ internal fun SignupContent(
             // Legal links retain the existing expanded 48dp hit logic and custom actions.
             LegalConsentText(colors.muted, colors.ink)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                AuthLink(stringResource(R.string.auth_explore_guest), enabled = !loading, onClick = onGuest)
+                AuthLink(stringResource(R.string.auth_explore_guest), enabled = !loading, modifier = Modifier.weight(1f), onClick = onGuest)
                 if (spec.tier == AuthHeightTier.Compact) AuthLink(stringResource(R.string.auth_login_footer),
                     enabled = !loading, modifier = Modifier.weight(1f), onClick = onLogin)
 

@@ -37,4 +37,3 @@ internal fun rememberIsOnline(): State<Boolean> {
     }
     return online
 }
-
