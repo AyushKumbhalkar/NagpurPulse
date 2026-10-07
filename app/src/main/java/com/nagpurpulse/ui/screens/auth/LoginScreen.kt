@@ -43,7 +43,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -102,7 +101,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -207,8 +205,8 @@ private fun LoginHeroHeadline(
         Text(
             text = prefix,
             color = ink,
-            fontSize = if (compact) 34.sp else 40.sp,
-            lineHeight = if (compact) 37.sp else 43.sp,
+            fontSize = if (compact) 28.sp else 38.sp,
+            lineHeight = if (compact) 30.sp else 41.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = (-1).sp,
             maxLines = 1
@@ -216,8 +214,8 @@ private fun LoginHeroHeadline(
         Text(
             text = accent,
             color = orange,
-            fontSize = if (compact) 34.sp else 40.sp,
-            lineHeight = if (compact) 37.sp else 43.sp,
+            fontSize = if (compact) 28.sp else 38.sp,
+            lineHeight = if (compact) 30.sp else 41.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = (-1).sp,
             maxLines = 1
@@ -226,14 +224,14 @@ private fun LoginHeroHeadline(
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Box(
                 Modifier
-                    .width(88.dp)
+                    .width(if (compact) 72.dp else 88.dp)
                     .height(3.dp)
                     .clip(RoundedCornerShape(50))
                     .background(orange)
             )
             Box(
                 Modifier
-                    .width(34.dp)
+                    .width(if (compact) 28.dp else 34.dp)
                     .height(3.dp)
                     .clip(RoundedCornerShape(50))
                     .background(orange.copy(alpha = 0.75f))
@@ -316,18 +314,37 @@ fun LoginScreen(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val compact = maxHeight < 790.dp
-        val heroHeight = if (compact) 282.dp else 316.dp
-        val cardPadding = if (compact) 16.dp else 20.dp
-        val buttonHeight = if (compact) 52.dp else 58.dp
-        val fieldGap = if (compact) 9.dp else 12.dp
+        // Galaxy S24 is approximately 360 x 780 logical dp. Keep that size as
+        // the compact baseline, then add breathing room only on taller phones.
+        val veryCompact = maxHeight < 720.dp
+        val compact = maxHeight < 900.dp
+        val heroHeight = when {
+            veryCompact -> 176.dp
+            compact -> 196.dp
+            else -> 244.dp
+        }
+        val footerHeight = when {
+            veryCompact -> 44.dp
+            compact -> 56.dp
+            else -> 92.dp
+        }
+        val cardPadding = when {
+            veryCompact -> 10.dp
+            compact -> 12.dp
+            else -> 20.dp
+        }
+        val buttonHeight = when {
+            veryCompact -> 44.dp
+            compact -> 46.dp
+            else -> 58.dp
+        }
+        val fieldGap = if (compact) 6.dp else 12.dp
 
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -353,7 +370,12 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
-                        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 26.dp)
+                        .padding(
+                            start = if (compact) 18.dp else 24.dp,
+                            end = if (compact) 18.dp else 24.dp,
+                            top = if (compact) 4.dp else 8.dp,
+                            bottom = if (compact) 12.dp else 24.dp
+                        )
                 ) {
                     Image(
                         painter = painterResource(
@@ -363,16 +385,16 @@ fun LoginScreen(
                         contentDescription = "NagpurPulse",
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                         modifier = Modifier
-                            .width(if (compact) 188.dp else 210.dp)
-                            .height(if (compact) 48.dp else 54.dp)
+                            .width(if (compact) 168.dp else 210.dp)
+                            .height(if (compact) 40.dp else 54.dp)
                     )
                     Text(
                         text = stringResource(R.string.login_brand_tagline),
                         color = muted,
-                        fontSize = 9.sp,
+                        fontSize = if (compact) 8.sp else 9.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.4.sp,
-                        modifier = Modifier.padding(start = 42.dp, top = 1.dp)
+                        letterSpacing = if (compact) 2.sp else 2.4.sp,
+                        modifier = Modifier.padding(start = if (compact) 34.dp else 42.dp)
                     )
 
                     Spacer(Modifier.weight(1f))
@@ -382,14 +404,14 @@ fun LoginScreen(
                         ink = ink,
                         orange = OrangePrimary
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(if (compact) 4.dp else 10.dp))
                     Text(
                         text = stringResource(R.string.login_hero_body),
                         color = muted,
-                        fontSize = if (compact) 13.sp else 14.sp,
-                        lineHeight = if (compact) 18.sp else 20.sp,
+                        fontSize = if (compact) 11.sp else 14.sp,
+                        lineHeight = if (compact) 14.sp else 20.sp,
                         fontWeight = FontWeight.Medium,
-                        modifier = Modifier.widthIn(max = 245.dp)
+                        modifier = Modifier.widthIn(max = if (compact) 220.dp else 245.dp)
                     )
                 }
 
@@ -400,46 +422,46 @@ fun LoginScreen(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .statusBarsPadding()
-                        .padding(top = 8.dp, end = 14.dp)
+                        .padding(top = if (compact) 4.dp else 8.dp, end = if (compact) 10.dp else 14.dp)
                 )
             }
 
             Column(
                 modifier = Modifier
-                    .offset(y = (-10).dp)
-                    .padding(horizontal = 18.dp)
+                    .weight(1f)
+                    .padding(horizontal = if (compact) 12.dp else 18.dp)
                     .widthIn(max = 520.dp)
                     .fillMaxWidth()
                     .shadow(
                         elevation = 12.dp,
-                        shape = RoundedCornerShape(28.dp),
+                        shape = RoundedCornerShape(if (compact) 24.dp else 28.dp),
                         ambientColor = OrangePrimary.copy(alpha = 0.10f),
                         spotColor = OrangePrimary.copy(alpha = 0.12f)
                     )
-                    .clip(RoundedCornerShape(28.dp))
+                    .clip(RoundedCornerShape(if (compact) 24.dp else 28.dp))
                     .background(cardBackground)
                     .border(
                         1.dp,
                         if (isDarkTheme) OrangePrimary.copy(alpha = 0.22f) else Color(0xFFFFE6D5),
-                        RoundedCornerShape(28.dp)
+                        RoundedCornerShape(if (compact) 24.dp else 28.dp)
                     )
                     .padding(cardPadding)
             ) {
                     Text(
                         text = stringResource(R.string.login_welcome_back),
                         color = ink,
-                        fontSize = if (compact) 27.sp else 30.sp,
-                        lineHeight = if (compact) 32.sp else 35.sp,
+                        fontSize = if (compact) 23.sp else 30.sp,
+                        lineHeight = if (compact) 27.sp else 35.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(if (compact) 1.dp else 2.dp))
                     Text(
                         text = stringResource(R.string.login_card_subtitle),
                         color = muted,
-                        fontSize = 14.sp,
-                        lineHeight = 19.sp
+                        fontSize = if (compact) 12.sp else 14.sp,
+                        lineHeight = if (compact) 16.sp else 19.sp
                     )
-                    Spacer(Modifier.height(if (compact) 14.dp else 18.dp))
+                    Spacer(Modifier.height(if (compact) 7.dp else 18.dp))
 
                     LoginFieldContainer {
                         PremiumInputField(
@@ -469,9 +491,9 @@ fun LoginScreen(
                         Text(
                             text = emailError.orEmpty(),
                             color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            modifier = Modifier.padding(start = 10.dp, top = 4.dp)
+                            fontSize = if (compact) 10.sp else 12.sp,
+                            lineHeight = if (compact) 12.sp else 16.sp,
+                            modifier = Modifier.padding(start = 10.dp, top = if (compact) 2.dp else 4.dp)
                         )
                     }
 
@@ -520,13 +542,13 @@ fun LoginScreen(
                         Text(
                             text = passwordError.orEmpty(),
                             color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            modifier = Modifier.padding(start = 10.dp, top = 4.dp)
+                            fontSize = if (compact) 10.sp else 12.sp,
+                            lineHeight = if (compact) 12.sp else 16.sp,
+                            modifier = Modifier.padding(start = 10.dp, top = if (compact) 2.dp else 4.dp)
                         )
                     }
 
-                    Spacer(Modifier.height(if (compact) 8.dp else 10.dp))
+                    Spacer(Modifier.height(if (compact) 4.dp else 10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -541,12 +563,17 @@ fun LoginScreen(
                                     loginPrefs.edit().putBoolean("keep_signed_in", keepSignedIn).apply()
                                     if (!keepSignedIn) loginPrefs.edit().remove("remembered_email").apply()
                                 }
-                                .padding(start = 0.dp, top = 7.dp, end = 8.dp, bottom = 7.dp),
+                                .padding(
+                                    start = 0.dp,
+                                    top = if (compact) 4.dp else 7.dp,
+                                    end = 8.dp,
+                                    bottom = if (compact) 4.dp else 7.dp
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(if (compact) 20.dp else 22.dp)
                                     .clip(RoundedCornerShape(5.dp))
                                     .background(if (keepSignedIn) OrangePrimary else Color.Transparent)
                                     .border(
@@ -561,22 +588,22 @@ fun LoginScreen(
                                         Icons.Filled.Check,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(if (compact) 14.dp else 16.dp)
                                     )
                                 }
                             }
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(if (compact) 6.dp else 8.dp))
                             Text(
                                 text = stringResource(R.string.login_keep_signed_in),
                                 color = ink,
-                                fontSize = 13.sp,
+                                fontSize = if (compact) 12.sp else 13.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
                         Text(
                             stringResource(R.string.login_forgot_password),
                             color = OrangePrimary,
-                            fontSize = 13.sp,
+                            fontSize = if (compact) 12.sp else 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.pressScale(
                                 onClick = {
@@ -588,7 +615,7 @@ fun LoginScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
                     AnimatedErrorMessage(
                         uiState.error?.let {
                             if (uiState.loginCooldownSeconds > 0) {
@@ -664,7 +691,7 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 4.dp else 12.dp))
 
                     Box(
                         modifier = Modifier
@@ -684,31 +711,35 @@ fun LoginScreen(
                             Text(
                                 text = if (uiState.isLoading) stringResource(R.string.login_signing_in) else stringResource(R.string.login_button),
                                 color = Color.White,
-                                fontSize = 17.sp,
+                                fontSize = if (compact) 15.sp else 17.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(Modifier.size(12.dp))
-                            Text("→", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.size(if (compact) 8.dp else 12.dp))
+                            Text("→", color = Color.White, fontSize = if (compact) 20.sp else 24.sp, fontWeight = FontWeight.Medium)
                         }
                     }
 
-                    Spacer(Modifier.height(if (compact) 11.dp else 15.dp))
+                    Spacer(Modifier.height(if (compact) 6.dp else 15.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         HorizontalDivider(Modifier.weight(1f), color = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB))
-                        Text("  " + stringResource(R.string.login_or_continue_with) + "  ", color = muted, fontSize = 12.sp)
+                        Text(
+                            "  " + stringResource(R.string.login_or_continue_with) + "  ",
+                            color = muted,
+                            fontSize = if (compact) 10.sp else 12.sp
+                        )
                         HorizontalDivider(Modifier.weight(1f), color = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB))
                     }
 
-                    Spacer(Modifier.height(if (compact) 6.dp else 14.dp))
+                    Spacer(Modifier.height(if (compact) 4.dp else 14.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (compact) 44.dp else 48.dp)
+                            .height(if (compact) 42.dp else 48.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(inputBackground)
                             .border(
@@ -743,10 +774,15 @@ fun LoginScreen(
                             modifier = Modifier.size(19.dp)
                         )
                         Spacer(Modifier.size(9.dp))
-                        Text(stringResource(R.string.login_continue_google), color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(R.string.login_continue_google),
+                            color = ink,
+                            fontSize = if (compact) 13.sp else 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
-                    Spacer(Modifier.height(if (compact) 9.dp else 12.dp))
+                    Spacer(Modifier.height(if (compact) 5.dp else 12.dp))
 
                     Row(
                         modifier = Modifier
@@ -762,47 +798,62 @@ fun LoginScreen(
                                 AuthAnalytics.log(context, "login_guest_tap")
                                 onGuestContinue()
                             })
-                            .padding(horizontal = 12.dp, vertical = if (compact) 7.dp else 10.dp),
+                            .padding(horizontal = 10.dp, vertical = if (compact) 5.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(if (compact) 34.dp else 38.dp)
+                                .size(if (compact) 30.dp else 38.dp)
                                 .clip(RoundedCornerShape(13.dp))
                                 .background(Color(0xFFFFE4CF)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Groups, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
+                            Icon(
+                                Icons.Filled.Groups,
+                                contentDescription = null,
+                                tint = OrangePrimary,
+                                modifier = Modifier.size(if (compact) 18.dp else 21.dp)
+                            )
                         }
                         Spacer(Modifier.size(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.login_continue_guest), color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text(stringResource(R.string.login_guest_subtitle), color = muted, fontSize = 12.sp, lineHeight = 16.sp)
+                            Text(
+                                stringResource(R.string.login_continue_guest),
+                                color = ink,
+                                fontSize = if (compact) 13.sp else 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                stringResource(R.string.login_guest_subtitle),
+                                color = muted,
+                                fontSize = if (compact) 10.sp else 12.sp,
+                                lineHeight = if (compact) 12.sp else 16.sp
+                            )
                         }
                         Icon(Icons.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_continue_guest), tint = OrangePrimary, modifier = Modifier.size(20.dp))
                     }
-                    Spacer(Modifier.height(if (compact) 11.dp else 14.dp))
+                    Spacer(Modifier.height(if (compact) 5.dp else 14.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(24.dp))
                             .pressScale(onClick = onNavigateToSignup)
-                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                            .padding(horizontal = 12.dp, vertical = if (compact) 5.dp else 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
                             stringResource(R.string.login_no_account),
                             color = muted,
-                            fontSize = 13.sp,
+                            fontSize = if (compact) 12.sp else 13.sp,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             stringResource(R.string.signup_create_account),
                             color = OrangePrimary,
-                            fontSize = 14.sp,
+                            fontSize = if (compact) 13.sp else 14.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Spacer(Modifier.width(4.dp))
@@ -812,8 +863,10 @@ fun LoginScreen(
                     LegalConsentText(
                         textColor = muted,
                         linkColor = OrangePrimary,
-                        modifier = Modifier.padding(top = 2.dp),
-                        textRes = R.string.login_legal_consent
+                        modifier = Modifier.padding(top = if (compact) 1.dp else 2.dp),
+                        textRes = R.string.login_legal_consent,
+                        fontSize = if (compact) 10.sp else 12.sp,
+                        lineHeight = if (compact) 13.sp else 17.sp
                     )
             }
 
@@ -821,15 +874,14 @@ fun LoginScreen(
                 Image(
                     painter = painterResource(R.drawable.nagpur_footer_transparent),
                     contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                    contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
                     alignment = Alignment.BottomCenter,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1949f / 807f)
-                        .offset(y = (-2).dp)
+                        .height(footerHeight)
                 )
             } else {
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(footerHeight))
             }
         }
     }

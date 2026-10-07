@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.res.stringResource
 import com.nagpurpulse.R
 
@@ -28,7 +29,9 @@ fun LegalConsentText(
     textColor: Color,
     linkColor: Color,
     modifier: Modifier = Modifier,
-    textRes: Int = R.string.legal_consent
+    textRes: Int = R.string.legal_consent,
+    fontSize: TextUnit = 12.sp,
+    lineHeight: TextUnit = 17.sp
 ) {
     val uriHandler = LocalUriHandler.current
     val linkStyle = SpanStyle(
@@ -62,8 +65,8 @@ fun LegalConsentText(
         modifier = modifier.fillMaxWidth(),
         style = TextStyle(
             color = textColor,
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
+            fontSize = fontSize,
+            lineHeight = lineHeight,
             textAlign = TextAlign.Center
         ),
         onClick = { offset ->
