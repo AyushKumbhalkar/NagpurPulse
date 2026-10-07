@@ -18,4 +18,74 @@
     <string name="err_password_short">पासवर्ड किमान ८ अक्षरांचा असावा</string>
     <string name="err_confirm_required">तुमच्या पासवर्डची खात्री करा</string>
     <string name="err_password_mismatch">पासवर्ड जुळत नाहीत</string>
+
+    <!-- Signup screen: dialogs, headline, consent, validation and auth messages -->
+    <string name="signup_subtitle">तुमचे खाते तयार करा आणि नागपूरमध्ये सुरू असलेल्या चर्चांमध्ये सहभागी व्हा.</string>
+    <string name="signup_headline_prefix">तुमची माणसं</string>
+    <string name="cd_hide_password">पासवर्ड लपवा</string>
+    <string name="cd_show_password">पासवर्ड दाखवा</string>
+    <string name="cd_hide_confirm_password">खात्रीचा पासवर्ड लपवा</string>
+    <string name="cd_show_confirm_password">खात्रीचा पासवर्ड दाखवा</string>
+    <string name="cd_continue_guest">पाहुणा म्हणून सुरू ठेवा</string>
+    <string name="cd_close">बंद करा</string>
+    <string name="benefit_secure">सुरक्षित\nआणि खाजगी</string>
+    <string name="benefit_part_of_nagpur">नागपूरचा\nभाग बना</string>
+    <string name="benefit_discussions">रोचक\nचर्चा</string>
+    <string name="loading_creating_account">तुमचे खाते तयार होत आहे…</string>
+    <string name="loading_verifying_email">तुमचा ईमेल सत्यापित होत आहे…</string>
+    <string name="loading_please_wait">कृपया प्रतीक्षा करा</string>
+    <string name="verify_cd_icon">ईमेल सत्यापन</string>
+    <string name="verify_title_ink">तुमचा</string>
+    <string name="verify_title_accent">ईमेल सत्यापित करा</string>
+    <string name="verify_enter_code">या पत्त्यावर पाठवलेला 6 अंकी कोड टाका:</string>
+    <string name="verify_button">सत्यापित करा आणि पुढे जा</string>
+    <string name="verify_button_loading">सत्यापित होत आहे…</string>
+    <string name="verify_resend_in">कोड पुन्हा पाठवा:</string>
+    <string name="verify_retry_in">कोड आधीच पाठवला आहे. पुन्हा प्रयत्न करा:</string>
+    <string name="verify_resend_code">कोड पुन्हा पाठवा</string>
+    <string name="verify_change_email">ईमेल पत्ता बदला</string>
+    <string name="used_cd_icon">ईमेल आधीच वापरात आहे</string>
+    <string name="used_title_ink">ईमेल</string>
+    <string name="used_title_accent">आधीच वापरात</string>
+    <string name="used_body">हा ईमेल पत्ता NagpurPulse मध्ये आधीच नोंदणीकृत आहे. पुढे जाण्यासाठी कृपया लॉग इन करा.</string>
+    <string name="used_go_login">लॉग इनवर जा</string>
+    <string name="used_try_different">दुसरा ईमेल वापरून पहा</string>
+    <string name="legal_terms">सेवा अटी</string>
+    <string name="legal_privacy">गोपनीयता धोरण</string>
+    <string name="legal_consent">खाते तयार करून किंवा Google सह पुढे जाऊन, तुम्ही पुष्टी करता की तुमचे वय 18 किंवा अधिक आहे आणि तुम्ही आमच्या %1$s आणि %2$s यांना सहमत आहात.</string>
+    <string name="strength_weak">कमकुवत</string>
+    <string name="strength_fair">बरा</string>
+    <string name="strength_good">चांगला</string>
+    <string name="strength_strong">मजबूत</string>
+    <string name="strength_cd">पासवर्डची ताकद: %1$s</string>
+    <string name="password_tip">सूचना: अक्षरे, अंक आणि चिन्हे वापरून 12+ अक्षरे ठेवा.</string>
+    <string name="auth_err_invalid_credentials">ईमेल किंवा पासवर्ड चुकीचा आहे.</string>
+    <string name="auth_err_weak_password">हा पासवर्ड ओळखायला खूप सोपा आहे. अक्षरे, अंक आणि चिन्हे असलेला मोठा पासवर्ड वापरा.</string>
+    <string name="auth_err_rate_limit">खूप प्रयत्न झाले आहेत. कृपया थोडा वेळ थांबून पुन्हा प्रयत्न करा.</string>
+    <string name="auth_err_network">सध्या कनेक्ट होता येत नाही. तुमचे इंटरनेट कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.</string>
+    <string name="auth_err_password_min8">पासवर्ड किमान 8 अक्षरांचा असावा.</string>
+    <string name="auth_err_create_failed">तुमचे खाते तयार करता आले नाही. कृपया पुन्हा प्रयत्न करा.</string>
+    <string name="auth_err_valid_email">वैध ईमेल पत्ता टाका.</string>
+    <string name="auth_err_enter_code">6 अंकी सत्यापन कोड टाका.</string>
+    <string name="auth_err_invalid_code">सत्यापन कोड चुकीचा आहे. कृपया कोड तपासून पुन्हा प्रयत्न करा.</string>
+    <string name="auth_err_resend_failed">सत्यापन कोड पुन्हा पाठवता आला नाही. कृपया नंतर प्रयत्न करा.</string>
+    <string name="auth_err_enter_password">तुमचा पासवर्ड टाका.</string>
+    <string name="auth_err_sign_in_failed">साइन इन करता आले नाही. कृपया पुन्हा प्रयत्न करा.</string>
+    <string name="auth_err_google_failed">Google साइन-इन अयशस्वी झाले. कृपया पुन्हा प्रयत्न करा.</string>
+    <string name="auth_err_enter_email_first">आधी वैध ईमेल पत्ता टाका</string>
+    <string name="auth_err_reset_failed">रीसेट ईमेल पाठवता आला नाही. कृपया नंतर प्रयत्न करा.</string>
+    <string name="google_err_no_internet">इंटरनेट कनेक्शन नाही. तुमचे कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.</string>
+    <string name="google_err_no_account">या फोनमध्ये Google खाते आढळले नाही. सेटिंग्जमध्ये एक जोडा आणि पुन्हा प्रयत्न करा.</string>
+    <string name="google_err_unavailable">या फोनवर Google साइन-इन उपलब्ध नाही. Google Play services अपडेट करा आणि पुन्हा प्रयत्न करा.</string>
+    <string name="google_err_interrupted">Google साइन-इनमध्ये व्यत्यय आला. कृपया पुन्हा प्रयत्न करा.</string>
+
+    <string-array name="signup_headline_phrases">
+        <item>इथे आहेत.</item>
+        <item>ऑनलाइन आहेत.</item>
+        <item>बोलत आहेत.</item>
+        <item>सामील होत आहेत.</item>
+        <item>सक्रिय आहेत.</item>
+        <item>आसपास आहेत.</item>
+        <item>विचारत आहेत.</item>
+    </string-array>
 </resources>
