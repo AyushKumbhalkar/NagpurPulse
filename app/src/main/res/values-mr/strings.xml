@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="onboarding_headline_city">आपलं शहर, </string>
+    <string name="onboarding_headline_together">एकत्र.</string>
+    <string name="onboarding_body">नागपूरमध्ये प्रश्न विचारा, उपयुक्त माहिती शेअर करा आणि आजूबाजूला काय घडतंय ते जाणून घ्या.</string>
+    <string name="onboarding_join">NagpurPulse मध्ये सामील व्हा</string>
+    <string name="onboarding_sign_in">साइन इन करा</string>
+    <string name="onboarding_guest">पाहुणा म्हणून पहा</string>
+    <string name="onboarding_guest_note">खात्याशिवाय पहा. पोस्ट करण्यासाठी नंतर साइन अप करा.</string>
+
     <string name="signup_email_hint">ईमेल पत्ता</string>
     <string name="signup_password_hint">पासवर्ड (किमान ८ अक्षरे)</string>
     <string name="signup_confirm_hint">पासवर्डची खात्री करा</string>
