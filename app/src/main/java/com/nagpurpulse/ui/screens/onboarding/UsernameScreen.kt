@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -41,8 +42,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.data.repository.UsernameAvailability
+import com.nagpurpulse.R
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.*
 import kotlinx.coroutines.delay
@@ -219,15 +222,20 @@ fun UsernameScreen(
                     modifier = Modifier.padding(start = 8.dp)
                 )
                 Spacer(Modifier.weight(1f))
-                // Mini logo
+                // NagpurPulse brand mark
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .border(2.dp, OrangePrimary, CircleShape),
+                        .background(Color.White)
+                        .border(1.dp, OrangePrimary.copy(alpha = 0.22f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("~", color = OrangePrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Image(
+                        painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
+                        contentDescription = "NagpurPulse",
+                        modifier = Modifier.size(34.dp)
+                    )
                 }
             }
 
