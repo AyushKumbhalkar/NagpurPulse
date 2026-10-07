@@ -46,8 +46,13 @@ class AuthRepository @Inject constructor(
      * a signup-screen concern.
      */
     fun isLoggedIn(): Boolean {
-        val user = client.auth.currentUserOrNull() ?: return false
-        return user.emailConfirmedAt != null
+        val user = client.auth.currentUserOrNull()
+        val confirmed = user?.emailConfirmedAt != null
+        android.util.Log.d(
+            AUTH_LOG_TAG,
+            "SESSION_CHECK: sessionUserPresent=\${user != null}, emailConfirmed=\${confirmed}"
+        )
+        return user != null && confirmed
     }
 
     /** Server-backed admin check used only for UI routing. Database RLS/RPCs remain authoritative. */
