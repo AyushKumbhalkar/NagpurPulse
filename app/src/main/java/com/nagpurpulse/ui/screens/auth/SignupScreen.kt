@@ -76,6 +76,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -978,15 +979,22 @@ private fun SignupEmailAlreadyUsedDialog(
             // positioned with offsets, so text can never be covered by a button.
             val popupWidth = maxWidth * 0.86f
             val popupHeight = maxHeight * 0.74f
-            val horizontalPadding = popupWidth * 0.062f
+            val horizontalPadding = minOf(popupWidth * 0.062f, 26.dp)
             val illustrationSize = minOf(
-                popupWidth * 0.46f,
-                popupHeight * 0.28f
+                popupWidth * 0.42f,
+                popupHeight * 0.23f
             )
             val compactWidth = popupWidth < 330.dp
-            val titleSize = if (compactWidth) 28.sp else 31.sp
-            val bodySize = if (compactWidth) 15.sp else 16.sp
-            val bodyLineHeight = if (compactWidth) 21.sp else 22.sp
+            val compactHeight = popupHeight < 620.dp
+            val titleSize = when {
+                compactWidth -> 28.sp
+                compactHeight -> 29.sp
+                else -> 31.sp
+            }
+            val bodySize = if (compactWidth || compactHeight) 15.sp else 16.sp
+            val bodyLineHeight = if (compactWidth || compactHeight) 21.sp else 22.sp
+            val contentGap = if (compactHeight) 12.dp else 16.dp
+            val actionGap = if (compactHeight) 20.dp else 24.dp
 
             Box(
                 modifier = Modifier
@@ -1056,7 +1064,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         .padding(
                             start = horizontalPadding,
                             end = horizontalPadding,
-                            top = 44.dp,
+                            top = 42.dp,
                             bottom = 18.dp
                         ),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -1068,7 +1076,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         modifier = Modifier.size(illustrationSize)
                     )
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(contentGap))
 
                     Text(
                         text = buildAnnotatedString {
@@ -1096,7 +1104,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         maxLines = 2
                     )
 
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(contentGap))
 
                     Text(
                         text = "This email address is already registered with NagpurPulse. Please log in to continue.",
@@ -1110,7 +1118,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     // The description is a normal Column child. This fixed
                     // spacing guarantees it is completely measured before the
                     // primary action can begin.
-                    Spacer(Modifier.height(26.dp))
+                    Spacer(Modifier.height(actionGap))
 
                     Box(
                         modifier = Modifier
@@ -1122,7 +1130,10 @@ private fun SignupEmailAlreadyUsedDialog(
                                     listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
                                 )
                             )
-                            .clickable(onClick = onGoToLogin),
+                            .clickable(
+                                role = Role.Button,
+                                onClick = onGoToLogin
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -1201,7 +1212,10 @@ private fun SignupEmailAlreadyUsedDialog(
                                 color = Color(0xFFFFCBAA),
                                 shape = RoundedCornerShape(60.dp)
                             )
-                            .clickable(onClick = onTryDifferentEmail),
+                            .clickable(
+                                role = Role.Button,
+                                onClick = onTryDifferentEmail
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
