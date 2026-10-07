@@ -1630,6 +1630,129 @@ private fun NagpurPulseLoadingOverlay(
 // ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
+private fun SignupGoogleExistingDialog(
+    onContinue: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val vc = rememberVerifyPalette()
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            val popupWidth = minOf(maxWidth * 0.86f, 400.dp)
+            val compact = maxHeight < 650.dp
+            Box(
+                modifier = Modifier
+                    .width(popupWidth)
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(vc.card)
+            ) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(82.dp)
+                        .align(Alignment.TopCenter)
+                ) {
+                    val fill = Path().apply {
+                        moveTo(size.width * 0.48f, 0f)
+                        cubicTo(
+                            size.width * 0.66f, size.height * 0.08f,
+                            size.width * 0.80f, size.height * 0.04f,
+                            size.width, size.height * 0.30f
+                        )
+                        lineTo(size.width, 0f)
+                        close()
+                    }
+                    drawPath(fill, brush = SolidColor(vc.artFill))
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = 24.dp,
+                            end = 24.dp,
+                            top = if (compact) 28.dp else 34.dp,
+                            bottom = 24.dp
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
+                        contentDescription = null,
+                        modifier = Modifier.size(if (compact) 58.dp else 68.dp)
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = stringResource(R.string.google_existing_title),
+                        color = vc.ink,
+                        fontSize = if (compact) 26.sp else 29.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.google_existing_body),
+                        color = vc.muted,
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(60.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
+                                )
+                            )
+                            .clickable(role = Role.Button, onClick = onContinue),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.google_existing_continue),
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(vc.closeBg)
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.cd_close),
+                        tint = vc.iconNeutral,
+                        modifier = Modifier.size(21.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SignupEmailAlreadyUsedDialog(
     onGoToLogin: () -> Unit,
     onTryDifferentEmail: () -> Unit,
