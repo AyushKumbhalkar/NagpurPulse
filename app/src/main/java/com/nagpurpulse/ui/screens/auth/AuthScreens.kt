@@ -46,7 +46,12 @@ private fun safeAuthError(context: Context, e: Throwable, fallback: String): Str
         (message.contains("weak") && message.contains("password")) ||
                 message.contains("password should") || message.contains("pwned") ->
             context.getString(R.string.auth_err_weak_password)
-        message.contains("rate limit") || message.contains("too many requests") ->
+        message.contains("rate limit") ||
+                message.contains("too many requests") ||
+                message.contains("too many attempts") ||
+                message.contains("over_request_rate_limit") ||
+                message.contains("over_email_send_rate_limit") ||
+                message.contains("429") ->
             context.getString(R.string.auth_err_rate_limit)
         message.contains("network") || message.contains("timeout") ->
             context.getString(R.string.auth_err_network)
@@ -256,6 +261,7 @@ class AuthViewModel @Inject constructor(
                         AuthAnalytics.log(context, "login_failed", "reason" to "credentials_or_server")
                         if (failedLoginAttempts >= 5) {
                             failedLoginAttempts = 0
+                            AuthAnalytics.log(context, "login_cooldown_started")
                             startLoginCooldown(30)
                         }
                     }
