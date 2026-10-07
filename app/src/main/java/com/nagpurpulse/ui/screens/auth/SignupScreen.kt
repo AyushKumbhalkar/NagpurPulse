@@ -373,21 +373,9 @@ fun SignupScreen(
                         orange = SignupOrange
                     )
                 }
-                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = (-19).dp)
-                        .padding(horizontal = 36.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.signup_subtitle),
-                        color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
-                        fontSize = if (compact) 15.sp else 16.sp,
-                        lineHeight = if (compact) 21.sp else 23.sp
-                    )
-                }
-                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                // The subtitle was removed to keep the complete signup form visible on smaller screens.
+                // The form now starts directly after the animated headline.
+                Spacer(Modifier.height(if (compact) 6.dp else 8.dp))
 
                 Column(
                     modifier = Modifier
