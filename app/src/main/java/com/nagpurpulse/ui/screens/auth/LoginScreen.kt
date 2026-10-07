@@ -122,17 +122,7 @@ private fun LoginAnimatedHeadline(
     ink: Color,
     orange: Color
 ) {
-    val phrases = remember {
-        listOf(
-            "are here.",
-            "are online.",
-            "are talking.",
-            "are joining.",
-            "are active.",
-            "are around.",
-            "are asking."
-        )
-    }
+    val phrases = stringArrayResource(R.array.login_headline_phrases)
 
     var animatedText by remember { mutableStateOf("") }
 
@@ -175,7 +165,7 @@ private fun LoginAnimatedHeadline(
                     fontWeight = FontWeight.ExtraBold
                 )
             ) {
-                append("Your people ")
+                append(stringResource(R.string.login_headline_prefix))
             }
             withStyle(
                 SpanStyle(
@@ -327,7 +317,7 @@ fun LoginScreen(
                         )
                         Spacer(Modifier.width(9.dp))
                         Text(
-                            "WELCOME BACK",
+                            stringResource(R.string.login_welcome_back),
                             color = OrangePrimary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -360,11 +350,13 @@ fun LoginScreen(
                         PremiumInputField(
                             value = email,
                             onValueChange = { email = it },
-                            placeholder = "Email address",
+                            placeholder = stringResource(R.string.login_email_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { passwordFocusRequester.requestFocus() }),
+                            autofillTypes = listOf(AutofillType.EmailAddress),
                             index = 0,
                             containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
@@ -372,7 +364,7 @@ fun LoginScreen(
 
                     if (email.isNotBlank() && !emailLooksValid) {
                         Text(
-                            text = "Enter a valid email address",
+                            text = stringResource(R.string.login_err_email_invalid),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(start = 10.dp, top = 4.dp)
@@ -385,7 +377,7 @@ fun LoginScreen(
                         PremiumInputField(
                             value = password,
                             onValueChange = { password = it },
-                            placeholder = "Password",
+                            placeholder = stringResource(R.string.login_password_hint),
                             leadingIcon = {
                                 Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
@@ -398,14 +390,17 @@ fun LoginScreen(
                                     ) { visible ->
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                            contentDescription = if (visible) "Hide password" else "Show password",
+                                            contentDescription = stringResource(if (visible) R.string.cd_hide_password else R.string.cd_show_password),
                                             tint = OrangePrimary
                                         )
                                     }
                                 }
                             },
                             visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { submitLogin() }),
+                            focusRequester = passwordFocusRequester,
+                            autofillTypes = listOf(AutofillType.Password),
                             index = 1,
                             containerColor = cardBackground
                         )
@@ -420,7 +415,7 @@ fun LoginScreen(
                         contentAlignment = Alignment.CenterEnd
                     ) {
                         Text(
-                            "Forgot password?",
+                            stringResource(R.string.login_forgot_password),
                             color = OrangePrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -451,7 +446,7 @@ fun LoginScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "Reset email sent! Check your inbox.",
+                                stringResource(R.string.login_reset_sent),
                                 color = GreenSuccess,
                                 fontSize = 13.sp
                             )
@@ -480,7 +475,7 @@ fun LoginScreen(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = if (uiState.isLoading) "Signing in…" else "Login",
+                                text = if (uiState.isLoading) stringResource(R.string.login_signing_in) else stringResource(R.string.login_button),
                                 color = Color.White,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold
@@ -497,7 +492,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         HorizontalDivider(Modifier.weight(1f), color = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB))
-                        Text("  or continue with  ", color = muted, fontSize = 12.sp)
+                        Text("  " + stringResource(R.string.login_or_continue_with) + "  ", color = muted, fontSize = 12.sp)
                         HorizontalDivider(Modifier.weight(1f), color = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else Color(0xFFE5E7EB))
                     }
 
@@ -540,7 +535,7 @@ fun LoginScreen(
                             modifier = Modifier.size(19.dp)
                         )
                         Spacer(Modifier.size(9.dp))
-                        Text("Continue with Google", color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.login_continue_google), color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     // Google sign-in can create a new account from this screen too.
@@ -573,10 +568,10 @@ fun LoginScreen(
                         }
                         Spacer(Modifier.size(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Continue as Guest", color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Explore without an account", color = muted, fontSize = 12.sp, lineHeight = 16.sp)
+                            Text(stringResource(R.string.login_continue_guest), color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.login_guest_subtitle), color = muted, fontSize = 12.sp, lineHeight = 16.sp)
                         }
-                        Icon(Icons.Filled.ArrowForward, contentDescription = "Continue as guest", tint = OrangePrimary, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_continue_guest), tint = OrangePrimary, modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -610,9 +605,9 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("Don't have an account?", color = muted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.login_no_account), color = muted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.width(7.dp))
-                    Text("Create Account", color = Color(0xFFFF7518), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(stringResource(R.string.signup_create_account), color = Color(0xFFFF7518), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(Modifier.width(4.dp))
                     Text("→", color = Color(0xFFFF7518), fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
@@ -701,7 +696,7 @@ fun LoginScreen(
                     }
                     Spacer(Modifier.height(24.dp))
                     Text(
-                        "Reset your password",
+                        stringResource(R.string.login_reset_title),
                         color = ink,
                         fontSize = 25.sp,
                         lineHeight = 32.sp,
@@ -710,7 +705,7 @@ fun LoginScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.",
+                        stringResource(R.string.login_reset_body),
                         color = muted,
                         fontSize = 15.sp,
                         lineHeight = 22.sp,
@@ -721,7 +716,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = resetEmail,
                         onValueChange = { resetEmail = it },
-                        placeholder = { Text("Email address", color = muted) },
+                        placeholder = { Text(stringResource(R.string.login_email_hint), color = muted) },
                         leadingIcon = {
                             Icon(Icons.Filled.Email, contentDescription = null, tint = muted)
                         },
@@ -754,7 +749,7 @@ fun LoginScreen(
                                 .pressScale { if (!uiState.isLoading) showForgotPasswordDialog = false },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Cancel", color = ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.login_cancel), color = ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Box(
                             modifier = Modifier.weight(1.2f).height(54.dp)
@@ -776,7 +771,7 @@ fun LoginScreen(
                                 )
                             } else {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("Send reset link", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.login_reset_link), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                     Text("→", color = Color.White, fontSize = 21.sp)
                                 }
                             }
