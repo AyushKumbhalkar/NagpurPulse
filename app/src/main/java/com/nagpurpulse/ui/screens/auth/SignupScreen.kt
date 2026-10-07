@@ -467,9 +467,12 @@ fun SignupScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(if (compact) 7.dp else 16.dp))
+                    Spacer(Modifier.height(if (compact) 6.dp else 10.dp))
+                    LegalConsentText(textColor = muted, linkColor = SignupOrange)
+                    Spacer(Modifier.height(if (compact) 4.dp else 12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
+
                         Text("  or continue with  ", color = muted, fontSize = 12.sp)
                         HorizontalDivider(Modifier.weight(1f), color = fieldBorder)
                     }
