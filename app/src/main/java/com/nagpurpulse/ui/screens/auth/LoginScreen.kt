@@ -100,6 +100,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.ui.components.pressScale
@@ -221,6 +222,13 @@ fun LoginScreen(
     val muted = if (isDarkTheme) SecondaryText else Color(0xFF64748B)
     val emailLooksValid = email.isNotBlank() &&
             android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+    val passwordFocusRequester = remember { FocusRequester() }
+
+    fun submitLogin() {
+        if (emailLooksValid && password.isNotBlank() && !uiState.isLoading) {
+            viewModel.signIn(email.trim(), password, onLoginSuccess)
+        }
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val compact = maxHeight < 800.dp
