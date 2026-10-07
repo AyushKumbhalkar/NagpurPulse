@@ -98,4 +98,5 @@
     <string name="google_existing_title">वापसी पर स्वागत है!</string>
     <string name="google_existing_body">यह Google खाता पहले से NagpurPulse पर पंजीकृत है। आपका खाता तैयार है।</string>
     <string name="google_existing_continue">NagpurPulse पर जाएँ</string>
+    <string name="verify_email_delivery_note">अगर यह ईमेल पता सही है, तो सत्यापन कोड इसी पते पर भेजा गया है।</string>
 </resources>
