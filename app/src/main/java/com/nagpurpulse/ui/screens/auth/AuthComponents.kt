@@ -80,6 +80,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -448,7 +456,7 @@ fun PremiumLogo(subtitle: String, compact: Boolean = false) {
 
 
 // ─── Premium input field ──────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun PremiumInputField(
     value: String,
@@ -458,10 +466,26 @@ fun PremiumInputField(
     trailingIcon: (@Composable () -> Unit)? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    autofillTypes: List<AutofillType> = emptyList(),
     index: Int = 0,
     containerColor: Color? = null
 ) {
     var focused by remember { mutableStateOf(false) }
+
+    // Autofill / password-manager support (Compose 1.6 API). Only active when
+    // the caller passes autofillTypes, so LoginScreen is unaffected.
+    val autofill = LocalAutofill.current
+    val autofillTree = LocalAutofillTree.current
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    val autofillNode = remember(autofillTypes) {
+        if (autofillTypes.isEmpty()) null
+        else AutofillNode(
+            autofillTypes = autofillTypes,
+            onFill = { filled -> currentOnValueChange(filled) }
+        )
+    }
+    autofillNode?.let { autofillTree += it }
     val borderAlpha by animateFloatAsState(
         if (focused) 1f else 0.3f,
         tween(200), label = "border"
@@ -472,111 +496,121 @@ fun PremiumInputField(
     )
 
     Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    (containerColor ?: MaterialTheme.colorScheme.surface).copy(alpha = bgAlpha)
-                )
-                .border(
-                    width = if (focused) 1.6.dp else 1.2.dp,
-                    brush = Brush.linearGradient(
-                        colors =
-                            if (focused) {
-                                listOf(
-                                    Color(0xFFFFA54B),
-                                    OrangePrimary,
-                                    Color(0xFFFFA54B)
-                                )
-                            } else {
-                                listOf(
-                                    Color(0x33FF8C1A),
-                                    Color(0x66FF8C1A),
-                                    Color(0x33FF8C1A)
-                                )
-                            }
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .shadow(
-                    elevation = if (focused) 10.dp else 3.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    ambientColor = OrangePrimary.copy(alpha = 0.25f),
-                    spotColor = OrangePrimary.copy(alpha = 0.25f)
-                )
-        ) {
-            // Focus glow
-            if (focused) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    OrangePrimary.copy(0.6f),
-                                    OrangePrimary.copy(0.9f),
-                                    OrangePrimary.copy(0.6f),
-                                    Color.Transparent
-                                )
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                (containerColor ?: MaterialTheme.colorScheme.surface).copy(alpha = bgAlpha)
+            )
+            .border(
+                width = if (focused) 1.6.dp else 1.2.dp,
+                brush = Brush.linearGradient(
+                    colors =
+                        if (focused) {
+                            listOf(
+                                Color(0xFFFFA54B),
+                                OrangePrimary,
+                                Color(0xFFFFA54B)
                             )
-                        )
-                )
-            }
-
-            Row(
+                        } else {
+                            listOf(
+                                Color(0x33FF8C1A),
+                                Color(0x66FF8C1A),
+                                Color(0x33FF8C1A)
+                            )
+                        }
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .shadow(
+                elevation = if (focused) 10.dp else 3.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = OrangePrimary.copy(alpha = 0.25f),
+                spotColor = OrangePrimary.copy(alpha = 0.25f)
+            )
+    ) {
+        // Focus glow
+        if (focused) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 0.dp),
+                    .height(1.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                OrangePrimary.copy(0.6f),
+                                OrangePrimary.copy(0.9f),
+                                OrangePrimary.copy(0.6f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 0.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(26.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                leadingIcon()
+            }
+            Spacer(Modifier.width(12.dp))
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier.size(26.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    leadingIcon()
-                }
-                Spacer(Modifier.width(12.dp))
-                Row(
                     modifier = Modifier
                         .weight(1f)
-                        .height(50.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focused = it.isFocused },
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        if (value.isEmpty()) {
-                            Text(
-                                text = placeholder,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 14.sp
-                            )
+                        .onGloballyPositioned { coords ->
+                            autofillNode?.boundingBox = coords.boundsInWindow()
                         }
-                        BasicTextField(
-                            value = value,
-                            onValueChange = onValueChange,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            textStyle = TextStyle(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            visualTransformation = visualTransformation,
-                            keyboardOptions = keyboardOptions,
-                            cursorBrush = SolidColor(OrangePrimary)
+                        .onFocusChanged { state ->
+                            focused = state.isFocused
+                            autofillNode?.let { node ->
+                                if (state.isFocused) autofill?.requestAutofillForNode(node)
+                                else autofill?.cancelAutofillForNode(node)
+                            }
+                        },
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
                         )
                     }
-                    trailingIcon?.invoke()
+                    BasicTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        visualTransformation = visualTransformation,
+                        keyboardOptions = keyboardOptions,
+                        keyboardActions = keyboardActions,
+                        cursorBrush = SolidColor(OrangePrimary)
+                    )
                 }
+                trailingIcon?.invoke()
             }
         }
+    }
 }
 
 
@@ -976,4 +1010,3 @@ fun GuestContinueCard(
         }
     }
 }
-

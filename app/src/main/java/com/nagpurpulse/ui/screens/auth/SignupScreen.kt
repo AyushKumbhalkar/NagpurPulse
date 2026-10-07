@@ -75,6 +75,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +83,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -94,6 +97,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -103,6 +107,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -138,12 +143,14 @@ fun SignupScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var email by remember { mutableStateOf("") }
+    // email + dialog flag survive process death (user leaves to read the OTP mail).
+    // Passwords are deliberately NOT saved.
+    var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var showEmailVerificationDialog by remember { mutableStateOf(false) }
+    var showEmailVerificationDialog by rememberSaveable { mutableStateOf(false) }
     var showEmailAlreadyUsedDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
     var verificationSeconds by remember { mutableStateOf(48) }
@@ -153,6 +160,11 @@ fun SignupScreen(
     var lastSubmittedCode by remember { mutableStateOf("") }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val autofillManager = remember(context) {
+        context.getSystemService(android.view.autofill.AutofillManager::class.java)
+    }
 
     // Automatically verify as soon as the sixth digit is entered.
     // A failed verification clears the code so the user can immediately retry.
@@ -181,7 +193,39 @@ fun SignupScreen(
         }
     }
     val emailLooksValid = email.isNotBlank() &&
-        android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+            android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+
+    // Single submit path used by both the Create Account button and the
+    // keyboard "Done" key on the confirm-password field.
+    fun submitSignup() {
+        if (emailLooksValid && password.length >= 8 &&
+            confirmPassword.isNotBlank() && password == confirmPassword &&
+            !uiState.isLoading
+        ) {
+            viewModel.signUp(
+                email = email.trim(),
+                password = password,
+                onSuccess = {
+                    // Tells Google/Samsung password manager the form was submitted,
+                    // so it can offer to save the new password.
+                    autofillManager?.commit()
+                    verificationCode = ""
+                    verificationSeconds = 48
+                    verificationRateLimited = false
+                    showEmailVerificationDialog = true
+                },
+                onEmailAlreadyUsed = {
+                    showEmailAlreadyUsedDialog = true
+                },
+                onRateLimited = { seconds ->
+                    verificationCode = ""
+                    verificationSeconds = seconds
+                    verificationRateLimited = true
+                    showEmailVerificationDialog = true
+                }
+            )
+        }
+    }
 
     val isDarkTheme = LocalIsDarkTheme.current
     val pageBackground = if (isDarkTheme) Background else Color(0xFFFFF9F2)
@@ -313,8 +357,15 @@ fun SignupScreen(
                                 Icon(Icons.Filled.Email, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email
+                                capitalization = KeyboardCapitalization.None,
+                                autoCorrect = false,
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
                             ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            autofillTypes = listOf(AutofillType.EmailAddress),
                             index = 0,
                             containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
@@ -353,7 +404,14 @@ fun SignupScreen(
                                 }
                             },
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            autofillTypes = listOf(AutofillType.NewPassword),
                             index = 1,
                             containerColor = cardBackground
                         )
@@ -384,7 +442,18 @@ fun SignupScreen(
                                 }
                             },
                             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                    submitSignup()
+                                }
+                            ),
+                            autofillTypes = listOf(AutofillType.NewPassword),
                             index = 2,
                             containerColor = cardBackground
                         )
@@ -424,32 +493,7 @@ fun SignupScreen(
                             .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
                             .then(
                                 Modifier.pressScale(
-                                    onClick = {
-                                        if (emailLooksValid && password.length >= 8 &&
-                                            confirmPassword.isNotBlank() && password == confirmPassword &&
-                                            !uiState.isLoading
-                                        ) {
-                                            viewModel.signUp(
-                                                email = email.trim(),
-                                                password = password,
-                                                onSuccess = {
-                                                    verificationCode = ""
-                                                    verificationSeconds = 48
-                                                    verificationRateLimited = false
-                                                    showEmailVerificationDialog = true
-                                                },
-                                                onEmailAlreadyUsed = {
-                                                    showEmailAlreadyUsedDialog = true
-                                                },
-                                                onRateLimited = { seconds ->
-                                                    verificationCode = ""
-                                                    verificationSeconds = seconds
-                                                    verificationRateLimited = true
-                                                    showEmailVerificationDialog = true
-                                                }
-                                            )
-                                        }
-                                    }
+                                    onClick = { submitSignup() }
                                 )
                             )
                             .height(buttonHeight),
@@ -1747,30 +1791,6 @@ private fun SignupAnimatedHeadline(
         letterSpacing = (-0.7).sp,
         maxLines = 2
     )
-}
-
-@Composable
-private fun SignupProviderTile(
-    label: String,
-    symbol: String,
-    symbolColor: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
-            .border(1.dp, SignupBorder, RoundedCornerShape(20.dp))
-            .pressScale(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 13.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(symbol, color = symbolColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = inkLight, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-    }
 }
 
 @Composable
