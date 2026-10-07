@@ -29,6 +29,8 @@ class EmailConfirmationRequiredException : IllegalStateException(
     "Your account was created. Check your email to confirm your address, then sign in."
 )
 
+private const val AUTH_LOG_TAG = "NP_AUTH_FLOW"
+
 class AuthRepository @Inject constructor(
     private val client: SupabaseClient
 ) {
@@ -66,11 +68,15 @@ class AuthRepository @Inject constructor(
         email: String,
         password: String
     ): Result<Unit> {
+        android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_START: starting Supabase email/password signup")
         if (password.length < 8) {
             return Result.failure(IllegalArgumentException("Password must be at least 8 characters"))
         }
         return try {
+            android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_REQUEST: calling Supabase signUpWith(Email)")
             client.auth.signUpWith(Email) { this.email = email; this.password = password }
+            val signupUser = client.auth.currentUserOrNull()
+            android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_RESPONSE: request completed; sessionUserPresent=${signupUser != null}, emailConfirmed=${signupUser?.emailConfirmedAt != null}")
 
             // Supabase may return no active session when email confirmation is required.
             // Account creation is still successful in that case; the verification
@@ -78,8 +84,10 @@ class AuthRepository @Inject constructor(
             if (client.auth.currentUserOrNull() != null) {
                 registerFcmTokenForCurrentUser()
             }
+            android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_RESULT: signup returned success to ViewModel")
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e(AUTH_LOG_TAG, "SIGNUP_ERROR: Supabase signup failed type=${e::class.java.simpleName}, message=${e.message}", e)
             Result.failure(e)
         }
     }
@@ -282,6 +290,7 @@ class AuthRepository @Inject constructor(
 
 
     suspend fun verifySignupEmailOtp(email: String, token: String): Result<Unit> {
+        android.util.Log.d(AUTH_LOG_TAG, "OTP_VERIFY_START: validating verification code locally")
         val normalizedEmail = email.trim()
         val normalizedToken = token.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
@@ -291,27 +300,36 @@ class AuthRepository @Inject constructor(
             return Result.failure(IllegalArgumentException("Enter the 6-digit verification code."))
         }
         return try {
+            android.util.Log.d(AUTH_LOG_TAG, "OTP_VERIFY_REQUEST: calling Supabase verifyEmailOtp type=SIGNUP")
             client.auth.verifyEmailOtp(
                 type = OtpType.Email.SIGNUP,
                 email = normalizedEmail,
                 token = normalizedToken
             )
+            val verifiedUser = client.auth.currentUserOrNull()
+            android.util.Log.d(AUTH_LOG_TAG, "OTP_VERIFY_RESPONSE: verification call completed; sessionUserPresent=${verifiedUser != null}, emailConfirmed=${verifiedUser?.emailConfirmedAt != null}")
             registerFcmTokenForCurrentUser()
+            android.util.Log.d(AUTH_LOG_TAG, "OTP_VERIFY_RESULT: verification succeeded")
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e(AUTH_LOG_TAG, "OTP_VERIFY_ERROR: verification failed type=${e::class.java.simpleName}, message=${e.message}", e)
             Result.failure(e)
         }
     }
 
     suspend fun resendSignupEmailOtp(email: String): Result<Unit> {
+        android.util.Log.d(AUTH_LOG_TAG, "OTP_RESEND_START: validating email locally")
         val normalizedEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
             return Result.failure(IllegalArgumentException("Enter a valid email address."))
         }
         return try {
+            android.util.Log.d(AUTH_LOG_TAG, "OTP_RESEND_REQUEST: calling Supabase resendEmail type=SIGNUP")
             client.auth.resendEmail(OtpType.Email.SIGNUP, normalizedEmail)
+            android.util.Log.d(AUTH_LOG_TAG, "OTP_RESEND_RESULT: resend request completed successfully")
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e(AUTH_LOG_TAG, "OTP_RESEND_ERROR: resend failed type=${e::class.java.simpleName}, message=${e.message}", e)
             Result.failure(e)
         }
     }
