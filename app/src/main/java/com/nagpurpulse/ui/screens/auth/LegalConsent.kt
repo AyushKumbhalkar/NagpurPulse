@@ -1,7 +1,4 @@
-//java/com/nagpurpulse/ui/screens/auth/LegalConsent.kt
-
 package com.nagpurpulse.ui.screens.auth
-
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.ClickableText
@@ -20,8 +17,8 @@ import androidx.compose.ui.unit.sp
 
 /** Single place to change the legal page URLs. */
 object LegalLinks {
-    const val TERMS_URL = "https://YOUR-DOMAIN.com/terms"      // TODO: replace
-    const val PRIVACY_URL = "https://YOUR-DOMAIN.com/privacy"  // TODO: replace
+    const val TERMS_URL = "https://www.nagpurpulse.in/legal/terms.html"
+    const val PRIVACY_URL = "https://www.nagpurpulse.in/legal/privacy.html"
 }
 
 @Composable
