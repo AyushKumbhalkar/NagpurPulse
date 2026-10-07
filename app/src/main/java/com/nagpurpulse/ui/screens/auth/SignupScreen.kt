@@ -138,28 +138,11 @@ fun SignupScreen(
         }
     }
 
-    // Invalid OTP feedback: clear the old code, provide a short haptic
-    // vibration and let the six boxes visibly shake.
-    val hapticFeedback = LocalHapticFeedback.current
-    var otpShake by remember { mutableStateOf(0) }
-    val otpShakeOffset = remember { Animatable(0f) }
-
+    // Invalid OTP: clear the code so the user can immediately retry.
     LaunchedEffect(uiState.error) {
         if (showEmailVerificationDialog && !uiState.error.isNullOrBlank()) {
             verificationCode = ""
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-            otpShake++
         }
-    }
-
-    LaunchedEffect(otpShake) {
-        if (otpShake == 0) return@LaunchedEffect
-        otpShakeOffset.snapTo(0f)
-        otpShakeOffset.animateTo(-8f, tween(55))
-        otpShakeOffset.animateTo(8f, tween(55))
-        otpShakeOffset.animateTo(-6f, tween(45))
-        otpShakeOffset.animateTo(6f, tween(45))
-        otpShakeOffset.animateTo(0f, tween(45))
     }
     val emailLooksValid = email.isNotBlank() &&
         android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
@@ -673,6 +656,30 @@ private fun SignupEmailVerificationDialog(
     onChangeEmail: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Keep OTP error animation state inside the verification dialog itself.
+    // This avoids leaking a local animation value from SignupScreen into this
+    // separate composable.
+    val hapticFeedback = LocalHapticFeedback.current
+    var otpShake by remember { mutableStateOf(0) }
+    val otpShakeOffset = remember { Animatable(0f) }
+
+    LaunchedEffect(error) {
+        if (!error.isNullOrBlank()) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            otpShake++
+        }
+    }
+
+    LaunchedEffect(otpShake) {
+        if (otpShake == 0) return@LaunchedEffect
+        otpShakeOffset.snapTo(0f)
+        otpShakeOffset.animateTo(-8f, tween(55))
+        otpShakeOffset.animateTo(8f, tween(55))
+        otpShakeOffset.animateTo(-6f, tween(45))
+        otpShakeOffset.animateTo(6f, tween(45))
+        otpShakeOffset.animateTo(0f, tween(45))
+    }
+
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
         properties = androidx.compose.ui.window.DialogProperties(
