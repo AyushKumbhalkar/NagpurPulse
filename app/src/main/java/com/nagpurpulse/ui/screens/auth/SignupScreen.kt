@@ -135,6 +135,7 @@ import com.nagpurpulse.ui.theme.Surface
 import com.nagpurpulse.ui.theme.SurfaceAlt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringArrayResource
 
 private val inkLight = Color(0xFF111827)
 private val mutedLight = Color(0xFF64748B)
@@ -371,7 +372,7 @@ fun SignupScreen(
                         .padding(horizontal = 36.dp)
                 ) {
                     Text(
-                        text = "Create your account and join the conversations happening around Nagpur.",
+                        text = stringResource(R.string.signup_subtitle),
                         color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
                         fontSize = if (compact) 15.sp else 16.sp,
                         lineHeight = if (compact) 21.sp else 23.sp
@@ -435,7 +436,7 @@ fun SignupScreen(
                                     ) { visible ->
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                            contentDescription = if (visible) "Hide password" else "Show password",
+                                            contentDescription = stringResource(if (visible) R.string.cd_hide_password else R.string.cd_show_password),
                                             tint = OrangePrimary
                                         )
                                     }
@@ -488,7 +489,7 @@ fun SignupScreen(
                                     ) { visible ->
                                         Icon(
                                             if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                            contentDescription = if (visible) "Hide confirm password" else "Show confirm password",
+                                            contentDescription = stringResource(if (visible) R.string.cd_hide_confirm_password else R.string.cd_show_confirm_password),
                                             tint = OrangePrimary
                                         )
                                     }
@@ -626,7 +627,7 @@ fun SignupScreen(
                             Text(stringResource(R.string.signup_guest_title), color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Text(stringResource(R.string.signup_guest_subtitle), color = muted, fontSize = 12.sp, lineHeight = 16.sp)
                         }
-                        Icon(Icons.Filled.ArrowForward, contentDescription = "Continue as guest", tint = SignupOrange, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_continue_guest), tint = SignupOrange, modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -694,19 +695,19 @@ fun SignupScreen(
             ) {
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Shield, null, tint = Color(0xFF168447), modifier = Modifier.size(22.dp)) },
-                    title = "Secure\n& private",
+                    title = stringResource(R.string.benefit_secure),
                     background = if (isDarkTheme) Color(0xFF123322) else Color(0xFFD9F7E5),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Groups, null, tint = Color(0xFFE85D0D), modifier = Modifier.size(22.dp)) },
-                    title = "Be a part\nof Nagpur",
+                    title = stringResource(R.string.benefit_part_of_nagpur),
                     background = if (isDarkTheme) Color(0xFF3A2112) else Color(0xFFFFE1C8),
                     modifier = Modifier.weight(1f)
                 )
                 SignupBenefit(
                     icon = { Icon(Icons.Filled.Forum, null, tint = Color(0xFF2563EB), modifier = Modifier.size(22.dp)) },
-                    title = "Interesting\ndiscussions",
+                    title = stringResource(R.string.benefit_discussions),
                     background = if (isDarkTheme) Color(0xFF142A43) else Color(0xFFDCEEFF),
                     modifier = Modifier.weight(1f)
                 )
@@ -719,7 +720,7 @@ fun SignupScreen(
     // Create Account is pressed, so the user never sees a blank waiting period.
     if (uiState.isLoading && !showEmailVerificationDialog) {
         NagpurPulseLoadingOverlay(
-            message = "Creating your account…"
+            message = stringResource(R.string.loading_creating_account)
         )
     }
 
@@ -1033,7 +1034,7 @@ private fun SignupEmailVerificationDialog(
                         )
                         Image(
                             painter = painterResource(R.drawable.verify_email),
-                            contentDescription = "Email verification",
+                            contentDescription = stringResource(R.string.verify_cd_icon),
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .size(illustration)
@@ -1046,10 +1047,10 @@ private fun SignupEmailVerificationDialog(
                     Text(
                         text = buildAnnotatedString {
                             withStyle(SpanStyle(color = vc.ink, fontWeight = FontWeight.ExtraBold)) {
-                                append("Verify your ")
+                                append(stringResource(R.string.verify_title_ink) + " ")
                             }
                             withStyle(SpanStyle(color = vc.orange, fontWeight = FontWeight.ExtraBold)) {
-                                append("email")
+                                append(stringResource(R.string.verify_title_accent))
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -1062,7 +1063,7 @@ private fun SignupEmailVerificationDialog(
                     Spacer(Modifier.height(8.dp))
 
                     Text(
-                        "Enter the 6-digit code we sent to",
+                        stringResource(R.string.verify_enter_code),
                         modifier = Modifier.fillMaxWidth(),
                         color = vc.muted,
                         fontSize = 15.sp,
@@ -1208,7 +1209,7 @@ private fun SignupEmailVerificationDialog(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                if (isLoading) "Verifying…" else "Verify & Continue",
+                                stringResource(if (isLoading) R.string.verify_button_loading else R.string.verify_button),
                                 color = Color.White,
                                 fontSize = if (compactWidth) 18.sp else 20.sp,
                                 fontWeight = FontWeight.Bold
@@ -1244,7 +1245,7 @@ private fun SignupEmailVerificationDialog(
                             Text(
                                 text = buildAnnotatedString {
                                     withStyle(SpanStyle(color = vc.muted)) {
-                                        append(if (rateLimited) "Code already sent. Retry in " else "Resend code in ")
+                                        append(stringResource(if (rateLimited) R.string.verify_retry_in else R.string.verify_resend_in) + " ")
                                     }
                                     withStyle(SpanStyle(color = vc.orange, fontWeight = FontWeight.Bold)) {
                                         // mm:ss, so 75s shows 01:15 (the old code showed 00:75)
@@ -1271,7 +1272,7 @@ private fun SignupEmailVerificationDialog(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                "Resend code",
+                                stringResource(R.string.verify_resend_code),
                                 color = vc.orange,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
@@ -1297,7 +1298,7 @@ private fun SignupEmailVerificationDialog(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "Change email address",
+                            stringResource(R.string.verify_change_email),
                             color = vc.muted,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -1324,7 +1325,7 @@ private fun SignupEmailVerificationDialog(
                     ) {
                         Icon(
                             Icons.Filled.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.cd_close),
                             tint = vc.iconNeutral,
                             modifier = Modifier.size(20.dp)
                         )
@@ -1334,7 +1335,7 @@ private fun SignupEmailVerificationDialog(
                 if (isLoading) {
                     Box(modifier = Modifier.matchParentSize().clip(cardShape)) {
                         NagpurPulseLoadingOverlay(
-                            message = "Verifying your email…",
+                            message = stringResource(R.string.loading_verifying_email),
                             inDialog = true
                         )
                     }
@@ -1520,7 +1521,7 @@ private fun NagpurPulseLoadingOverlay(
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "Please wait",
+                text = stringResource(R.string.loading_please_wait),
                 color = vc.muted,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center
@@ -1649,7 +1650,7 @@ private fun SignupEmailAlreadyUsedDialog(
                 ) {
                     Image(
                         painter = painterResource(R.drawable.email_alert),
-                        contentDescription = "Email already used",
+                        contentDescription = stringResource(R.string.used_cd_icon),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(illustrationSize)
                     )
@@ -1664,7 +1665,7 @@ private fun SignupEmailAlreadyUsedDialog(
                                     fontWeight = FontWeight.ExtraBold
                                 )
                             ) {
-                                append("Email ")
+                                append(stringResource(R.string.used_title_ink) + " ")
                             }
                             withStyle(
                                 SpanStyle(
@@ -1672,7 +1673,7 @@ private fun SignupEmailAlreadyUsedDialog(
                                     fontWeight = FontWeight.ExtraBold
                                 )
                             ) {
-                                append("already used")
+                                append(stringResource(R.string.used_title_accent))
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -1685,7 +1686,7 @@ private fun SignupEmailAlreadyUsedDialog(
                     Spacer(Modifier.height(contentGap))
 
                     Text(
-                        text = "This email address is already registered with NagpurPulse. Please log in to continue.",
+                        text = stringResource(R.string.used_body),
                         modifier = Modifier.fillMaxWidth(),
                         color = vc.muted,
                         fontSize = bodySize,
@@ -1760,7 +1761,7 @@ private fun SignupEmailAlreadyUsedDialog(
                             Spacer(Modifier.width(10.dp))
 
                             Text(
-                                "Go to Login",
+                                stringResource(R.string.used_go_login),
                                 color = Color.White,
                                 fontSize = if (compactWidth) 19.sp else 20.sp,
                                 fontWeight = FontWeight.Bold
@@ -1797,7 +1798,7 @@ private fun SignupEmailAlreadyUsedDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Try a different email",
+                            stringResource(R.string.used_try_different),
                             color = vc.ink,
                             fontSize = if (compactWidth) 18.sp else 19.sp,
                             fontWeight = FontWeight.Bold,
@@ -1821,7 +1822,7 @@ private fun SignupEmailAlreadyUsedDialog(
                 ) {
                     Icon(
                         Icons.Filled.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.cd_close),
                         tint = vc.iconNeutral,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1841,21 +1842,12 @@ private fun SignupAnimatedHeadline(
     ink: Color,
     orange: Color
 ) {
-    val phrases = remember {
-        listOf(
-            "are here.",
-            "are online.",
-            "are talking.",
-            "are joining.",
-            "are active.",
-            "are around.",
-            "are asking."
-        )
-    }
+    val phrases = stringArrayResource(R.array.signup_headline_phrases).toList()
+    val headlinePrefix = stringResource(R.string.signup_headline_prefix)
 
     var animatedText by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(phrases) {
         var currentIndex = 0
 
         while (true) {
@@ -1894,7 +1886,7 @@ private fun SignupAnimatedHeadline(
                     fontWeight = FontWeight.ExtraBold
                 )
             ) {
-                append("Your people ")
+                append("$headlinePrefix ")
             }
             withStyle(
                 SpanStyle(
