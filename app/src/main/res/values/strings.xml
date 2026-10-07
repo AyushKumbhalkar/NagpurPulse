@@ -40,6 +40,7 @@
     <string name="verify_title_ink">Verify your</string>
     <string name="verify_title_accent">email</string>
     <string name="verify_enter_code">Enter the 6-digit code we sent to</string>
+    <string name="verify_email_delivery_note">If this email address is correct, the verification code has been sent there.</string>
     <string name="verify_button">Verify &amp; Continue</string>
     <string name="verify_button_loading">Verifying…</string>
     <string name="verify_resend_in">Resend code in</string>
