@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.animation.ExperimentalAnimationApi::class)
+
 package com.nagpurpulse.ui.screens.auth
 
 
