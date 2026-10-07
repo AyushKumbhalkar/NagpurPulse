@@ -475,12 +475,12 @@ fun PremiumInputField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
-    focusRequester: FocusRequester? = null,
     autofillTypes: List<AutofillType> = emptyList(),
     onBlur: (() -> Unit)? = null,
     index: Int = 0,
     containerColor: Color? = null,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    focusRequester: FocusRequester? = null
 ) {
     var focused by remember { mutableStateOf(false) }
 

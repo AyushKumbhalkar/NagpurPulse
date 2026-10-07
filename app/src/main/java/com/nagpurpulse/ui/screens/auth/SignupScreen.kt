@@ -1,7 +1,8 @@
 @file:OptIn(
     androidx.compose.animation.ExperimentalAnimationApi::class,
     androidx.compose.ui.ExperimentalComposeUiApi::class,
-    androidx.compose.material3.ExperimentalMaterial3Api::class
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
 )
 
 package com.nagpurpulse.ui.screens.auth
@@ -138,11 +139,39 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.foundation.layout.widthIn
 import android.widget.Toast
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 
 private val inkLight = Color(0xFF111827)
 private val mutedLight = Color(0xFF64748B)
 private val SignupBorder = Color(0xFFE5E7EB)
 private val SignupOrange = Color(0xFFFF7518)
+
+/**
+ * U2: the Create Account button now shows its own spinner. Set this to true if you
+ * ALSO want the old full-screen branded overlay while the signup request is running.
+ * (Google sign-in always keeps the full-screen overlay.)
+ */
+private const val SHOW_FULLSCREEN_LOADER_ON_SUBMIT = false
 
 @Composable
 fun SignupScreen(
@@ -168,13 +197,27 @@ fun SignupScreen(
     var submitAttempted by remember { mutableStateOf(false) }
     var showEmailVerificationDialog by rememberSaveable { mutableStateOf(false) }
     var showEmailAlreadyUsedDialog by remember { mutableStateOf(false) }
-    var showGoogleExistingDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
     var verificationSeconds by remember { mutableStateOf(48) }
     var verificationRateLimited by remember { mutableStateOf(false) }
     // Remembers the last code that was auto-submitted so the same wrong code
     // can never be sent to the server again and again.
     var lastSubmittedCode by remember { mutableStateOf("") }
+    // U6: success tick shown after the OTP is verified, before moving on.
+    var showSuccess by remember { mutableStateOf(false) }
+    // U2/U3: true from the moment Create Account is tapped until loading ends.
+    var submitInFlight by remember { mutableStateOf(false) }
+    // U5: after the entrance animation has played once (also survives rotation) skip it.
+    var entrancePlayed by rememberSaveable { mutableStateOf(false) }
+    // U4: auto-focus for the email field.
+    val emailFocusRequester = remember { FocusRequester() }
+    // U8: connectivity.
+    val isOnline by rememberIsOnline()
+    // U9: where the inline button and the visible area are, in window pixels.
+    var inlineButtonTop by remember { mutableStateOf(0f) }
+    var inlineButtonBottom by remember { mutableStateOf(0f) }
+    var viewportTop by remember { mutableStateOf(0f) }
+    var viewportBottom by remember { mutableStateOf(0f) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { AuthAnalytics.log(context, "signup_view") }
@@ -183,6 +226,40 @@ fun SignupScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val autofillManager = remember(context) {
         context.getSystemService(android.view.autofill.AutofillManager::class.java)
+    }
+
+    // U6: one place for "OTP accepted". Shows the success tick first;
+    // navigation happens when the tick animation has finished.
+    fun onOtpVerified() {
+        AuthAnalytics.log(context, "signup_verified")
+        showEmailVerificationDialog = false
+        showSuccess = true
+    }
+    val currentOnSignupSuccess by rememberUpdatedState(onSignupSuccess)
+    LaunchedEffect(showSuccess) {
+        if (showSuccess) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(1300L)
+            currentOnSignupSuccess()
+        }
+    }
+
+    // U4: open the keyboard on the email field (only on a fresh screen).
+    LaunchedEffect(Unit) {
+        if (email.isEmpty() && !showEmailVerificationDialog) {
+            delay(450L)
+            runCatching { emailFocusRequester.requestFocus() }
+            keyboardController?.show()
+        }
+    }
+    // U5: remember that the entrance animation has played.
+    LaunchedEffect(Unit) {
+        delay(1200L)
+        entrancePlayed = true
+    }
+    // U2/U3: clear the in-flight flag when the request ends.
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading) submitInFlight = false
     }
 
     // Automatically verify as soon as the sixth digit is entered.
@@ -197,11 +274,7 @@ fun SignupScreen(
             delay(120L)
             if (verificationCode.length == 6 && !uiState.isLoading) {
                 lastSubmittedCode = verificationCode
-                viewModel.verifySignupEmailOtp(email, verificationCode) {
-                    AuthAnalytics.log(context, "signup_verified")
-                    showEmailVerificationDialog = false
-                    onSignupSuccess()
-                }
+                viewModel.verifySignupEmailOtp(email, verificationCode) { onOtpVerified() }
             }
         }
     }
@@ -236,6 +309,9 @@ fun SignupScreen(
         else -> null
     }
 
+    // U1: both fields filled and equal.
+    val passwordsMatch = confirmPassword.isNotEmpty() && password == confirmPassword
+
     // Single submit path used by both the Create Account button and the
     // keyboard "Done" key on the confirm-password field.
     fun submitSignup() {
@@ -249,6 +325,7 @@ fun SignupScreen(
             return
         }
         if (!uiState.isLoading) {
+            submitInFlight = true
             viewModel.signUp(
                 email = email.trim().lowercase(java.util.Locale.ROOT),
                 password = password,
@@ -282,6 +359,7 @@ fun SignupScreen(
     val ink = if (isDarkTheme) PrimaryText else inkLight
     val muted = if (isDarkTheme) SecondaryText else mutedLight
     val fieldBorder = if (isDarkTheme) OrangePrimary.copy(alpha = 0.28f) else SignupBorder
+    val matchGreen = if (isDarkTheme) Color(0xFF4ADE80) else Color(0xFF168447)
 
     LaunchedEffect(showEmailVerificationDialog) {
         if (!showEmailVerificationDialog) return@LaunchedEffect
@@ -301,6 +379,15 @@ fun SignupScreen(
         val cardPaddingV = if (compact) 10.dp else 20.dp
         val fieldGap = if (compact) 4.dp else 9.dp
         val buttonHeight = if (compact) 50.dp else 58.dp
+        // U8: the page slides down while the offline banner is visible.
+        val bannerShift by animateDpAsState(
+            targetValue = if (isOnline) 0.dp else 36.dp,
+            animationSpec = tween(220),
+            label = "offline-banner-shift"
+        )
+        // U9: room for the pinned button so the last items can scroll above it.
+        val imeVisible = WindowInsets.isImeVisible
+        val pinnedBarSpace = if (compact || imeVisible) buttonHeight + 28.dp else 0.dp
         Box(modifier = Modifier.fillMaxSize().background(pageBackground))
 
         // New NagpurPulse auth header artwork. It is transparent, so the logo
@@ -340,10 +427,13 @@ fun SignupScreen(
                 .fillMaxSize()
                 .navigationBarsPadding()
                 .imePadding()
-                .then(
-                    if (maxHeight < 760.dp) Modifier.verticalScroll(rememberScrollState()) else Modifier
-                )
-                .padding(top = pageTop, bottom = 4.dp),
+                .onGloballyPositioned { c ->
+                    val b = c.boundsInWindow()
+                    viewportTop = b.top
+                    viewportBottom = b.bottom
+                }
+                .verticalScroll(rememberScrollState())
+                .padding(top = pageTop + bannerShift, bottom = 4.dp + pinnedBarSpace),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Keep the logo + signup card together as the top section so the
@@ -373,9 +463,21 @@ fun SignupScreen(
                         orange = SignupOrange
                     )
                 }
-                // The subtitle was removed to keep the complete signup form visible on smaller screens.
-                // The form now starts directly after the animated headline.
-                Spacer(Modifier.height(if (compact) 6.dp else 8.dp))
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-19).dp)
+                        .padding(horizontal = 36.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.signup_subtitle),
+                        color = if (isDarkTheme) PrimaryText else Color(0xFF111827),
+                        fontSize = if (compact) 15.sp else 16.sp,
+                        lineHeight = if (compact) 21.sp else 23.sp
+                    )
+                }
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
 
                 Column(
                     modifier = Modifier
@@ -387,7 +489,7 @@ fun SignupScreen(
                         .border(1.dp, pageBackground, RoundedCornerShape(32.dp))
                         .padding(horizontal = 18.dp, vertical = cardPaddingV)
                 ) {
-                    SignupFieldContainer {
+                    SignupFieldContainer(entranceIndex = 0, entranceSkip = entrancePlayed) {
                         PremiumInputField(
                             value = email,
                             onValueChange = { email = it },
@@ -407,6 +509,7 @@ fun SignupScreen(
                             autofillTypes = listOf(AutofillType.EmailAddress),
                             onBlur = { emailTouched = true },
                             errorMessage = emailError,
+                            focusRequester = emailFocusRequester,
                             index = 0,
                             containerColor = if (isDarkTheme) SurfaceAlt else Color(0xFFFFF8F2)
                         )
@@ -423,7 +526,7 @@ fun SignupScreen(
                     )
                     Spacer(Modifier.height(fieldGap))
 
-                    SignupFieldContainer {
+                    SignupFieldContainer(entranceIndex = 1, entranceSkip = entrancePlayed) {
                         PremiumInputField(
                             value = password,
                             onValueChange = { password = it },
@@ -432,7 +535,10 @@ fun SignupScreen(
                                 Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             trailingIcon = {
-                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                IconButton(
+                                    onClick = { passwordVisible = !passwordVisible },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
                                     AnimatedContent(
                                         targetState = passwordVisible,
                                         transitionSpec = { fadeIn(tween(130)) togetherWith fadeOut(tween(130)) },
@@ -477,7 +583,7 @@ fun SignupScreen(
                     }
                     Spacer(Modifier.height(if (compact) 3.dp else 10.dp))
 
-                    SignupFieldContainer {
+                    SignupFieldContainer(entranceIndex = 2, entranceSkip = entrancePlayed) {
                         PremiumInputField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
@@ -486,17 +592,35 @@ fun SignupScreen(
                                 Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(21.dp))
                             },
                             trailingIcon = {
-                                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                                    AnimatedContent(
-                                        targetState = confirmPasswordVisible,
-                                        transitionSpec = { fadeIn(tween(130)) togetherWith fadeOut(tween(130)) },
-                                        label = "confirm-password-visibility"
-                                    ) { visible ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // U1: green tick as soon as both passwords match.
+                                    AnimatedVisibility(
+                                        visible = passwordsMatch,
+                                        enter = fadeIn(tween(160)) + androidx.compose.animation.scaleIn(initialScale = 0.5f, animationSpec = tween(200)),
+                                        exit = fadeOut(tween(100))
+                                    ) {
                                         Icon(
-                                            if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                            contentDescription = stringResource(if (visible) R.string.cd_hide_confirm_password else R.string.cd_show_confirm_password),
-                                            tint = OrangePrimary
+                                            Icons.Filled.CheckCircle,
+                                            contentDescription = null,
+                                            tint = matchGreen,
+                                            modifier = Modifier.size(22.dp)
                                         )
+                                    }
+                                    IconButton(
+                                        onClick = { confirmPasswordVisible = !confirmPasswordVisible },
+                                        modifier = Modifier.size(48.dp)
+                                    ) {
+                                        AnimatedContent(
+                                            targetState = confirmPasswordVisible,
+                                            transitionSpec = { fadeIn(tween(130)) togetherWith fadeOut(tween(130)) },
+                                            label = "confirm-password-visibility"
+                                        ) { visible ->
+                                            Icon(
+                                                if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                                contentDescription = stringResource(if (visible) R.string.cd_hide_confirm_password else R.string.cd_show_confirm_password),
+                                                tint = OrangePrimary
+                                            )
+                                        }
                                     }
                                 }
                             },
@@ -524,6 +648,23 @@ fun SignupScreen(
                         message = confirmError,
                         color = MaterialTheme.colorScheme.error
                     )
+                    AnimatedVisibility(
+                        visible = passwordsMatch && confirmError == null,
+                        enter = fadeIn(tween(140)) + expandVertically(),
+                        exit = fadeOut(tween(100)) + shrinkVertically()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.signup_passwords_match),
+                            color = matchGreen,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 10.dp, top = 4.dp)
+                                .semantics { liveRegion = LiveRegionMode.Polite }
+                        )
+                    }
                     Spacer(Modifier.height(10.dp))
                     AnimatedErrorMessage(uiState.error)
                     uiState.infoMessage?.let { message ->
@@ -536,28 +677,20 @@ fun SignupScreen(
                     }
                     Spacer(Modifier.height(if (compact) 7.dp else 12.dp))
 
+                    // U9: remember where this button is, so a pinned copy can appear when it is out of view.
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(40.dp))
-                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
-                            .then(
-                                Modifier.pressScale(
-                                    onClick = { submitSignup() }
-                                )
-                            )
-                            .height(buttonHeight),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.onGloballyPositioned { c ->
+                            val b = c.boundsInWindow()
+                            inlineButtonTop = b.top
+                            inlineButtonBottom = b.bottom
+                        }
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                            Text(
-                                text = stringResource(if (uiState.isLoading) R.string.signup_creating_account else R.string.signup_create_account),
-                                color = Color.White,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
+                        EntranceItem(index = 3, skip = entrancePlayed) {
+                            CreateAccountButton(
+                                isLoading = uiState.isLoading,
+                                height = buttonHeight,
+                                onClick = { submitSignup() }
                             )
-                            Spacer(Modifier.size(12.dp))
-                            Text("→", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
                         }
                     }
 
@@ -607,7 +740,7 @@ fun SignupScreen(
                                             viewModel.signInWithGoogleToken(
                                                 idToken = outcome.idToken,
                                                 nonce = outcome.rawNonce,
-                                                onExistingUser = { showGoogleExistingDialog = true },
+                                                onExistingUser = onExistingGoogleUser,
                                                 onNewUser = onSignupSuccess
                                             )
                                         GoogleSignInOutcome.Cancelled -> Unit
@@ -749,6 +882,77 @@ fun SignupScreen(
             Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
         }
 
+        // U9: pinned Create Account button. Appears (above the keyboard) only while the
+        // inline button is not fully visible, so it is never hidden on small phones.
+        val inlineButtonVisible = inlineButtonBottom > 0f &&
+                inlineButtonBottom <= viewportBottom + 1f &&
+                inlineButtonTop >= viewportTop - 1f
+        val showPinnedButton = inlineButtonBottom > 0f && !inlineButtonVisible && !showSuccess
+        AnimatedVisibility(
+            visible = showPinnedButton,
+            enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it },
+            exit = fadeOut(tween(120)) + slideOutVertically(tween(160)) { it },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.3f to pageBackground,
+                            1f to pageBackground
+                        )
+                    )
+                    .padding(top = 18.dp, bottom = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CreateAccountButton(
+                    isLoading = uiState.isLoading,
+                    height = buttonHeight,
+                    onClick = { submitSignup() },
+                    modifier = Modifier
+                        .widthIn(max = 520.dp)
+                        .padding(horizontal = 36.dp)
+                )
+            }
+        }
+
+        // U8: offline banner at the very top.
+        AnimatedVisibility(
+            visible = !isOnline,
+            enter = fadeIn(tween(160)) + slideInVertically(tween(220)) { -it },
+            exit = fadeOut(tween(120)) + slideOutVertically(tween(180)) { -it },
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFB3261E))
+                    .statusBarsPadding()
+                    .heightIn(min = 36.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Filled.CloudOff, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.offline_banner_signup),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    lineHeight = 17.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
+            }
+        }
+
         LanguagePickerChip(
             contentColor = ink,
             backgroundColor = cardBackground.copy(alpha = 0.92f),
@@ -756,16 +960,27 @@ fun SignupScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(top = 6.dp, end = 14.dp)
+                .padding(top = 6.dp + bannerShift, end = 14.dp)
         )
     }
 
     // Network-loading overlay: show NagpurPulse branding immediately after
     // Create Account is pressed, so the user never sees a blank waiting period.
-    if (uiState.isLoading && !showEmailVerificationDialog) {
+    if (uiState.isLoading && !showEmailVerificationDialog &&
+        (SHOW_FULLSCREEN_LOADER_ON_SUBMIT || !submitInFlight)
+    ) {
         NagpurPulseLoadingOverlay(
             message = stringResource(R.string.loading_creating_account)
         )
+    }
+
+    // U6: success moment after the OTP is accepted.
+    AnimatedVisibility(
+        visible = showSuccess,
+        enter = fadeIn(tween(180)),
+        exit = fadeOut(tween(120))
+    ) {
+        SignupSuccessOverlay()
     }
 
     if (showEmailVerificationDialog) {
@@ -780,11 +995,7 @@ fun SignupScreen(
             onVerify = {
                 if (verificationCode.length == 6 && !uiState.isLoading) {
                     lastSubmittedCode = verificationCode
-                    viewModel.verifySignupEmailOtp(email, verificationCode) {
-                        AuthAnalytics.log(context, "signup_verified")
-                        showEmailVerificationDialog = false
-                        onSignupSuccess()
-                    }
+                    viewModel.verifySignupEmailOtp(email, verificationCode) { onOtpVerified() }
                 }
             },
             onResend = {
@@ -802,18 +1013,6 @@ fun SignupScreen(
             },
             onDismiss = {
                 if (!uiState.isLoading) showEmailVerificationDialog = false
-            }
-        )
-    }
-
-    if (showGoogleExistingDialog) {
-        SignupGoogleExistingDialog(
-            onContinue = {
-                showGoogleExistingDialog = false
-                onExistingGoogleUser()
-            },
-            onDismiss = {
-                if (!uiState.isLoading) showGoogleExistingDialog = false
             }
         )
     }
@@ -1129,17 +1328,6 @@ private fun SignupEmailVerificationDialog(
                     )
 
                     Spacer(Modifier.height(10.dp))
-
-                    Text(
-                        text = stringResource(R.string.verify_email_delivery_note),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = vc.muted.copy(alpha = 0.88f),
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(8.dp))
 
                     // Email shown as a chip: long addresses ellipsize instead of breaking the layout.
                     Row(
@@ -1629,129 +1817,6 @@ private fun NagpurPulseLoadingOverlay(
 // ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun SignupGoogleExistingDialog(
-    onContinue: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val vc = rememberVerifyPalette()
-    androidx.compose.ui.window.Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            val popupWidth = minOf(maxWidth * 0.86f, 400.dp)
-            val compact = maxHeight < 650.dp
-            Box(
-                modifier = Modifier
-                    .width(popupWidth)
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(vc.card)
-            ) {
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(82.dp)
-                        .align(Alignment.TopCenter)
-                ) {
-                    val fill = Path().apply {
-                        moveTo(size.width * 0.48f, 0f)
-                        cubicTo(
-                            size.width * 0.66f, size.height * 0.08f,
-                            size.width * 0.80f, size.height * 0.04f,
-                            size.width, size.height * 0.30f
-                        )
-                        lineTo(size.width, 0f)
-                        close()
-                    }
-                    drawPath(fill, brush = SolidColor(vc.artFill))
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            start = 24.dp,
-                            end = 24.dp,
-                            top = if (compact) 28.dp else 34.dp,
-                            bottom = 24.dp
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.nagpurpulse_orange_n_icon),
-                        contentDescription = null,
-                        modifier = Modifier.size(if (compact) 58.dp else 68.dp)
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        text = stringResource(R.string.google_existing_title),
-                        color = vc.ink,
-                        fontSize = if (compact) 26.sp else 29.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = stringResource(R.string.google_existing_body),
-                        color = vc.muted,
-                        fontSize = 15.sp,
-                        lineHeight = 22.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(54.dp)
-                            .clip(RoundedCornerShape(60.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
-                                )
-                            )
-                            .clickable(role = Role.Button, onClick = onContinue),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            stringResource(R.string.google_existing_continue),
-                            color = Color.White,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 8.dp, end = 8.dp)
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(vc.closeBg)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.cd_close),
-                        tint = vc.iconNeutral,
-                        modifier = Modifier.size(21.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SignupEmailAlreadyUsedDialog(
     onGoToLogin: () -> Unit,
     onTryDifferentEmail: () -> Unit,
@@ -2070,11 +2135,11 @@ private fun SignupAnimatedHeadline(
         while (true) {
             val phrase = phrases[currentIndex]
 
-            // Keep one character visible during locale changes so the headline
-            // never collapses to zero height and makes the whole screen flicker.
-            animatedText = phrase.take(1)
+            // Start the new phrase completely empty.
+            animatedText = ""
 
-            for (index in 1 until phrase.length) {
+            // Type EVERY character continuously until the whole phrase is visible.
+            for (index in phrase.indices) {
                 animatedText = phrase.substring(0, index + 1)
                 delay(75L)
             }
@@ -2095,12 +2160,8 @@ private fun SignupAnimatedHeadline(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxWidth().height(if (compact) 68.dp else 76.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Text(
-            text = buildAnnotatedString {
+    Text(
+        text = buildAnnotatedString {
             withStyle(
                 SpanStyle(
                     color = ink,
@@ -2124,27 +2185,217 @@ private fun SignupAnimatedHeadline(
         lineHeight = if (compact) 32.sp else 36.sp,
         fontWeight = FontWeight.ExtraBold,
         letterSpacing = (-0.7).sp,
-            maxLines = 2
-        )
-    }
+        maxLines = 2
+    )
 }
 
 @Composable
-private fun SignupFieldContainer(content: @Composable () -> Unit) {
+private fun SignupFieldContainer(
+    entranceIndex: Int = -1,
+    entranceSkip: Boolean = true,
+    content: @Composable () -> Unit
+) {
     // Give all signup fields a stronger, darker orange outline.
     // The rounded wrapper keeps the border clean and consistent across
     // Email, Password, and Confirm Password.
+    val box: @Composable () -> Unit = {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .border(
+                    width = 0.75.dp,
+                    color = Color(0xFFFF7518),
+                    shape = RoundedCornerShape(18.dp)
+                )
+        ) {
+            content()
+        }
+    }
+    if (entranceIndex >= 0) {
+        EntranceItem(index = entranceIndex, skip = entranceSkip) { box() }
+    } else {
+        box()
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  NEW HELPERS (U2, U5, U6, U8)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** U5: fades + slides its content in, one item after another (staggered by [index]). */
+@Composable
+private fun EntranceItem(
+    index: Int,
+    skip: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val progress = remember { Animatable(if (skip) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (progress.value < 1f) {
+            delay(80L + index * 90L)
+            progress.animateTo(1f, tween(380, easing = FastOutSlowInEasing))
+        }
+    }
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .border(
-                width = 0.75.dp,
-                color = Color(0xFFFF7518),
-                shape = RoundedCornerShape(18.dp)
-            )
+        modifier = modifier.graphicsLayer {
+            alpha = progress.value
+            translationY = (1f - progress.value) * 24.dp.toPx()
+        }
     ) {
         content()
+    }
+}
+
+/**
+ * U2 + U3: Create Account button. While loading it shows a spinner instead of the
+ * arrow, is dimmed, is announced as disabled, and ignores taps (no double submit).
+ */
+@Composable
+private fun CreateAccountButton(
+    isLoading: Boolean,
+    height: Dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val buttonAlpha by animateFloatAsState(
+        targetValue = if (isLoading) 0.6f else 1f,
+        animationSpec = tween(150),
+        label = "create-button-alpha"
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(buttonAlpha)
+            .clip(RoundedCornerShape(40.dp))
+            .background(Brush.horizontalGradient(listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))))
+            .pressScale(onClick = { if (!isLoading) onClick() })
+            .semantics { if (isLoading) disabled() }
+            .height(height),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            Text(
+                text = stringResource(if (isLoading) R.string.signup_creating_account else R.string.signup_create_account),
+                color = Color.White,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.size(12.dp))
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier.size(22.dp)
+                )
+            } else {
+                Text("→", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+
+/** U8: live "is there internet" state. Starts as true so the banner never flashes on open. */
+@Composable
+private fun rememberIsOnline(): State<Boolean> {
+    val context = LocalContext.current
+    val online = remember { mutableStateOf(true) }
+    DisposableEffect(context) {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+        if (cm == null) {
+            onDispose { }
+        } else {
+            val main = android.os.Handler(android.os.Looper.getMainLooper())
+            online.value = cm.getNetworkCapabilities(cm.activeNetwork)
+                ?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+            val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: android.net.Network) {
+                    main.post { online.value = true }
+                }
+                override fun onLost(network: android.net.Network) {
+                    main.post { online.value = false }
+                }
+                override fun onCapabilitiesChanged(
+                    network: android.net.Network,
+                    caps: android.net.NetworkCapabilities
+                ) {
+                    val hasInternet = caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    main.post { online.value = hasInternet }
+                }
+            }
+            runCatching { cm.registerDefaultNetworkCallback(callback, main) }
+            onDispose { runCatching { cm.unregisterNetworkCallback(callback) } }
+        }
+    }
+    return online
+}
+
+/** U6: scrim + circle that pops in, then a tick that draws itself. */
+@Composable
+private fun SignupSuccessOverlay() {
+    val vc = rememberVerifyPalette()
+    val pop = remember { Animatable(0.6f) }
+    val tick = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 400f))
+    }
+    LaunchedEffect(Unit) {
+        delay(160L)
+        tick.animateTo(1f, tween(420, easing = FastOutSlowInEasing))
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(vc.scrim)
+            // swallow touches so nothing underneath can be tapped during the moment
+            .pointerInput(Unit) { detectTapGestures { } },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .graphicsLayer {
+                        scaleX = pop.value
+                        scaleY = pop.value
+                    }
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(vc.gradientStart, vc.gradientEnd))),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.size(52.dp)) {
+                    val w = size.width
+                    val h = size.height
+                    val a = Offset(w * 0.10f, h * 0.55f)
+                    val b = Offset(w * 0.38f, h * 0.82f)
+                    val c = Offset(w * 0.92f, h * 0.22f)
+                    val t = tick.value
+                    val stroke = 5.dp.toPx()
+                    // first leg 0..0.4, second leg 0.4..1
+                    val first = (t / 0.4f).coerceIn(0f, 1f)
+                    val second = ((t - 0.4f) / 0.6f).coerceIn(0f, 1f)
+                    drawLine(
+                        Color.White, a, Offset(a.x + (b.x - a.x) * first, a.y + (b.y - a.y) * first),
+                        strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                    if (second > 0f) {
+                        drawLine(
+                            Color.White, b, Offset(b.x + (c.x - b.x) * second, b.y + (c.y - b.y) * second),
+                            strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.signup_success_title),
+                color = vc.ink,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+            )
+        }
     }
 }
 

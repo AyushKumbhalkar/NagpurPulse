@@ -59,10 +59,6 @@
     <string name="strength_strong">मजबूत</string>
     <string name="strength_cd">पासवर्डची ताकद: %1$s</string>
     <string name="password_tip">सूचना: अक्षरे, अंक आणि चिन्हे वापरून 12+ अक्षरे ठेवा.</string>
-    <string name="auth_err_login_cooldown">खूप अयशस्वी प्रयत्न झाले. पुन्हा प्रयत्न करण्यापूर्वी %1$d सेकंद प्रतीक्षा करा.</string>
-    <string name="auth_err_email_not_confirmed">साइन इन करण्यापूर्वी तुमचा ईमेल सत्यापित करा. आम्ही सत्यापन कोड पुन्हा पाठवू शकतो.</string>
-    <string name="login_email_not_confirmed_hint">तुमचा ईमेल अद्याप सत्यापित झालेला नाही. आधी तो सत्यापित करा, नंतर साइन इन करा.</string>
-    <string name="login_resend_verification">सत्यापन कोड पुन्हा पाठवा</string>
     <string name="auth_err_invalid_credentials">ईमेल किंवा पासवर्ड चुकीचा आहे.</string>
     <string name="auth_err_weak_password">हा पासवर्ड ओळखायला खूप सोपा आहे. अक्षरे, अंक आणि चिन्हे असलेला मोठा पासवर्ड वापरा.</string>
     <string name="auth_err_rate_limit">खूप प्रयत्न झाले आहेत. कृपया थोडा वेळ थांबून पुन्हा प्रयत्न करा.</string>
@@ -99,41 +95,7 @@
     <string name="verify_have_code">तुमच्याकडे आधीच सत्यापन कोड आहे का?</string>
     <string name="verify_open_email_app">ईमेल अ‍ॅप उघडा</string>
     <string name="verify_no_email_app">या फोनमध्ये ईमेल अ‍ॅप आढळले नाही.</string>
-    <string name="google_existing_title">पुन्हा स्वागत आहे!</string>
-    <string name="google_existing_body">हे Google खाते आधीच NagpurPulse वर नोंदणीकृत आहे. तुमचे खाते तयार आहे.</string>
-    <string name="google_existing_continue">NagpurPulse वर जा</string>
-    <string name="verify_email_delivery_note">हा ईमेल पत्ता बरोबर असल्यास, सत्यापन कोड याच पत्त्यावर पाठवला आहे.</string>
-
-    <!-- Login screen -->
-    <string name="login_headline_prefix">तुमची माणसं </string>
-    <string-array name="login_headline_phrases">
-        <item>इथे आहेत.</item>
-        <item>ऑनलाइन आहेत.</item>
-        <item>बोलत आहेत.</item>
-        <item>सामील होत आहेत.</item>
-        <item>सक्रिय आहेत.</item>
-        <item>आसपास आहेत.</item>
-        <item>विचारत आहेत.</item>
-    </string-array>
-    <string name="login_welcome_back">पुन्हा स्वागत आहे</string>
-    <string name="login_email_hint">ईमेल पत्ता</string>
-    <string name="login_password_hint">पासवर्ड</string>
-    <string name="login_err_email_invalid">वैध ईमेल पत्ता टाका</string>
-    <string name="login_forgot_password">पासवर्ड विसरलात?</string>
-    <string name="login_reset_sent">रीसेट ईमेल पाठवला आहे! तुमचा इनबॉक्स तपासा.</string>
-    <string name="login_button">लॉग इन</string>
-    <string name="login_signing_in">लॉग इन होत आहे…</string>
-    <string name="login_or_continue_with">किंवा याद्वारे सुरू ठेवा</string>
-    <string name="login_continue_google">Google सह सुरू ठेवा</string>
-    <string name="login_continue_guest">पाहुणा म्हणून सुरू ठेवा</string>
-    <string name="login_guest_subtitle">खात्याशिवाय पहा</string>
-    <string name="login_no_account">तुमचे खाते नाही का?</string>
-    <string name="login_benefit_secure">सुरक्षित&#10;आणि खाजगी</string>
-    <string name="login_benefit_nagpur">नागपूरचा&#10;भाग बना</string>
-    <string name="login_benefit_discussions">रोचक&#10;चर्चा</string>
-    <string name="login_reset_title">पासवर्ड रीसेट करा</string>
-    <string name="login_reset_body">तुमच्या NagpurPulse खात्याशी जोडलेला ईमेल पत्ता टाका. आम्ही तुम्हाला सुरक्षित रीसेट लिंक पाठवू.</string>
-    <string name="login_cancel">रद्द करा</string>
-    <string name="login_reset_link">रीसेट लिंक पाठवा</string>
-
+    <string name="signup_passwords_match">पासवर्ड जुळतात</string>
+    <string name="offline_banner_signup">इंटरनेट कनेक्शन नाही. खाते तयार करण्यासाठी नेटवर्कशी कनेक्ट व्हा.</string>
+    <string name="signup_success_title">ईमेल सत्यापित झाले!</string>
 </resources>
