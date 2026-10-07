@@ -83,8 +83,7 @@ class AuthRepository @Inject constructor(
         }
         return try {
             android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_REQUEST: calling Supabase signUpWith(Email)")
-            client.auth.signUpWith(Email) { this.email = email; this.password = password }
-            val signupUser = client.auth.currentUserOrNull()
+            val signupUser = client.auth.signUpWith(Email) { this.email = email; this.password = password }
             android.util.Log.d(AUTH_LOG_TAG, "SIGNUP_RESPONSE: request completed; sessionUserPresent=${signupUser != null}, emailConfirmed=${signupUser?.emailConfirmedAt != null}, identitiesCount=${signupUser?.identities?.size}")
 
             // Supabase silently "succeeds" for already-registered emails instead of throwing.
