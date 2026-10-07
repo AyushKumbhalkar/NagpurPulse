@@ -2,6 +2,7 @@ package com.nagpurpulse.ui.screens.auth
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -68,6 +69,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -117,6 +120,47 @@ fun SignupScreen(
     var verificationRateLimited by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Automatically verify as soon as the sixth digit is entered.
+    // A failed verification clears the code so the user can immediately retry.
+    LaunchedEffect(verificationCode, uiState.isLoading) {
+        if (showEmailVerificationDialog &&
+            verificationCode.length == 6 &&
+            !uiState.isLoading
+        ) {
+            delay(120L)
+            if (verificationCode.length == 6 && !uiState.isLoading) {
+                viewModel.verifySignupEmailOtp(email, verificationCode) {
+                    showEmailVerificationDialog = false
+                    onSignupSuccess()
+                }
+            }
+        }
+    }
+
+    // Invalid OTP feedback: clear the old code, provide a short haptic
+    // vibration and let the six boxes visibly shake.
+    val hapticFeedback = LocalHapticFeedback.current
+    var otpShake by remember { mutableStateOf(0) }
+    val otpShakeOffset = remember { Animatable(0f) }
+
+    LaunchedEffect(uiState.error) {
+        if (showEmailVerificationDialog && !uiState.error.isNullOrBlank()) {
+            verificationCode = ""
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            otpShake++
+        }
+    }
+
+    LaunchedEffect(otpShake) {
+        if (otpShake == 0) return@LaunchedEffect
+        otpShakeOffset.snapTo(0f)
+        otpShakeOffset.animateTo(-8f, tween(55))
+        otpShakeOffset.animateTo(8f, tween(55))
+        otpShakeOffset.animateTo(-6f, tween(45))
+        otpShakeOffset.animateTo(6f, tween(45))
+        otpShakeOffset.animateTo(0f, tween(45))
+    }
     val emailLooksValid = email.isNotBlank() &&
         android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 
@@ -803,7 +847,8 @@ private fun SignupEmailVerificationDialog(
                         cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (compactHeight) 68.dp else 74.dp),
+                            .height(if (compactHeight) 68.dp else 74.dp)
+                            .offset(x = otpShakeOffset.value.dp),
                         decorationBox = {
                             Row(
                                 modifier = Modifier.fillMaxSize(),
