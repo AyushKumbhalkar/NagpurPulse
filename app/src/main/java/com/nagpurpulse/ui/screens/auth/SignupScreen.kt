@@ -36,6 +36,10 @@ import androidx.compose.runtime.rememberUpdatedState
 // Enable only after a separately reviewed repository/API implementation exists.
 internal const val PASSWORDLESS_SIGNUP = false
 
+// The keyboard used to open by itself (U4). With Google as the first option, an auto-opened
+// keyboard hides it and makes the layout jump, so it is off. Set true to bring U4 back.
+private const val AUTOFOCUS_EMAIL = false
+
 @Composable
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
@@ -107,7 +111,7 @@ fun SignupScreen(
 
     // U4: open the keyboard on the email field (only on a fresh screen).
     LaunchedEffect(Unit) {
-        if (email.isEmpty() && !showEmailVerificationDialog && !passwordStep) {
+        if (AUTOFOCUS_EMAIL && email.isEmpty() && !showEmailVerificationDialog && !passwordStep) {
             delay(450L)
             runCatching { emailFocusRequester.requestFocus() }
             keyboardController?.show()
