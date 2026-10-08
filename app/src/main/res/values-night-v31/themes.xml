@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Keep the launch splash light even when the device system is in dark mode.
-         NagpurPulse applies its own saved theme after the splash. -->
+    <!-- Use a dark system launch splash when Android is in night mode. -->
     <style
         name="Theme.NagpurPulse"
         parent="Theme.SplashScreen">
 
-        <item name="windowSplashScreenBackground">@color/background_light</item>
+        <item name="windowSplashScreenBackground">@color/background_dark</item>
 
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_loading_icon</item>
 
-        <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Light</item>
+        <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Dark</item>
 
     </style>
 
