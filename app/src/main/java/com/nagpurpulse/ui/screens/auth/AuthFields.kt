@@ -22,7 +22,8 @@ import com.nagpurpulse.ui.theme.authPalette
 internal fun AuthEmailField(
     value: String, onValue: (String) -> Unit, enabled: Boolean,
     error: String?, onBlur: () -> Unit, onNext: () -> Unit,
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    bare: Boolean = false
 ) {
     PremiumInputField(
         value, onValue, stringResource(R.string.signup_email_hint),
@@ -31,9 +32,9 @@ internal fun AuthEmailField(
         keyboardActions = KeyboardActions(onNext = { onNext() }),
         autofillTypes = listOf(AutofillType.EmailAddress),
         onBlur = onBlur, errorMessage = error, focusRequester = focusRequester,
-        enabled = enabled, clearEmail = true
+        enabled = enabled, clearEmail = true, bare = bare
     )
-    AuthNotice(error)
+    if (!bare) AuthNotice(error)
 }
 
 @Composable
@@ -41,7 +42,8 @@ internal fun AuthPasswordField(
     value: String, onValue: (String) -> Unit, enabled: Boolean,
     label: String, error: String?, onBlur: () -> Unit, onDone: () -> Unit,
     newPassword: Boolean = false, focusRequester: FocusRequester? = null,
-    next: Boolean = false
+    next: Boolean = false,
+    bare: Boolean = false
 ) {
     var visible by remember { mutableStateOf(false) }
     PremiumInputField(
@@ -59,7 +61,7 @@ internal fun AuthPasswordField(
             imeAction = if (next) ImeAction.Next else ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone() }, onNext = { onDone() }),
         autofillTypes = listOf(if (newPassword) AutofillType.NewPassword else AutofillType.Password),
-        onBlur = onBlur, errorMessage = error, enabled = enabled, focusRequester = focusRequester
+        onBlur = onBlur, errorMessage = error, enabled = enabled, focusRequester = focusRequester, bare = bare
     )
-    AuthNotice(error)
+    if (!bare) AuthNotice(error)
 }
