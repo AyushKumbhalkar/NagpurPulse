@@ -6,6 +6,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -435,8 +440,14 @@ internal fun WelcomeButton(
     text: String, height: Dp, font: FontFamily, onClick: () -> Unit, loading: Boolean = false
 ) {
     val shape = RoundedCornerShape(28.dp)
+    // Gentle press feedback so the main button feels physical.
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        if (pressed && !loading) 0.97f else 1f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "button-press"
+    )
     Button(
-        onClick = onClick, enabled = !loading, shape = shape,
+        onClick = onClick, enabled = !loading, shape = shape, interactionSource = interaction,
         contentPadding = PaddingValues(horizontal = 16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent, contentColor = Color.White,
@@ -446,7 +457,9 @@ internal fun WelcomeButton(
             defaultElevation = 0.dp, pressedElevation = 0.dp, focusedElevation = 0.dp,
             hoveredElevation = 0.dp, disabledElevation = 0.dp
         ),
-        modifier = Modifier.fillMaxWidth().height(height).alpha(if (loading) 0.65f else 1f)
+        modifier = Modifier.fillMaxWidth().height(height)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .alpha(if (loading) 0.65f else 1f)
             .clip(shape).background(WelcomeButtonBrush)
     ) {
         WelcomeFitText(
@@ -487,6 +500,18 @@ private tailrec fun Context.welcomeActivity(): Activity? = when (this) {
     else -> null
 }
 
+/**
+ * Remembers the system-bar look from before the first auth screen and restores it only when the
+ * LAST auth screen leaves. During a screen transition the old and new screen overlap, and the old
+ * one used to restore white icons AFTER the new one had set dark ones (invisible clock on cream).
+ */
+private object AuthBars {
+    var users = 0
+    var oldStatus: Boolean? = null
+    var oldNav: Boolean? = null
+    var oldColor: Int? = null
+}
+
 /** Transparent status bar with dark icons on the light theme. */
 @Composable
 internal fun WelcomeSystemBars() {
@@ -496,16 +521,26 @@ internal fun WelcomeSystemBars() {
     DisposableEffect(view, dark, preview) {
         val window = if (preview) null else view.context.welcomeActivity()?.window
         val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-        val oldStatus = controller?.isAppearanceLightStatusBars
-        val oldNav = controller?.isAppearanceLightNavigationBars
-        val oldColor = window?.statusBarColor
-        window?.statusBarColor = android.graphics.Color.TRANSPARENT
-        controller?.isAppearanceLightStatusBars = !dark
-        controller?.isAppearanceLightNavigationBars = !dark
+        if (window != null && controller != null) {
+            if (AuthBars.users == 0) {
+                AuthBars.oldStatus = controller.isAppearanceLightStatusBars
+                AuthBars.oldNav = controller.isAppearanceLightNavigationBars
+                AuthBars.oldColor = window.statusBarColor
+            }
+            AuthBars.users++
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            controller.isAppearanceLightStatusBars = !dark
+            controller.isAppearanceLightNavigationBars = !dark
+        }
         onDispose {
-            if (oldStatus != null) controller?.isAppearanceLightStatusBars = oldStatus
-            if (oldNav != null) controller?.isAppearanceLightNavigationBars = oldNav
-            if (oldColor != null) window?.statusBarColor = oldColor
+            if (window != null && controller != null) {
+                AuthBars.users = (AuthBars.users - 1).coerceAtLeast(0)
+                if (AuthBars.users == 0) {
+                    AuthBars.oldStatus?.let { controller.isAppearanceLightStatusBars = it }
+                    AuthBars.oldNav?.let { controller.isAppearanceLightNavigationBars = it }
+                    AuthBars.oldColor?.let { window.statusBarColor = it }
+                }
+            }
         }
     }
 }
