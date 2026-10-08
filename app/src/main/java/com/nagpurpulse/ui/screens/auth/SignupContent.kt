@@ -2,6 +2,12 @@
 
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,19 +39,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -57,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.R
+import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import com.nagpurpulse.ui.theme.authPalette
@@ -89,6 +103,8 @@ internal fun SignupContent(
     val font = rememberWelcomeFont()
     val confirmFocus = remember { FocusRequester() }
     val focus = LocalFocusManager.current
+    val haptic = LocalHapticFeedback.current
+    val tap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
     val largeText = LocalDensity.current.fontScale > 1.3f
     val keyboard = WindowInsets.isImeVisible || keyboardPreview
     // Looked up by name: a missing file just hides that artwork instead of breaking the build.
@@ -96,6 +112,7 @@ internal fun SignupContent(
     val footerArt = rememberSignupDrawable("new_footer")
     WelcomeSystemBars()
 
+    CompositionLocalProvider(LocalAuthFont provides font) {
     Box(Modifier.fillMaxSize().background(colors.background)) {
         // Footer art: full-bleed behind everything, under the navigation bar too.
         if (footerArt != 0 && !keyboard && !largeText) {
@@ -104,6 +121,14 @@ internal fun SignupContent(
                 contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter,
                 alpha = if (dark) 0.5f else 1f,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().heightIn(max = 210.dp)
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            Brush.verticalGradient(0f to Color.Transparent, 0.5f to Color.Black, 1f to Color.Black),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
             )
         }
 
@@ -122,6 +147,10 @@ internal fun SignupContent(
                 }
                 val compact = tier == SignupTier.Compact
                 val minimal = keyboard && maxHeight < 440.dp
+                // With the keyboard up, keep headline + art if the phone is tall enough (no big empty gap).
+                val roomy = maxHeight >= 400.dp
+                val showArt = (!keyboard || roomy) && !largeText
+                val showHeadline = !keyboard || roomy
                 val headlineSp = when (tier) { SignupTier.Compact -> 30; SignupTier.Medium -> 38; SignupTier.Expanded -> 44 }
                 val controlHeight = when (tier) { SignupTier.Compact -> 48.dp; SignupTier.Medium -> 52.dp; SignupTier.Expanded -> 56.dp }
 
@@ -137,7 +166,7 @@ internal fun SignupContent(
                     }
 
                     // Header art: flexible. A soft peach sky sits behind the transparent PNG.
-                    if (!keyboard && !largeText) {
+                    if (showArt) {
                         Box(
                             Modifier.fillMaxWidth().weight(1f).background(
                                 Brush.verticalGradient(
@@ -153,7 +182,7 @@ internal fun SignupContent(
                             if (headerArt != 0) {
                                 Image(
                                     painterResource(headerArt), contentDescription = null,
-                                    contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter,
+                                    contentScale = ContentScale.Crop, alignment = Alignment.BottomCenter,
                                     alpha = if (dark) 0.6f else 1f,
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -167,7 +196,7 @@ internal fun SignupContent(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (!passwordStep && !keyboard) {
+                        if (!passwordStep && showHeadline) {
                             AuthEntrance(0, entrancePlayed) {
                                 WelcomeHeadline(
                                     first = stringResource(R.string.signup_headline_prefix),
@@ -178,22 +207,42 @@ internal fun SignupContent(
                                 )
                             }
                             if (!compact) {
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    stringResource(R.string.auth_signup_subtitle), Modifier.fillMaxWidth(),
-                                    color = colors.muted, fontSize = 15.sp, lineHeight = 21.sp, fontFamily = font,
-                                    textAlign = TextAlign.Center, maxLines = if (largeText) Int.MAX_VALUE else 2
-                                )
+                                AnimatedVisibility(
+                                    visible = !keyboard,
+                                    enter = fadeIn(tween(180)) + expandVertically(tween(220)),
+                                    exit = fadeOut(tween(120)) + shrinkVertically(tween(180))
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Spacer(Modifier.height(6.dp))
+                                        // Width cap = balanced two-line wrap instead of a lonely last word.
+                                        Text(
+                                            stringResource(R.string.auth_signup_subtitle), Modifier.widthIn(max = 300.dp),
+                                            color = colors.muted, fontSize = 15.sp, lineHeight = 21.sp, fontFamily = font,
+                                            textAlign = TextAlign.Center, maxLines = if (largeText) Int.MAX_VALUE else 2
+                                        )
+                                    }
+                                }
                             }
                             Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
                         }
 
                         if (!passwordStep) {
-                            if (!keyboard) {
-                                AuthEntrance(1, entrancePlayed) {
-                                    SignupGoogleButton(stringResource(R.string.signup_continue_google), loading, controlHeight, font, onGoogle)
+                            AnimatedVisibility(
+                                visible = !keyboard,
+                                enter = fadeIn(tween(180)) + expandVertically(tween(220)),
+                                exit = fadeOut(tween(120)) + shrinkVertically(tween(180))
+                            ) {
+                                Column {
+                                    AuthEntrance(1, entrancePlayed) {
+                                        SignupGoogleButton(
+                                            stringResource(R.string.signup_continue_google), loading, controlHeight, font,
+                                            onClick = { tap(); onGoogle() }
+                                        )
+                                    }
+                                    Spacer(Modifier.height(10.dp))
+                                    AuthOr()
+                                    Spacer(Modifier.height(10.dp))
                                 }
-                                AuthOr()
                             }
                             AuthEntrance(2, entrancePlayed) {
                                 Column {
@@ -225,7 +274,7 @@ internal fun SignupContent(
                                     if (loading) R.string.signup_creating_account
                                     else if (passwordStep) R.string.signup_create_account else R.string.auth_continue_email
                                 ),
-                                controlHeight, font, onContinue, loading
+                                controlHeight, font, { tap(); onContinue() }, loading
                             )
                         }
 
@@ -241,7 +290,13 @@ internal fun SignupContent(
                                 }
                             } else {
                                 SignupGuestLink(stringResource(R.string.auth_explore_guest), !loading, colors.ink, font, Modifier, onGuest)
-                                WelcomeLoginLink(stringResource(R.string.auth_login_footer), colors.muted, colors.ink, font, onLogin, !loading)
+                                // Soft pill keeps the line readable on top of the footer artwork.
+                                Box(
+                                    Modifier.fillMaxWidth().clip(RoundedCornerShape(50))
+                                        .background(colors.surface.copy(alpha = if (dark) 0.35f else 0.88f))
+                                ) {
+                                    WelcomeLoginLink(stringResource(R.string.auth_login_footer), colors.muted, colors.ink, font, onLogin, !loading)
+                                }
                             }
                         }
                         Spacer(Modifier.height(4.dp))
@@ -249,6 +304,7 @@ internal fun SignupContent(
                 }
             }
         }
+    }
     }
 }
 
@@ -264,9 +320,10 @@ private fun SignupGoogleButton(text: String, loading: Boolean, height: Dp, font:
     val colors = authPalette()
     val shape = RoundedCornerShape(28.dp)
     Row(
-        Modifier.fillMaxWidth().height(height).alpha(if (loading) 0.65f else 1f)
-            .shadow(2.dp, shape).clip(shape).background(colors.surface)
-            .clickable(enabled = !loading, role = Role.Button, onClick = onClick)
+        Modifier.fillMaxWidth().height(height)
+            .pressScale(pressedScale = 0.97f, onClick = { if (!loading) onClick() })
+            .alpha(if (loading) 0.65f else 1f)
+            .shadow(3.dp, shape).clip(shape).background(colors.surface)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
