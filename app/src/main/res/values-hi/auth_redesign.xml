@@ -19,4 +19,13 @@
     <string name="auth_topic_poha">बेहतरीन तर्री पोहा</string>
     <string name="auth_topic_sunset">फुटाला सूर्यास्त</string>
     <string name="auth_live_count">अभी %1$d नागपुरवासी बात कर रहे हैं</string>
+    <string name="splash_connect_error">NagpurPulse से कनेक्ट नहीं हो पा रहा। अपना इंटरनेट जांचें।</string>
+    <string name="splash_retry">फिर कोशिश करें</string>
+    <string name="pw_strength_weak">कमज़ोर</string>
+    <string name="pw_strength_fair">ठीक-ठाक</string>
+    <string name="pw_strength_good">अच्छा</string>
+    <string name="pw_strength_strong">मज़बूत</string>
+    <string name="verify_paste_code">कोड पेस्ट करें</string>
+    <string name="verify_paste_none">क्लिपबोर्ड में 6 अंकों का कोड नहीं मिला</string>
+    <string name="login_last_used">पिछली बार</string>
 </resources>

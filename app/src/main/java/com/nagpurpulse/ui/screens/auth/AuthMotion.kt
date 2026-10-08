@@ -5,7 +5,14 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,4 +58,17 @@ internal fun AuthEntrance(index: Int, skip: Boolean = false, content: @Composabl
         alpha = progress.value
         translationY = (1f - progress.value) * 16.dp.toPx()
     }) { content() }
+}
+
+/** Very slow zoom-in/zoom-out so illustrations feel alive. Static when animations are off. */
+internal fun Modifier.slowBreathing(max: Float = 1.03f, originY: Float = 1f): Modifier = composed {
+    val reduce = rememberReduceMotion()
+    val scale by rememberInfiniteTransition(label = "breathing").animateFloat(
+        1f, max, infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse), label = "breathe"
+    )
+    graphicsLayer {
+        val sc = if (reduce) 1f else scale
+        scaleX = sc; scaleY = sc
+        transformOrigin = TransformOrigin(0.5f, originY)
+    }
 }

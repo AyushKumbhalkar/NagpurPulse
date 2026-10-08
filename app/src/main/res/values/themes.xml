@@ -11,7 +11,7 @@
         name="Theme.NagpurPulse.Light"
         parent="Theme.Material3.Light">
 
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowBackground">@color/background_light</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
 

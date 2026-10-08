@@ -19,4 +19,13 @@
     <string name="auth_topic_poha">झणझणीत तर्री पोहे</string>
     <string name="auth_topic_sunset">फुटाळा सूर्यास्त</string>
     <string name="auth_live_count">आत्ता %1$d नागपूरकर गप्पा मारत आहेत</string>
+    <string name="splash_connect_error">NagpurPulse शी कनेक्ट होता येत नाही. इंटरनेट तपासा.</string>
+    <string name="splash_retry">पुन्हा प्रयत्न करा</string>
+    <string name="pw_strength_weak">कमकुवत</string>
+    <string name="pw_strength_fair">बरा</string>
+    <string name="pw_strength_good">चांगला</string>
+    <string name="pw_strength_strong">मजबूत</string>
+    <string name="verify_paste_code">कोड पेस्ट करा</string>
+    <string name="verify_paste_none">क्लिपबोर्डवर ६ अंकी कोड सापडला नाही</string>
+    <string name="login_last_used">मागील वेळी</string>
 </resources>

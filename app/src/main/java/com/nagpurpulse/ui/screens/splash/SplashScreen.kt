@@ -4,6 +4,16 @@ package com.nagpurpulse.ui.screens.splash
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -33,7 +43,17 @@ import com.nagpurpulse.ui.theme.*
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(onFinished: () -> Unit) {
+fun SplashScreen(
+    onFinished: () -> Unit,
+    /** True once the next destination is known. The splash leaves only when this is true. */
+    ready: Boolean = true,
+    /** True when the server could not be reached and nothing is cached: shows Retry. */
+    failed: Boolean = false,
+    onRetry: () -> Unit = {}
+) {
+    val currentOnFinished by rememberUpdatedState(onFinished)
+    var minTimeDone by remember { mutableStateOf(false) }
+    val lineProgress = remember { Animatable(0f) }
     val configuration = LocalConfiguration.current
     val splashBackground = MaterialTheme.colorScheme.background
     val compactHeight = configuration.screenHeightDp < 700
@@ -50,14 +70,22 @@ fun SplashScreen(onFinished: () -> Unit) {
 
 
     val logoScale by animateFloatAsState(if (logoVisible) 1f else 0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow), label = "logo_scale")
-    val exitAlpha by animateFloatAsState(if (exitAnim) 0f else 1f, tween(500, easing = FastOutSlowInEasing), label = "exit_alpha")
+    val exitAlpha by animateFloatAsState(if (exitAnim) 0f else 1f, tween(350, easing = FastOutSlowInEasing), label = "exit_alpha")
 
+    // Short brand moment (about 1.1s), then leave as soon as the destination is known.
     LaunchedEffect(Unit) {
         delay(100); logoVisible = true
-        delay(300); textVisible = true
+        delay(250); textVisible = true
         delay(200); tagVisible  = true
-        delay(1200); exitAnim   = true
-        delay(700); onFinished()
+        lineProgress.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
+        delay(150); minTimeDone = true
+    }
+    LaunchedEffect(minTimeDone, ready) {
+        if (minTimeDone && ready) {
+            exitAnim = true
+            delay(380)
+            currentOnFinished()
+        }
     }
 
     Box(
@@ -127,10 +155,37 @@ fun SplashScreen(onFinished: () -> Unit) {
             }
             Spacer(Modifier.height(if (compactHeight) 28.dp else 60.dp))
             AnimatedVisibility(tagVisible, enter = fadeIn(tween(400, 300))) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    repeat(3) { i ->
-                        val dotAlpha by t.animateFloat(0.2f, 1f, infiniteRepeatable(tween(600, delayMillis = i * 200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "dot_$i")
-                        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(OrangePrimary.copy(dotAlpha)))
+                if (failed) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 32.dp)) {
+                        Text(
+                            stringResource(R.string.splash_connect_error),
+                            color = SecondaryText, fontSize = 14.sp, textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Box(
+                            Modifier.clip(RoundedCornerShape(50)).background(OrangePrimary)
+                                .clickable(role = Role.Button, onClick = onRetry)
+                                .padding(horizontal = 28.dp, vertical = 12.dp)
+                        ) {
+                            Text(stringResource(R.string.splash_retry), color = Color.White,
+                                fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    // The pulse line draws itself, then gently glows until the app is ready.
+                    val glow = if (lineProgress.value >= 1f) 0.55f + 0.45f * glowAlpha else 1f
+                    Canvas(Modifier.size(width = 120.dp, height = 28.dp).graphicsLayer { alpha = glow }) {
+                        val w = size.width; val h = size.height; val mid = h / 2f
+                        val full = Path().apply {
+                            moveTo(0f, mid)
+                            lineTo(w * 0.30f, mid); lineTo(w * 0.40f, h * 0.05f); lineTo(w * 0.54f, h * 0.95f)
+                            lineTo(w * 0.64f, mid * 0.8f); lineTo(w * 0.70f, mid); lineTo(w, mid)
+                        }
+                        val measure = PathMeasure().apply { setPath(full, false) }
+                        val visible = Path()
+                        measure.getSegment(0f, measure.length * lineProgress.value, visible, true)
+                        drawPath(visible, OrangePrimary,
+                            style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                 }
             }

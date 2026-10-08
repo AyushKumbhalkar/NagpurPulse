@@ -26,6 +26,9 @@ import com.nagpurpulse.BuildConfig
 
 enum class UsernameAvailability { AVAILABLE, TAKEN, UNABLE_TO_CHECK }
 
+/** Result of asking the server whether the signed-in user finished profile setup. */
+enum class OnboardingProbe { COMPLETE, INCOMPLETE, UNREACHABLE }
+
 class EmailConfirmationRequiredException : IllegalStateException(
     "Your account was created. Check your email to confirm your address, then sign in."
 )
@@ -331,6 +334,30 @@ class AuthRepository @Inject constructor(
         } catch (_: Exception) {
 
             false
+        }
+    }
+
+    /**
+     * Like [hasCompletedOnboarding] but never confuses "server unreachable" with "not onboarded".
+     * A network failure returns UNREACHABLE so the caller can retry instead of sending a
+     * fully set-up user back to profile creation.
+     */
+    suspend fun probeOnboarding(): OnboardingProbe {
+        val userId = currentUserId ?: return OnboardingProbe.INCOMPLETE
+        return try {
+            val profile = client.postgrest["profiles"]
+                .select { filter { eq("id", userId) } }
+                .decodeList<Profile>()
+                .firstOrNull()
+            when {
+                profile == null -> OnboardingProbe.INCOMPLETE
+                profile.username.isNotBlank() && !profile.avatarUrl.isNullOrBlank() -> OnboardingProbe.COMPLETE
+                else -> OnboardingProbe.INCOMPLETE
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            OnboardingProbe.UNREACHABLE
         }
     }
 

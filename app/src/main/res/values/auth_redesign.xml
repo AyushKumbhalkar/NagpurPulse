@@ -19,4 +19,13 @@
     <string name="auth_topic_poha">Best tarri poha</string>
     <string name="auth_topic_sunset">Futala sunset</string>
     <string name="auth_live_count">%1$d Nagpurians talking right now</string>
+    <string name="splash_connect_error">Can\'t reach NagpurPulse. Check your connection.</string>
+    <string name="splash_retry">Try again</string>
+    <string name="pw_strength_weak">Weak</string>
+    <string name="pw_strength_fair">Fair</string>
+    <string name="pw_strength_good">Good</string>
+    <string name="pw_strength_strong">Strong</string>
+    <string name="verify_paste_code">Paste code</string>
+    <string name="verify_paste_none">No 6-digit code found on the clipboard</string>
+    <string name="login_last_used">Last used</string>
 </resources>

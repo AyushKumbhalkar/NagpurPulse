@@ -90,6 +90,8 @@ fun LoginScreen(
     var passwordTouched by remember { mutableStateOf(false) }
     var googleBusy by remember { mutableStateOf(false) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    val lastMethod = remember { loginPrefs.getString("last_method", "").orEmpty() }
+    fun rememberMethod(method: String) { loginPrefs.edit().putString("last_method", method).apply() }
 
     val scope = rememberCoroutineScope()
 
@@ -121,7 +123,7 @@ fun LoginScreen(
         passwordTouched = true
         persistEmailIfValid()
         if (emailLooksValid && password.isNotBlank() && !uiState.isLoading) {
-            viewModel.signIn(email.trim(), password, onLoginSuccess)
+            viewModel.signIn(email.trim(), password) { rememberMethod("email"); onLoginSuccess() }
         }
     }
 
@@ -133,6 +135,7 @@ fun LoginScreen(
             stringResource(R.string.auth_err_login_cooldown, uiState.loginCooldownSeconds) else uiState.error,
         info = if (uiState.forgotPasswordSent) stringResource(R.string.login_reset_sent) else uiState.infoMessage,
         verificationRequired = uiState.emailVerificationRequired,
+        lastMethod = lastMethod,
         onEmail = { email = it }, onPassword = { password = it },
         onEmailBlur = { emailTouched = true }, onPasswordBlur = { passwordTouched = true },
         onLogin = { submitLogin() },
@@ -151,7 +154,8 @@ fun LoginScreen(
                 try { when (val outcome = GoogleAuthManager(context).signIn()) {
                     is GoogleSignInOutcome.Success -> viewModel.signInWithGoogleToken(
                         idToken = outcome.idToken, nonce = outcome.rawNonce,
-                        onExistingUser = onLoginSuccess, onNewUser = onGoogleNewUser)
+                        onExistingUser = { rememberMethod("google"); onLoginSuccess() },
+                        onNewUser = { rememberMethod("google"); onGoogleNewUser() })
                     GoogleSignInOutcome.Cancelled -> Unit
                     is GoogleSignInOutcome.Failure -> viewModel.showError(outcome.message)
                 } } finally { googleBusy = false }

@@ -31,6 +31,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -220,6 +222,14 @@ internal fun SignupEmailVerificationDialog(
     var otpFocused by remember { mutableStateOf(false) }
     var otpShake by remember { mutableStateOf(0) }
     val otpShakeOffset = remember { Animatable(0f) }
+
+    // Submit by itself as soon as the 6th digit is in (typed or pasted).
+    LaunchedEffect(code) {
+        if (code.length == 6 && !isLoading) {
+            delay(180L)
+            onVerify()
+        }
+    }
 
     // Open the keyboard automatically (and again after a failed attempt).
     LaunchedEffect(isLoading) {
@@ -558,26 +568,57 @@ internal fun SignupEmailVerificationDialog(
                     // ── Open the user's email app ──
                     val dialogContext = LocalContext.current
                     val noEmailAppMessage = stringResource(R.string.verify_no_email_app)
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(vc.neutral)
-                            .clickable(role = Role.Button) {
-                                if (!openEmailApp(dialogContext)) {
-                                    Toast.makeText(dialogContext, noEmailAppMessage, Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Filled.Email, contentDescription = null, tint = vc.orange, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.verify_open_email_app),
-                            color = vc.ink,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(vc.neutral)
+                                .clickable(role = Role.Button) {
+                                    if (!openEmailApp(dialogContext)) {
+                                        Toast.makeText(dialogContext, noEmailAppMessage, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.Email, contentDescription = null, tint = vc.orange, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                stringResource(R.string.verify_open_email_app),
+                                color = vc.ink,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                        val pasteNone = stringResource(R.string.verify_paste_none)
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(vc.neutral)
+                                .clickable(role = Role.Button, enabled = !isLoading) {
+                                    val found = Regex("\\d{6}").find(clipboard.getText()?.text.orEmpty())?.value
+                                    if (found != null) {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onCodeChange(found)
+                                    } else {
+                                        Toast.makeText(dialogContext, pasteNone, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.ContentPaste, contentDescription = null, tint = vc.orange, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                stringResource(R.string.verify_paste_code),
+                                color = vc.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
 

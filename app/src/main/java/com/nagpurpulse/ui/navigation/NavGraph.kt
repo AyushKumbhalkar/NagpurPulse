@@ -225,6 +225,7 @@ fun NagpurPulseNavGraph(
     var profileSaveError by rememberSaveable { mutableStateOf<String?>(null) }
     var onboardingOriginRoute by rememberSaveable { mutableStateOf(Screen.Signup.route) }
     val onboardingScope = rememberCoroutineScope()
+    val navContext = androidx.compose.ui.platform.LocalContext.current
     var showLoginDialog by remember { mutableStateOf(false) }
 
     NavHost(
@@ -239,29 +240,53 @@ fun NagpurPulseNavGraph(
         composable(
             Screen.Splash.route,
             enterTransition = { fadeIn(tween(300)) }, exitTransition = { fadeOut(tween(500)) }) {
-            SplashScreen(onFinished = {
-                onboardingScope.launch {
-                    val dest = when {
-                        !authRepository.isLoggedIn() -> Screen.Onboarding.route
-                        authRepository.hasCompletedOnboarding() -> Screen.Home.route
-                        else -> {
+            // Work out the destination WHILE the splash animation plays, so a returning
+            // user never waits on a blank screen and never sees a fixed 2.5s delay.
+            var splashAttempt by remember { mutableStateOf(0) }
+            var splashTarget by remember { mutableStateOf<String?>(null) }
+            var splashFailed by remember { mutableStateOf(false) }
+            val splashOnline by com.nagpurpulse.ui.screens.auth.rememberIsOnline()
+            LaunchedEffect(splashAttempt) {
+                splashFailed = false
+                splashTarget = null
+                val dest = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                    if (!authRepository.isLoggedIn()) Screen.Onboarding.route
+                    else when (com.nagpurpulse.ui.screens.auth.resolveOnboarding(navContext, authRepository)) {
+                        com.nagpurpulse.ui.screens.auth.OnboardingState.Complete -> Screen.Home.route
+                        com.nagpurpulse.ui.screens.auth.OnboardingState.Incomplete -> Screen.Identity.route
+                        com.nagpurpulse.ui.screens.auth.OnboardingState.Unknown -> null
+                    }
+                }
+                if (dest == null) splashFailed = true else splashTarget = dest
+            }
+            // Retry by itself as soon as the connection comes back.
+            LaunchedEffect(splashFailed, splashOnline) {
+                if (splashFailed && splashOnline) {
+                    kotlinx.coroutines.delay(600)
+                    splashAttempt++
+                }
+            }
+            SplashScreen(
+                ready = splashTarget != null,
+                failed = splashFailed,
+                onRetry = { splashAttempt++ },
+                onFinished = {
+                    val dest = splashTarget
+                    if (dest != null) {
+                        if (dest == Screen.Identity.route) {
                             // A restored session may belong to a user who closed the app
-                            // before finishing onboarding. Resume onboarding rather than
-                            // sending an incomplete profile directly to the feed.
-                            // The splash screen is the entry point for a restored session,
-                            // so the onboarding flow itself is the back-stack origin.
+                            // before finishing onboarding: resume it, with Identity as origin.
                             onboardingOriginRoute = Screen.Identity.route
                             selectedGender = null
                             selectedUsername = null
                             selectedAvatar = null
-                            Screen.Identity.route
+                        }
+                        navController.navigate(dest) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     }
-                    navController.navigate(dest) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
                 }
-            })
+            )
         }
 
         // Onboarding
@@ -269,8 +294,8 @@ fun NagpurPulseNavGraph(
             Screen.Onboarding.route,
             enterTransition = { tabEnter(this) }, exitTransition = { tabExit(this) }) {
             OnboardingScreen(
-                onGetStarted = { navController.navigate(Screen.Signup.route) },
-                onLogin = { navController.navigate(Screen.Login.route) },
+                onGetStarted = { navController.navigate(Screen.Signup.route) { launchSingleTop = true } },
+                onLogin = { navController.navigate(Screen.Login.route) { launchSingleTop = true } },
                 onGuestMode = {
                     selectedGender = null
                     selectedUsername = null
@@ -375,17 +400,25 @@ fun NagpurPulseNavGraph(
         // Auth
         composable(
             Screen.Login.route,
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }) {
+            enterTransition = { fadeIn(tween(220)) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(160)) }) {
             LoginScreen(
                 onLoginSuccess = {
                     // A verified account may exist without having finished the
                     // identity/username/profile-picture flow. Never send such a
                     // user directly to Home after a later sign-in.
                     onboardingScope.launch {
-                        if (authRepository.hasCompletedOnboarding()) {
+                        val onboardingState = com.nagpurpulse.ui.screens.auth.resolveOnboarding(navContext, authRepository)
+                        if (onboardingState == com.nagpurpulse.ui.screens.auth.OnboardingState.Unknown) {
+                            // Server unreachable and no cached answer: let Splash show Retry.
+                            navController.navigate(Screen.Splash.route) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                            return@launch
+                        }
+                        if (onboardingState == com.nagpurpulse.ui.screens.auth.OnboardingState.Complete) {
                             navController.navigate(Screen.Home.route) {
                                 popUpTo(Screen.Login.route) { inclusive = true }
                             }
@@ -414,22 +447,33 @@ fun NagpurPulseNavGraph(
                     authRepository.enterGuestMode()
                     navController.navigate(Screen.Identity.route)
                 },
-                onNavigateToSignup = { navController.navigate(Screen.Signup.route) }
+                onNavigateToSignup = {
+                    // Swap Login for Signup so Back leaves the auth flow instead of bouncing between them.
+                    navController.navigate(Screen.Signup.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
         composable(
             Screen.Signup.route,
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }) {
+            enterTransition = { fadeIn(tween(220)) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(160)) }) {
             SignupScreen(
                 onSignupSuccess = {
                     onboardingOriginRoute = Screen.Signup.route
                     navController.navigate(Screen.Identity.route)
                 },
-                onNavigateToLogin = { navController.navigate(Screen.Login.route) },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Signup.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onGuestContinue = {
                     selectedGender = null
                     selectedUsername = null
@@ -443,7 +487,15 @@ fun NagpurPulseNavGraph(
                     // Existing Google users also pass through the same onboarding
                     // completion check so interrupted profiles can resume safely.
                     onboardingScope.launch {
-                        if (authRepository.hasCompletedOnboarding()) {
+                        val onboardingState = com.nagpurpulse.ui.screens.auth.resolveOnboarding(navContext, authRepository)
+                        if (onboardingState == com.nagpurpulse.ui.screens.auth.OnboardingState.Unknown) {
+                            // Server unreachable and no cached answer: let Splash show Retry.
+                            navController.navigate(Screen.Splash.route) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                            return@launch
+                        }
+                        if (onboardingState == com.nagpurpulse.ui.screens.auth.OnboardingState.Complete) {
                             navController.navigate(Screen.Home.route) {
                                 popUpTo(Screen.Signup.route) { inclusive = true }
                             }

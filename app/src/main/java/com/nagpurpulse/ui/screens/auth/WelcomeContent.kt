@@ -329,7 +329,7 @@ private fun WelcomeHero(modifier: Modifier, liveCount: Int?, dark: Boolean, font
             contentDescription = null,
             contentScale = ContentScale.FillWidth,
             alignment = Alignment.BottomCenter,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().slowBreathing()
         )
         if (liveCount != null && liveCount >= 0) {
             Box(Modifier.align(Alignment.TopCenter).padding(top = 12.dp)) { LiveActivityPill(liveCount, font) }

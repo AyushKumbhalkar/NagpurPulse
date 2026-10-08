@@ -255,6 +255,7 @@ internal fun SignupContent(
                             }
                             AuthPasswordField(password, onPassword, !loading, stringResource(R.string.signup_password_hint),
                                 passwordError, onPasswordBlur, { confirmFocus.requestFocus() }, newPassword = true, next = true)
+                            if (!minimal) PasswordStrengthMeter(password)
                             Spacer(Modifier.height(8.dp))
                             AuthPasswordField(confirmPassword, onConfirm, !loading, stringResource(R.string.signup_confirm_hint),
                                 confirmError, onConfirmBlur, { focus.clearFocus(); onContinue() },
