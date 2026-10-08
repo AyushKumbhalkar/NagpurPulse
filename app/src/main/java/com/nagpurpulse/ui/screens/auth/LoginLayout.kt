@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.getValue
@@ -117,6 +118,9 @@ internal fun LoginScaffold(
             .firstOrNull { it != 0 } ?: 0
     }
 
+    // Decoded once off the main thread, scaled to the screen width, then cached (see AuthArtCache).
+    val footerBmp = rememberAuthArt(footerId)
+
     Box(Modifier.fillMaxSize().background(colors.background)) {
         BoxWithConstraints(Modifier.widthIn(max = 520.dp).fillMaxSize().align(Alignment.TopCenter)) {
             val dims = loginDims(maxHeight)
@@ -135,9 +139,9 @@ internal fun LoginScaffold(
             val animatedHeader by animateDpAsState(headerHeight, tween(if (reduceMotion) 0 else 220), label = "login-header")
 
             // Footer lake art: behind the Google button / pill, only when there is room.
-            if (fit && footerId != 0 && maxHeight >= 640.dp) {
+            if (fit && footerBmp != null && maxHeight >= 640.dp) {
                 Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(dims.footerArt + navDp)) {
-                    Image(painterResource(footerId), null, Modifier.fillMaxSize(),
+                    Image(footerBmp, null, Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop, alignment = Alignment.BottomCenter)
                     Box(Modifier.fillMaxWidth().height(70.dp).background(
                         Brush.verticalGradient(listOf(colors.background, colors.background.copy(alpha = 0f)))))
@@ -194,9 +198,12 @@ private fun LoginHeader(height: Dp, topBarHeight: Dp, showArt: Boolean, dark: Bo
             val breathe by rememberInfiniteTransition(label = "login-art").animateFloat(
                 1f, 1.035f, infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse), label = "breathe"
             )
-            Image(
-                painterResource(if (dark) R.drawable.new_header_dark else R.drawable.new_header), null,
+            val headerBmp = rememberAuthArt(if (dark) R.drawable.new_header_dark else R.drawable.new_header)
+            val artAlpha by animateFloatAsState(if (headerBmp != null) 1f else 0f, tween(250), label = "login-header-art")
+            if (headerBmp != null) Image(
+                headerBmp, null,
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).graphicsLayer {
+                    alpha = artAlpha
                     val sc = if (reduce) 1f else breathe
                     scaleX = sc; scaleY = sc; transformOrigin = TransformOrigin(0.5f, 1f)
                 },
