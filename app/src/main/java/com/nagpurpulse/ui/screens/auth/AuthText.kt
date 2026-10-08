@@ -29,22 +29,22 @@ import com.nagpurpulse.ui.theme.authPalette
 internal fun AuthFitText(
     text: String, modifier: Modifier = Modifier, color: Color = authPalette().ink,
     maxSize: Int = 14, minSize: Int = 11, maxLines: Int = 1,
-    weight: FontWeight = FontWeight.Normal, gradient: Boolean = false
+    weight: FontWeight = FontWeight.Normal, gradient: Boolean = false, brightGradient: Boolean = false
 ) {
     var size by remember(text, maxSize) { mutableStateOf(maxSize) }
     Text(text, modifier, color = if (gradient) Color.Unspecified else color, fontSize = size.sp, lineHeight = (size + 4).sp,
         fontWeight = weight, textAlign = TextAlign.Center, maxLines = maxLines,
-        style = if (gradient) TextStyle(brush = if (LocalIsDarkTheme.current) AuthTokens.Gradient else AuthTokens.HeadlineGradient) else TextStyle.Default,
+        style = if (gradient) TextStyle(brush = if (brightGradient || LocalIsDarkTheme.current) AuthTokens.Gradient else AuthTokens.HeadlineGradient) else TextStyle.Default,
         onTextLayout = { if (it.hasVisualOverflow && size > minSize) size-- })
 }
 
 @Composable
-internal fun AuthHeadline(first: String, accent: String, compact: Boolean) {
+internal fun AuthHeadline(first: String, accent: String, compact: Boolean, brightAccent: Boolean = false) {
     val largeText = LocalDensity.current.fontScale > 1.3f
     val lineModifier = if (largeText) Modifier else Modifier.height(if (compact) 24.dp else 40.dp)
     Column(Modifier.fillMaxWidth().padding(vertical = if (compact) 0.dp else 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         AuthFitText(first, lineModifier, maxSize = if (compact) 20 else 36, minSize = 14, weight = FontWeight.ExtraBold)
-        AuthFitText(accent, lineModifier, maxSize = if (compact) 20 else 36, minSize = 14, weight = FontWeight.ExtraBold, gradient = true)
+        AuthFitText(accent, lineModifier, maxSize = if (compact) 20 else 36, minSize = 14, weight = FontWeight.ExtraBold, gradient = true, brightGradient = brightAccent)
     }
 }
 
