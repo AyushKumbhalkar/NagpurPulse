@@ -21,7 +21,7 @@ import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.authPalette
 
 @Composable
-internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, onClick: () -> Unit) {
+internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, height: androidx.compose.ui.unit.Dp = 56.dp, onClick: () -> Unit) {
     val colors = authPalette()
     val shape = RoundedCornerShape(24.dp)
     val ink = contentColor ?: if (google) colors.ink else AuthTokens.OnGradient
@@ -32,7 +32,7 @@ internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean
             containerColor = Color.Transparent, contentColor = ink,
             disabledContainerColor = Color.Transparent, disabledContentColor = ink
         ),
-        modifier = Modifier.fillMaxWidth().height(56.dp).alpha(if (loading || !enabled) 0.65f else 1f)
+        modifier = Modifier.fillMaxWidth().height(height).alpha(if (loading || !enabled) 0.65f else 1f)
             .clip(shape).then(if (google) Modifier.background(colors.surface) else Modifier.background(AuthTokens.Gradient))
     ) {
         if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = ink, strokeWidth = 2.dp)
