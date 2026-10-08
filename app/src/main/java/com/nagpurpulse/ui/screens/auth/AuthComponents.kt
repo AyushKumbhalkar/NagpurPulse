@@ -550,8 +550,14 @@ fun PremiumInputField(
                 }
             }
         )
-        if (clearEmail && focused && value.isNotEmpty()) {
-            androidx.compose.material3.IconButton(onClick = { onValueChange("") }, enabled = enabled, modifier = Modifier.size(48.dp)) {
+        if (clearEmail) {
+            // Keep the trailing slot stable while the user types or presses Backspace.
+            val showClear = focused && value.isNotEmpty()
+            androidx.compose.material3.IconButton(
+                onClick = { onValueChange("") },
+                enabled = enabled && showClear,
+                modifier = Modifier.size(48.dp).alpha(if (showClear) 1f else 0f)
+            ) {
                 Icon(androidx.compose.material.icons.Icons.Filled.Close, clearLabel, tint = colors.ink)
             }
         } else trailingIcon?.invoke()
