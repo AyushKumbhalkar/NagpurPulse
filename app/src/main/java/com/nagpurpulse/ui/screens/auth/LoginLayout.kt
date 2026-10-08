@@ -1,7 +1,21 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -96,6 +110,8 @@ internal fun LoginScaffold(
     val context = LocalContext.current
     val density = LocalDensity.current
     AuthSystemBars()
+    val focus = LocalFocusManager.current
+    val reduceMotion = rememberReduceMotion()
     val keyboard = WindowInsets.isImeVisible || keyboardPreview
     val statusDp = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
     val navDp = with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
@@ -120,6 +136,14 @@ internal fun LoginScaffold(
                 else -> minHeader + 24.dp
             }
 
+            val animatedHeader by animateDpAsState(headerHeight, tween(if (reduceMotion) 0 else 220), label = "login-header")
+
+            // Tap on empty space dismisses the keyboard. This layer sits BEHIND the content (a sibling,
+            // not a parent), so it never competes with the text fields for focus.
+            Box(Modifier.fillMaxSize()
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { focus.clearFocus() }
+                .clearAndSetSemantics { })
+
             // Footer lake art: behind the Google button / pill, only when there is room.
             if (fit && footerId != 0 && maxHeight >= 640.dp) {
                 Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(dims.footerArt + navDp)) {
@@ -136,7 +160,7 @@ internal fun LoginScaffold(
                     .then(if (fit) Modifier else Modifier.verticalScroll(rememberScrollState()))
 
             ) {
-                LoginHeader(headerHeight, topBarHeight, showArt = !keyboard, dark = dark)
+                LoginHeader(animatedHeader, topBarHeight, showArt = animatedHeader > topBarHeight + 6.dp, dark = dark)
 
                 if (!online) Box(Modifier.padding(horizontal = 20.dp)) {
                     AuthNotice(stringResource(R.string.auth_offline), isError = false)
@@ -164,9 +188,17 @@ private fun LoginHeader(height: Dp, topBarHeight: Dp, showArt: Boolean, dark: Bo
         if (showArt) {
             Box(Modifier.matchParentSize().background(
                 Brush.verticalGradient(listOf(if (dark) colors.sand else Color(0xFFFFD9BF), colors.background))))
+            // Very slow "breathing" zoom so the scene feels alive; static when animations are off.
+            val reduce = rememberReduceMotion()
+            val breathe by rememberInfiniteTransition(label = "login-art").animateFloat(
+                1f, 1.035f, infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse), label = "breathe"
+            )
             Image(
                 painterResource(R.drawable.new_header), null,
-                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).graphicsLayer {
+                    val sc = if (reduce) 1f else breathe
+                    scaleX = sc; scaleY = sc; transformOrigin = TransformOrigin(0.5f, 1f)
+                },
                 contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter
             )
             if (dark) Box(Modifier.matchParentSize().background(colors.background.copy(alpha = 0.55f)))
