@@ -147,6 +147,7 @@ internal fun LoginScaffold(
             // Keep the scroll modifier (and its focus nodes) attached during IME changes.
             // Previously the scroll node was inserted as the keyboard appeared, which
             // could invalidate the active text field's focus ancestry mid-gesture.
+            val viewportHeight = maxHeight
             Column(
                 Modifier.fillMaxSize().navigationBarsPadding().imePadding()
                     .verticalScroll(rememberScrollState())
@@ -161,7 +162,7 @@ internal fun LoginScaffold(
                 // normal no-scroll case, give the form its exact remaining height so
                 // FlexSpacer weights still distribute free space without a weighted
                 // child on the scroll container itself.
-                val formHeight = (maxHeight - navDp - animatedHeader - pillBlock - offlineExtra)
+                val formHeight = (viewportHeight - navDp - animatedHeader - pillBlock - offlineExtra)
                     .coerceAtLeast(0.dp)
                 Column(
                     Modifier.fillMaxWidth()
