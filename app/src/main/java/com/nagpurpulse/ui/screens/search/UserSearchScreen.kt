@@ -113,7 +113,7 @@ fun UserSearchScreen(
     val query       by viewModel.query.collectAsState()
     val focusReq    = remember { FocusRequester() }
     val borderColor by animateColorAsState(
-        if (query.isNotEmpty()) OrangePrimary else DividerColor,
+        if (query.isNotEmpty()) OrangePrimary else Divider,
         tween(200), label = "border"
     )
 
@@ -123,11 +123,11 @@ fun UserSearchScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundDark,
+        containerColor = Background,
         topBar = {
             Column(
                 modifier = Modifier
-                    .background(Brush.verticalGradient(listOf(SurfaceOne, BackgroundDark), 0f, 160f))
+                    .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 160f))
                     .statusBarsPadding()
             ) {
                 Row(
@@ -135,7 +135,7 @@ fun UserSearchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = PrimaryText)
                     }
 
                     // Search bar
@@ -143,30 +143,30 @@ fun UserSearchScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(26.dp))
-                            .background(SurfaceTwo)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .border(1.dp, borderColor, RoundedCornerShape(26.dp))
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Filled.Search, null, tint = if (query.isNotEmpty()) OrangePrimary else TextTertiary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Filled.Search, null, tint = if (query.isNotEmpty()) OrangePrimary else TertiaryText, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(10.dp))
                         BasicTextField(
                             value         = query,
                             onValueChange = { viewModel.onQueryChange(it) },
                             modifier      = Modifier.weight(1f).focusRequester(focusReq),
-                            textStyle     = TextStyle(color = TextPrimary, fontSize = 15.sp),
+                            textStyle     = TextStyle(color = PrimaryText, fontSize = 15.sp),
                             singleLine    = true,
                             cursorBrush   = SolidColor(OrangePrimary),
                             decorationBox = { inner ->
                                 Box {
-                                    if (query.isEmpty()) Text("Search by username…", color = TextTertiary, fontSize = 15.sp)
+                                    if (query.isEmpty()) Text("Search by username…", color = TertiaryText, fontSize = 15.sp)
                                     inner()
                                 }
                             }
                         )
                         if (query.isNotEmpty()) {
                             Spacer(Modifier.width(8.dp))
-                            Icon(Icons.Filled.Close, null, tint = TextTertiary,
+                            Icon(Icons.Filled.Close, null, tint = TertiaryText,
                                 modifier = Modifier.size(16.dp).pressScale { viewModel.onQueryChange("") })
                         }
                     }
@@ -175,7 +175,7 @@ fun UserSearchScreen(
                     Text("Cancel", color = OrangePrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.pressScale { navController.popBackStack() })
                 }
-                HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
+                HorizontalDivider(color = Divider, thickness = 0.5.dp)
             }
         }
     ) { padding ->
@@ -194,9 +194,9 @@ fun UserSearchScreen(
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(Modifier.height(16.dp))
-                        Text("Find people on NagpurPulse", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("Find people on NagpurPulse", color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.height(6.dp))
-                        Text("Type at least 2 characters to search by username", color = TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text("Type at least 2 characters to search by username", color = SecondaryText, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -223,7 +223,7 @@ fun UserSearchScreen(
                     ) {
                         item {
                             Text("${uiState.results.size} result${if (uiState.results.size > 1) "s" else ""} for \"$query\"",
-                                color = TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(bottom = 4.dp))
+                                color = SecondaryText, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(bottom = 4.dp))
                         }
                         itemsIndexed(uiState.results) { i, profile ->
                             StaggeredItem(i) {
@@ -253,8 +253,8 @@ fun UserSearchScreen(
                     modifier        = Modifier.align(Alignment.BottomCenter).padding(
     DensityManager.cardPadding.dp
 ),
-                    containerColor  = SurfaceThree,
-                    contentColor    = TextPrimary
+                    containerColor  = SurfaceAlt,
+                    contentColor    = PrimaryText
                 ) { Text(uiState.error) }
             }
         }
@@ -275,8 +275,8 @@ private fun UserResultCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceOne)
-            .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+            .background(Surface)
+            .border(1.dp, Divider, RoundedCornerShape(16.dp))
             .pressScale(onClick = onViewProfile)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -291,7 +291,7 @@ private fun UserResultCard(
             Icon(
                 imageVector = Icons.Filled.Person,
                 contentDescription = null,
-                tint = TextPrimary,
+                tint = PrimaryText,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -301,7 +301,7 @@ private fun UserResultCard(
         Column(Modifier.weight(1f)) {
             Text(
                 "u/${profile.username ?: "unknown"}",
-                color = TextPrimary,
+                color = PrimaryText,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 maxLines = 1,
@@ -309,13 +309,13 @@ private fun UserResultCard(
             )
             if (!profile.tagline.isNullOrBlank()) {
                 Spacer(Modifier.height(2.dp))
-                Text(profile.tagline, color = TextSecondary, fontSize = 13.sp, maxLines = 1)
+                Text(profile.tagline, color = SecondaryText, fontSize = 13.sp, maxLines = 1)
             }
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.LocationOn, null, tint = TextTertiary, modifier = Modifier.size(11.dp))
-                Text(" ${profile.areas?.firstOrNull() ?: "Nagpur"}", color = TextTertiary, fontSize = 12.sp)
-                Text("  ·  ", color = TextTertiary, fontSize = 12.sp)
+                Icon(Icons.Filled.LocationOn, null, tint = TertiaryText, modifier = Modifier.size(11.dp))
+                Text(" ${profile.areas?.firstOrNull() ?: "Nagpur"}", color = TertiaryText, fontSize = 12.sp)
+                Text("  ·  ", color = TertiaryText, fontSize = 12.sp)
                 Text("${profile.karma} karma", color = OrangePrimary, fontSize = 12.sp)
             }
         }
@@ -346,7 +346,7 @@ private fun UserResultCard(
 @Composable
 private fun ShimmerUserRow() {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceOne).padding(14.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Surface).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(Modifier.size(50.dp).shimmerEffect(RoundedCornerShape(25.dp)))
