@@ -27,7 +27,8 @@ internal fun AuthEmailField(
     value: String, onValue: (String) -> Unit, enabled: Boolean,
     error: String?, onBlur: () -> Unit, onNext: () -> Unit,
     focusRequester: FocusRequester? = null,
-    bare: Boolean = false
+    bare: Boolean = false,
+    fieldHeight: androidx.compose.ui.unit.Dp? = null
 ) {
     PremiumInputField(
         value, onValue, stringResource(R.string.signup_email_hint),
@@ -36,7 +37,7 @@ internal fun AuthEmailField(
         keyboardActions = KeyboardActions(onNext = { onNext() }),
         autofillTypes = listOf(AutofillType.EmailAddress),
         onBlur = onBlur, errorMessage = error, focusRequester = focusRequester,
-        enabled = enabled, clearEmail = true, bare = bare
+        enabled = enabled, clearEmail = true, bare = bare, fieldHeight = fieldHeight
     )
     if (!bare) AuthNotice(error)
 }
@@ -47,7 +48,8 @@ internal fun AuthPasswordField(
     label: String, error: String?, onBlur: () -> Unit, onDone: () -> Unit,
     newPassword: Boolean = false, focusRequester: FocusRequester? = null,
     next: Boolean = false,
-    bare: Boolean = false
+    bare: Boolean = false,
+    fieldHeight: androidx.compose.ui.unit.Dp? = null
 ) {
     var visible by remember { mutableStateOf(false) }
     PremiumInputField(
@@ -65,7 +67,7 @@ internal fun AuthPasswordField(
             imeAction = if (next) ImeAction.Next else ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone() }, onNext = { onDone() }),
         autofillTypes = listOf(if (newPassword) AutofillType.NewPassword else AutofillType.Password),
-        onBlur = onBlur, errorMessage = error, enabled = enabled, focusRequester = focusRequester, bare = bare
+        onBlur = onBlur, errorMessage = error, enabled = enabled, focusRequester = focusRequester, bare = bare, fieldHeight = fieldHeight
     )
     if (!bare) AuthNotice(error)
 }
