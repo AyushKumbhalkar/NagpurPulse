@@ -1,7 +1,13 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.nagpurpulse.ui.theme.AuthTokens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +37,7 @@ import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import com.nagpurpulse.ui.theme.authPalette
 
-private val FooterArtHeight = 190.dp
+private val FooterArtHeight = 150.dp
 private val SignupPillHeight = 48.dp
 
 /**
@@ -109,8 +115,12 @@ internal fun LoginScaffold(
                             modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(70.dp),
                             contentScale = ContentScale.FillBounds
                         )
+                        // Soft cream fade so the header never ends on a hard horizontal edge.
+                        Box(Modifier.fillMaxWidth().height(56.dp).align(Alignment.BottomCenter).background(
+                            Brush.verticalGradient(listOf(colors.background.copy(alpha = 0f), colors.background))
+                        ))
                     }
-                    Box(Modifier.statusBarsPadding().padding(horizontal = 16.dp)) { AuthHeader() }
+                    LoginTopBar(Modifier.statusBarsPadding().padding(horizontal = 16.dp))
                 }
 
                 if (!online) {
@@ -163,5 +173,36 @@ private fun SignupPill(text: String, enabled: Boolean, onClick: () -> Unit, modi
     ) {
         Text(label, color = colors.ink, fontSize = 14.sp, maxLines = 2,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+    }
+}
+
+/** Pulse-wave mark + "Nagpur" (ink) "Pulse" (orange) wordmark, drawn natively. */
+@Composable
+private fun LoginLogo() {
+    val colors = authPalette()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(width = 34.dp, height = 24.dp)) {
+            val w = size.width; val h = size.height; val mid = h / 2f
+            val path = Path().apply {
+                moveTo(0f, mid)
+                lineTo(w * 0.22f, mid); lineTo(w * 0.34f, h * 0.05f); lineTo(w * 0.52f, h * 0.95f)
+                lineTo(w * 0.66f, mid * 0.75f); lineTo(w * 0.74f, mid); lineTo(w, mid)
+            }
+            drawPath(path, colors.ink, style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(buildAnnotatedString {
+            withStyle(SpanStyle(color = colors.ink)) { append("Nagpur") }
+            withStyle(SpanStyle(color = AuthTokens.Saffron)) { append("Pulse") }
+        }, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+    }
+}
+
+@Composable
+private fun LoginTopBar(modifier: Modifier = Modifier) {
+    val colors = authPalette()
+    Row(modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { LoginLogo() }
+        LanguagePickerChip(colors.ink, colors.surface.copy(alpha = 0.75f), colors.surface.copy(alpha = 0.75f), compact = true)
     }
 }
