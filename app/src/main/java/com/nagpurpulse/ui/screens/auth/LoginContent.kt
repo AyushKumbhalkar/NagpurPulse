@@ -53,12 +53,12 @@ internal fun LoginContent(
         if (!keyboard && !hasProblem) {
             Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 AuthHeadline(stringResource(R.string.login_headline_prefix).trim(),
-                    stringResource(R.string.auth_talking), compact, brightAccent = true)
+                    stringResource(R.string.auth_talking), compact, brightAccent = true, sizeSp = 38, lineDp = 44)
                 Text(
                     stringResource(R.string.login_welcome_back), color = colors.ink,
                     fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.offset(y = (-4).dp)
+                    modifier = Modifier.offset(y = 0.dp)
                 )
             }
             Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
@@ -98,14 +98,15 @@ internal fun LoginContent(
             )
         }
 
+        Spacer(Modifier.height(8.dp))
         AuthEntrance(3) {
             AuthAction(stringResource(if (loading) R.string.login_signing_in else R.string.login_button),
-                loading, contentColor = androidx.compose.ui.graphics.Color.White, onClick = onLogin)
+                loading, contentColor = androidx.compose.ui.graphics.Color.White, height = 54.dp, onClick = onLogin)
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         AuthOr()
         Spacer(Modifier.height(12.dp))
-        AuthAction(stringResource(R.string.login_continue_google), loading, google = true, onClick = onGoogle)
+        AuthAction(stringResource(R.string.login_continue_google), loading, google = true, height = 48.dp, onClick = onGoogle)
     }
 }
 
