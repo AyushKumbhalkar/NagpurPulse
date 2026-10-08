@@ -1,0 +1,41 @@
+name: Profile privacy RLS
+
+on:
+  push:
+    branches: [Ayush-new-onboarding]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/profile-privacy.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/profile-privacy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  profile-privacy:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: profile_privacy
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exercise privacy policies as actual database roles
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker cp supabase "$POSTGRES_CONTAINER:/tmp/privacy-supabase"
+          docker exec "$POSTGRES_CONTAINER" psql -U postgres -d profile_privacy \
+            -f /tmp/privacy-supabase/tests/profile_privacy.sql
