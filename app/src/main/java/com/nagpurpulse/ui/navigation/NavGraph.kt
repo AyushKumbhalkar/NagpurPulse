@@ -732,7 +732,26 @@ fun NagpurPulseNavGraph(
             )
         }
 
-        composable(Screen.Notifications.route) {
+        // Match the smooth Settings transition, without the default bouncy spring.
+        composable(
+            route = Screen.Notifications.route,
+            enterTransition = {
+                slideInHorizontally(initialOffsetX = { it / 8 }, animationSpec = tween(240)) +
+                    fadeIn(animationSpec = tween(220))
+            },
+            exitTransition = {
+                slideOutHorizontally(targetOffsetX = { -it / 8 }, animationSpec = tween(220)) +
+                    fadeOut(animationSpec = tween(180))
+            },
+            popEnterTransition = {
+                slideInHorizontally(initialOffsetX = { -it / 8 }, animationSpec = tween(220)) +
+                    fadeIn(animationSpec = tween(180))
+            },
+            popExitTransition = {
+                slideOutHorizontally(targetOffsetX = { it / 8 }, animationSpec = tween(220)) +
+                    fadeOut(animationSpec = tween(180))
+            }
+        ) {
             NotificationsScreen(
                 navController = navController,
                 onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) }
