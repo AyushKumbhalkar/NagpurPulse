@@ -102,6 +102,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -491,6 +493,11 @@ fun PremiumInputField(
 ) {
     val rowHeight = fieldHeight ?: if (bare) 60.dp else 56.dp
     var focused by remember { mutableStateOf(false) }
+    // Retain cursor/selection and IME composing state across parent recompositions.
+    var editingValue by remember { mutableStateOf(TextFieldValue(value, selection = TextRange(value.length))) }
+    if (editingValue.text != value) {
+        editingValue = TextFieldValue(value, selection = TextRange(value.length))
+    }
 
     // Autofill / password-manager support (Compose 1.6 API). Only active when
     // the caller passes autofillTypes, so LoginScreen is unaffected.
@@ -522,7 +529,12 @@ fun PremiumInputField(
         }
         Spacer(Modifier.width(12.dp))
         BasicTextField(
-            value = value, onValueChange = onValueChange, enabled = enabled,
+            value = editingValue,
+            onValueChange = { updated ->
+                editingValue = updated
+                if (updated.text != value) onValueChange(updated.text)
+            },
+            enabled = enabled,
             singleLine = true, visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
             textStyle = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = if (bare) 14.sp else 15.sp, fontFamily = LocalAuthFont.current),
