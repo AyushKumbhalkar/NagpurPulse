@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
     val configuration = LocalConfiguration.current
+    val splashBackground = MaterialTheme.colorScheme.background
     val compactHeight = configuration.screenHeightDp < 700
     val compactWidth = configuration.screenWidthDp < 360
     val logoSize = if (compactHeight) 112.dp else 140.dp
@@ -61,7 +63,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background),
+            .background(splashBackground),
         contentAlignment = Alignment.Center
     ) {
         Box(
