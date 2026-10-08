@@ -13,7 +13,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.animation.core.tween
@@ -130,7 +129,6 @@ internal fun LoginContent(
             Column(
                 Modifier.fillMaxWidth()
                     .graphicsLayer { translationX = shake.value.dp.toPx() }
-                    .onFocusChanged { cardFocused = it.hasFocus }
                     .shadow(if (cardFocused) 10.dp else 6.dp, cardShape, ambientColor = colors.accent.copy(alpha = glow),
                         spotColor = colors.accent.copy(alpha = glow))
                     .clip(cardShape).background(colors.surface.copy(alpha = 0.92f))
