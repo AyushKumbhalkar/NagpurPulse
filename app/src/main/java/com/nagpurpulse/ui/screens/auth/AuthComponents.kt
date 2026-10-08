@@ -507,7 +507,7 @@ fun PremiumInputField(
     val shape = RoundedCornerShape(20.dp)
     val clearLabel = stringResource(com.nagpurpulse.R.string.auth_clear_email)
     Row(
-        Modifier.fillMaxWidth().height(56.dp)
+        Modifier.fillMaxWidth().height(if (bare) 60.dp else 56.dp)
             .then(if (bare) Modifier else Modifier.clip(shape)
                 .background(containerColor ?: colors.sand)
                 .border(if (focused || errorMessage != null) 2.dp else 1.dp,
@@ -525,7 +525,7 @@ fun PremiumInputField(
             keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
             textStyle = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = if (bare) 14.sp else 15.sp),
             cursorBrush = SolidColor(colors.accent),
-            modifier = Modifier.weight(1f).height(56.dp)
+            modifier = Modifier.weight(1f).height(if (bare) 60.dp else 56.dp)
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .semantics {
                     contentDescription = placeholder
@@ -543,7 +543,7 @@ fun PremiumInputField(
                 },
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) AuthFitText(placeholder, color = colors.muted, maxSize = 14, minSize = 9)
+                    if (value.isEmpty()) AuthFitText(placeholder, color = if (bare) colors.ink.copy(alpha = 0.45f) else colors.muted, maxSize = if (bare) 13 else 14, minSize = 9)
                     inner()
                 }
             }
