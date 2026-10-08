@@ -303,19 +303,29 @@ private fun WelcomeHero(modifier: Modifier, liveCount: Int?, dark: Boolean, font
             drawCloud(Offset(size.width * 0.58f, 14.dp.toPx()), Size(120.dp.toPx(), 18.dp.toPx()), cloud)
             // sun in the gap between the Zero Mile stone and the dome
             val sun = Offset(size.width * 0.66f, 46.dp.toPx())
-            val core = 20.dp.toPx()
-            drawCircle(
-                Brush.radialGradient(listOf(Color(0xCCFFE9B0), Color(0x00FFE9B0)), sun, core * 3.2f),
-                radius = core * 3.2f, center = sun
-            )
-            drawCircle(Color(0xFFFFF1C9), radius = core, center = sun)
-            val bird = Color(0xFF8A4B1F).copy(alpha = 0.55f)
-            drawBird(Offset(size.width * 0.76f, 20.dp.toPx()), 7.dp.toPx(), bird)
-            drawBird(Offset(size.width * 0.82f, 34.dp.toPx()), 5.dp.toPx(), bird)
+            if (dark) {
+                // Night scene: a small pale moon with a cool glow instead of the sunset sun and birds.
+                val moon = 13.dp.toPx()
+                drawCircle(
+                    Brush.radialGradient(listOf(Color(0x66B9C4FF), Color(0x00B9C4FF)), sun, moon * 3.6f),
+                    radius = moon * 3.6f, center = sun
+                )
+                drawCircle(Color(0xFFEDEBFA), radius = moon, center = sun)
+            } else {
+                val core = 20.dp.toPx()
+                drawCircle(
+                    Brush.radialGradient(listOf(Color(0xCCFFE9B0), Color(0x00FFE9B0)), sun, core * 3.2f),
+                    radius = core * 3.2f, center = sun
+                )
+                drawCircle(Color(0xFFFFF1C9), radius = core, center = sun)
+                val bird = Color(0xFF8A4B1F).copy(alpha = 0.55f)
+                drawBird(Offset(size.width * 0.76f, 20.dp.toPx()), 7.dp.toPx(), bird)
+                drawBird(Offset(size.width * 0.82f, 34.dp.toPx()), 5.dp.toPx(), bird)
+            }
         }
     ) {
         Image(
-            painterResource(R.drawable.hero_nagpur),
+            painterResource(if (dark) R.drawable.welcome_dark else R.drawable.hero_nagpur),
             contentDescription = null,
             contentScale = ContentScale.FillWidth,
             alignment = Alignment.BottomCenter,
