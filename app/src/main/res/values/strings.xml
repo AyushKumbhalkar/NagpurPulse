@@ -2,6 +2,14 @@
 <resources>
     <string name="app_name" translatable="false">Nagpur Pulse</string>
 
+    <string name="onboarding_headline_city">Your city, </string>
+    <string name="onboarding_headline_together">together.</string>
+    <string name="onboarding_body">Ask questions, share useful finds and discover what’s happening around you in Nagpur.</string>
+    <string name="onboarding_join">Join NagpurPulse</string>
+    <string name="onboarding_sign_in">Sign in</string>
+    <string name="onboarding_guest">Explore as guest</string>
+    <string name="onboarding_guest_note">Browse without an account. Sign up later when you want to post.</string>
+
     <string name="signup_email_hint">Email address</string>
     <string name="signup_password_hint">Password (8+ characters)</string>
     <string name="signup_confirm_hint">Confirm password</string>
