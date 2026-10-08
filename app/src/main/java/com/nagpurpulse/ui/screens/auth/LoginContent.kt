@@ -1,7 +1,11 @@
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -10,19 +14,26 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.R
@@ -41,34 +52,51 @@ internal fun LoginContent(
     val colors = authPalette()
     val passwordFocus = remember { FocusRequester() }
     val focus = LocalFocusManager.current
+    val haptic = LocalHapticFeedback.current
+    val reduceMotion = rememberReduceMotion()
     val fieldMessage = emailError ?: passwordError ?: error
-    val hasProblem = fieldMessage != null || verificationRequired
+
+    // Wrong password / invalid email: short horizontal shake + haptic tick (skipped for reduce-motion).
+    val shake = remember { Animatable(0f) }
+    LaunchedEffect(fieldMessage) {
+        if (fieldMessage != null) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (!reduceMotion) for (x in floatArrayOf(-10f, 8f, -6f, 4f, 0f)) shake.animateTo(x, tween(45))
+        }
+    }
+
+    // Rare extra rows reserve space up-front so the layout never overflows.
+    val extra = (if (info != null) 28.dp else 0.dp) + (if (verificationRequired) 48.dp else 0.dp)
 
     LoginScaffold(
         online = online, keyboardPreview = keyboardPreview,
         signupText = stringResource(R.string.auth_signup_footer),
-        signupEnabled = !loading, onSignup = onSignup
-    ) { keyboard, compact ->
-        // Headline overlaps the wave, exactly like the mockup. Hidden while typing/erroring.
-        if (!keyboard && !hasProblem) {
-            Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                AuthHeadline(stringResource(R.string.login_headline_prefix).trim(),
-                    stringResource(R.string.auth_talking), compact, brightAccent = true, sizeSp = 38, lineDp = 44)
-                Text(
-                    stringResource(R.string.login_welcome_back), color = colors.ink,
-                    fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.offset(y = 0.dp)
-                )
+        signupEnabled = !loading, onSignup = onSignup, extraHeight = extra
+    ) { d, keyboard, flex ->
+        if (!keyboard) {
+            AuthEntrance(0) {
+                Column(Modifier.padding(top = 8.dp).semantics(mergeDescendants = true) { heading() },
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    AuthHeadline(stringResource(R.string.login_headline_prefix).trim(),
+                        stringResource(R.string.auth_talking), compact = false, brightAccent = true,
+                        sizeSp = d.headlineSp, lineDp = d.headlineLine)
+                    if (d.showWelcome) Text(
+                        stringResource(R.string.login_welcome_back), color = colors.ink,
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
+                        textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
-            Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
+            Spacer(Modifier.height(d.gap))
         } else Spacer(Modifier.height(8.dp))
+        FlexSpacer(flex)
 
         // One joined card: email row, hairline, password row.
         val cardShape = RoundedCornerShape(24.dp)
         AuthEntrance(1) {
             Column(
                 Modifier.fillMaxWidth()
+                    .graphicsLayer { translationX = shake.value.dp.toPx() }
                     .shadow(6.dp, cardShape, ambientColor = colors.accent.copy(alpha = 0.15f),
                         spotColor = colors.accent.copy(alpha = 0.15f))
                     .clip(cardShape).background(colors.surface.copy(alpha = 0.92f))
@@ -76,51 +104,55 @@ internal fun LoginContent(
                         else colors.outline.copy(alpha = 0.25f), cardShape)
             ) {
                 AuthEmailField(email, onEmail, !loading, emailError, onEmailBlur,
-                    { passwordFocus.requestFocus() }, bare = true)
+                    { passwordFocus.requestFocus() }, bare = true, fieldHeight = d.row)
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = colors.outline.copy(alpha = 0.25f))
                 AuthPasswordField(password, onPassword, !loading, stringResource(R.string.login_password_hint),
                     passwordError, onPasswordBlur, { focus.clearFocus(); onLogin() },
-                    focusRequester = passwordFocus, bare = true)
+                    focusRequester = passwordFocus, bare = true, fieldHeight = d.row)
             }
         }
 
-        // Error row (left) + "Forgot password?" (right, underlined) — as in panel 4.
-        fieldMessage?.let { LoginError(it) }
-        AuthNotice(info, isError = false)
-        if (verificationRequired) AuthLink(stringResource(R.string.login_resend_verification),
-            enabled = !loading, onClick = onResend)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        // Error (left) and "Forgot password?" (right) share one row, so an error never shifts the layout.
+        Row(Modifier.fillMaxWidth().heightIn(min = d.forgot), verticalAlignment = Alignment.CenterVertically) {
+            if (fieldMessage != null) LoginError(fieldMessage, Modifier.weight(1f))
+            else Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(R.string.login_forgot_password), color = colors.ink, fontSize = 12.sp,
                 textDecoration = TextDecoration.Underline,
-                modifier = Modifier.heightIn(min = 40.dp).wrapContentHeight(Alignment.CenterVertically)
+                modifier = Modifier.heightIn(min = d.forgot).wrapContentHeight(Alignment.CenterVertically)
                     .then(if (!loading) Modifier.clickableNoRipple(onForgot) else Modifier)
             )
         }
+        AuthNotice(info, isError = false)
+        if (verificationRequired) AuthLink(stringResource(R.string.login_resend_verification),
+            enabled = !loading, onClick = onResend)
 
-        Spacer(Modifier.height(8.dp))
         AuthEntrance(3) {
             AuthAction(stringResource(if (loading) R.string.login_signing_in else R.string.login_button),
-                loading, contentColor = androidx.compose.ui.graphics.Color.White, height = 54.dp, onClick = onLogin)
+                loading, contentColor = Color.White, height = d.button, onClick = onLogin)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(d.gap))
         AuthOr()
-        Spacer(Modifier.height(12.dp))
-        AuthAction(stringResource(R.string.login_continue_google), loading, google = true, height = 48.dp, onClick = onGoogle)
+        Spacer(Modifier.height(d.gap))
+        AuthAction(stringResource(R.string.login_continue_google), loading, google = true,
+            height = d.google, onClick = onGoogle)
+        FlexSpacer(flex)
     }
 }
 
 @Composable
-private fun LoginError(message: String) {
+private fun LoginError(message: String, modifier: Modifier = Modifier) {
     val colors = authPalette()
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Filled.ErrorOutline, null, Modifier.size(16.dp), tint = colors.error)
         Spacer(Modifier.width(8.dp))
-        Text(message, color = colors.error, fontSize = 12.sp, maxLines = 3, modifier = Modifier.weight(1f))
+        Text(message, color = colors.error, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 3,
+            modifier = Modifier.weight(1f))
     }
 }
 
 private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed {
-    clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-        indication = null, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+    clickable(interactionSource = remember { MutableInteractionSource() },
+        indication = null, role = Role.Button, onClick = onClick)
 }
