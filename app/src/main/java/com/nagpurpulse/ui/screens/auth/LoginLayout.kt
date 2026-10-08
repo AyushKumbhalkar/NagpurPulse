@@ -4,7 +4,6 @@ package com.nagpurpulse.ui.screens.auth
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,11 +18,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -98,7 +95,6 @@ internal fun LoginScaffold(
     val dark = LocalIsDarkTheme.current
     val context = LocalContext.current
     val density = LocalDensity.current
-    val focus = LocalFocusManager.current
     AuthSystemBars()
     val keyboard = WindowInsets.isImeVisible || keyboardPreview
     val statusDp = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
@@ -138,8 +134,7 @@ internal fun LoginScaffold(
             Column(
                 Modifier.fillMaxSize().navigationBarsPadding().imePadding()
                     .then(if (fit) Modifier else Modifier.verticalScroll(rememberScrollState()))
-                    // Tap anywhere that is not a control to dismiss the keyboard.
-                    .pointerInput(Unit) { detectTapGestures { focus.clearFocus() } }
+
             ) {
                 LoginHeader(headerHeight, topBarHeight, showArt = !keyboard, dark = dark)
 
