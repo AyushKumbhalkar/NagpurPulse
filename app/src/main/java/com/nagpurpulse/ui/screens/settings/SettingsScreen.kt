@@ -698,7 +698,7 @@ private fun AdminPanelSettingsCard(role: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF0D0D0D))
+            .background(Surface)
             .border(1.dp, OrangePrimary.copy(0.4f), RoundedCornerShape(16.dp))
             .pressScale(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -720,7 +720,7 @@ private fun AdminPanelSettingsCard(role: String, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "Admin Panel",
-                        color      = Color.White,
+                        color      = PrimaryText,
                         fontWeight = FontWeight.Bold,
                         fontSize   = 15.sp
                     )
@@ -747,7 +747,7 @@ private fun AdminPanelSettingsCard(role: String, onClick: () -> Unit) {
                 }
                 Text(
                     "Moderation, reports, users & logs",
-                    color    = Color.White.copy(0.5f),
+                    color    = SecondaryText,
                     fontSize = 12.sp
                 )
             }
