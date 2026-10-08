@@ -171,4 +171,47 @@
     <string name="comment_public">सार्वजनिक कमेंट</string>
     <string name="comment_anon_identity">अनामिक ओळख</string>
     <string name="comment_anon_hint">तुमची ओळख इतर वापरकर्त्यांपासून लपलेली राहील</string>
+
+    <!-- Explore screen -->
+    <string name="explore_title">नागपूर एक्सप्लोर करा</string>
+    <string name="explore_greeting_morning">शुभ प्रभात ☀️</string>
+    <string name="explore_greeting_afternoon">नमस्कार 🌤️</string>
+    <string name="explore_greeting_evening">शुभ संध्या 🌙</string>
+    <string name="explore_hint_1">नागपूरमध्ये शोधा…</string>
+    <string name="explore_hint_2">“धरमपेठ” करून पहा…</string>
+    <string name="explore_hint_3">“नोकऱ्या” करून पहा…</string>
+    <string name="explore_hint_4">“या वीकेंडचे इव्हेंट” करून पहा…</string>
+    <string name="explore_cancel">रद्द करा</string>
+    <string name="explore_clear_search">शोध पुसा</string>
+    <string name="explore_section_happening">आत्ता सुरू आहे</string>
+    <string name="explore_section_categories">श्रेणी</string>
+    <string name="explore_section_areas">परिसरानुसार पहा</string>
+    <string name="explore_section_hot">आत्ता ट्रेंडिंग</string>
+    <string name="explore_section_fresh">नागपूरमध्ये ताजे</string>
+    <string name="explore_section_more">आणखी पहा</string>
+    <string name="explore_section_recent">अलीकडील शोध</string>
+    <string name="explore_browse_categories">श्रेणीनुसार पहा</string>
+    <string name="explore_jump_area">एखाद्या परिसरात जा</string>
+    <string name="explore_clear_all">सर्व काढा</string>
+    <string name="explore_remove_recent">अलीकडील शोधांमधून काढा</string>
+    <string name="explore_new_since_visit">तुमच्या मागील भेटीनंतर %1$s नवीन</string>
+    <string name="explore_live">लाइव्ह</string>
+    <string name="explore_cat_today">आज %1$d</string>
+    <string name="explore_cat_posts">%1$d पोस्ट</string>
+    <string name="explore_cat_empty">पहिले व्हा</string>
+    <string name="explore_area_posts">%1$d पोस्ट</string>
+    <string name="explore_area_empty">अजून पोस्ट नाहीत</string>
+    <string name="explore_area_yours">तुमचा</string>
+    <string name="explore_results_for">“%2$s” साठी %1$d निकाल</string>
+    <string name="explore_area_results_title">%1$s मधील पोस्ट</string>
+    <string name="explore_no_results_title">“%1$s” साठी निकाल नाहीत</string>
+    <string name="explore_no_results_subtitle">दुसरा शब्द वापरून पहा, किंवा एखादी श्रेणी किंवा परिसर पाहा.</string>
+    <string name="explore_no_area_posts_title">%1$s मध्ये अजून पोस्ट नाहीत</string>
+    <string name="explore_no_area_posts_subtitle">इथे काय सुरू आहे ते सर्वात आधी शेअर करा.</string>
+    <string name="explore_clear_cta">शोध पुसा</string>
+    <string name="explore_error_message">एक्सप्लोर लोड होऊ शकले नाही. इंटरनेट तपासून पुन्हा प्रयत्न करा.</string>
+    <string name="explore_search_error">शोध अयशस्वी. कृपया पुन्हा प्रयत्न करा.</string>
+    <string name="explore_caught_up">तुम्ही नागपूरचे सर्व ताजे अपडेट पाहिले आहेत</string>
+    <string name="explore_caught_up_hint">रिफ्रेश करण्यासाठी खाली ओढा</string>
+    <string name="explore_scroll_top">वर जा</string>
 </resources>

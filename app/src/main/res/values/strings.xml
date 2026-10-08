@@ -224,4 +224,47 @@
     <string name="comment_public">Public comment</string>
     <string name="comment_anon_identity">Anonymous identity</string>
     <string name="comment_anon_hint">Your identity will be hidden from other users</string>
+
+    <!-- Explore screen -->
+    <string name="explore_title">Explore Nagpur</string>
+    <string name="explore_greeting_morning">Good morning ☀️</string>
+    <string name="explore_greeting_afternoon">Good afternoon 🌤️</string>
+    <string name="explore_greeting_evening">Good evening 🌙</string>
+    <string name="explore_hint_1">Search Nagpur…</string>
+    <string name="explore_hint_2">Try “Dharampeth”…</string>
+    <string name="explore_hint_3">Try “jobs”…</string>
+    <string name="explore_hint_4">Try “events this weekend”…</string>
+    <string name="explore_cancel">Cancel</string>
+    <string name="explore_clear_search">Clear search</string>
+    <string name="explore_section_happening">Happening now</string>
+    <string name="explore_section_categories">Categories</string>
+    <string name="explore_section_areas">Browse by area</string>
+    <string name="explore_section_hot">Hot right now</string>
+    <string name="explore_section_fresh">Fresh in Nagpur</string>
+    <string name="explore_section_more">More to explore</string>
+    <string name="explore_section_recent">Recent searches</string>
+    <string name="explore_browse_categories">Browse by category</string>
+    <string name="explore_jump_area">Jump to an area</string>
+    <string name="explore_clear_all">Clear all</string>
+    <string name="explore_remove_recent">Remove from recent searches</string>
+    <string name="explore_new_since_visit">%1$s new since your last visit</string>
+    <string name="explore_live">LIVE</string>
+    <string name="explore_cat_today">%1$d today</string>
+    <string name="explore_cat_posts">%1$d posts</string>
+    <string name="explore_cat_empty">Be the first</string>
+    <string name="explore_area_posts">%1$d posts</string>
+    <string name="explore_area_empty">No posts yet</string>
+    <string name="explore_area_yours">YOURS</string>
+    <string name="explore_results_for">%1$d results for “%2$s”</string>
+    <string name="explore_area_results_title">Posts in %1$s</string>
+    <string name="explore_no_results_title">No results for “%1$s”</string>
+    <string name="explore_no_results_subtitle">Try a different word, or browse a category or area instead.</string>
+    <string name="explore_no_area_posts_title">No posts in %1$s yet</string>
+    <string name="explore_no_area_posts_subtitle">Be the first to share what’s happening here.</string>
+    <string name="explore_clear_cta">Clear search</string>
+    <string name="explore_error_message">Couldn’t load Explore. Check your connection and try again.</string>
+    <string name="explore_search_error">Search failed. Please try again.</string>
+    <string name="explore_caught_up">You’re all caught up in Nagpur</string>
+    <string name="explore_caught_up_hint">Pull down to refresh</string>
+    <string name="explore_scroll_top">Back to top</string>
 </resources>

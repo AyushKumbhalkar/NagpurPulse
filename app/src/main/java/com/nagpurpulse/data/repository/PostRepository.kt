@@ -147,6 +147,24 @@ class PostRepository @Inject constructor(
         }
     }
 
+    /**
+     * Newest posts tagged with [area] (case-insensitive exact match on `area_tag`).
+     * Used by Explore's "Browse by area". Applies the same visibility rules as the main feed.
+     */
+    suspend fun getPostsByArea(area: String): Result<List<Post>> {
+        return try {
+            val posts = client.postgrest["posts"].select {
+                filter { ilike("area_tag", area) }
+                order("created_at", Order.DESCENDING)
+                limit(30)
+            }.decodeList<Post>()
+            val visiblePosts = filterVisiblePosts(posts, forSearch = false)
+            Result.success(enrichPostsWithUsernames(visiblePosts))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getPostsByUser(userId: String): Result<List<Post>> {
         return try {
             val posts = client.postgrest["posts"].select {

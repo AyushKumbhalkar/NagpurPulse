@@ -171,4 +171,47 @@
     <string name="comment_public">सार्वजनिक कमेंट</string>
     <string name="comment_anon_identity">गुमनाम पहचान</string>
     <string name="comment_anon_hint">आपकी पहचान दूसरे उपयोगकर्ताओं से छिपी रहेगी</string>
+
+    <!-- Explore screen -->
+    <string name="explore_title">नागपुर एक्सप्लोर करें</string>
+    <string name="explore_greeting_morning">सुप्रभात ☀️</string>
+    <string name="explore_greeting_afternoon">नमस्कार 🌤️</string>
+    <string name="explore_greeting_evening">शुभ संध्या 🌙</string>
+    <string name="explore_hint_1">नागपुर में खोजें…</string>
+    <string name="explore_hint_2">“धरमपेठ” आज़माएँ…</string>
+    <string name="explore_hint_3">“नौकरियाँ” आज़माएँ…</string>
+    <string name="explore_hint_4">“इस वीकेंड के इवेंट” आज़माएँ…</string>
+    <string name="explore_cancel">रद्द करें</string>
+    <string name="explore_clear_search">खोज साफ़ करें</string>
+    <string name="explore_section_happening">अभी चल रहा है</string>
+    <string name="explore_section_categories">श्रेणियाँ</string>
+    <string name="explore_section_areas">इलाके के अनुसार देखें</string>
+    <string name="explore_section_hot">अभी ट्रेंडिंग</string>
+    <string name="explore_section_fresh">नागपुर में ताज़ा</string>
+    <string name="explore_section_more">और देखें</string>
+    <string name="explore_section_recent">हाल की खोजें</string>
+    <string name="explore_browse_categories">श्रेणी के अनुसार देखें</string>
+    <string name="explore_jump_area">किसी इलाके पर जाएँ</string>
+    <string name="explore_clear_all">सब हटाएँ</string>
+    <string name="explore_remove_recent">हाल की खोजों से हटाएँ</string>
+    <string name="explore_new_since_visit">आपकी पिछली विज़िट के बाद %1$s नए</string>
+    <string name="explore_live">लाइव</string>
+    <string name="explore_cat_today">आज %1$d</string>
+    <string name="explore_cat_posts">%1$d पोस्ट</string>
+    <string name="explore_cat_empty">पहले बनें</string>
+    <string name="explore_area_posts">%1$d पोस्ट</string>
+    <string name="explore_area_empty">अभी कोई पोस्ट नहीं</string>
+    <string name="explore_area_yours">आपका</string>
+    <string name="explore_results_for">“%2$s” के लिए %1$d परिणाम</string>
+    <string name="explore_area_results_title">%1$s की पोस्ट</string>
+    <string name="explore_no_results_title">“%1$s” के लिए कोई परिणाम नहीं</string>
+    <string name="explore_no_results_subtitle">कोई दूसरा शब्द आज़माएँ, या किसी श्रेणी या इलाके में देखें।</string>
+    <string name="explore_no_area_posts_title">%1$s में अभी कोई पोस्ट नहीं</string>
+    <string name="explore_no_area_posts_subtitle">यहाँ क्या हो रहा है, सबसे पहले साझा करें।</string>
+    <string name="explore_clear_cta">खोज साफ़ करें</string>
+    <string name="explore_error_message">एक्सप्लोर लोड नहीं हो सका। इंटरनेट जाँचकर फिर कोशिश करें।</string>
+    <string name="explore_search_error">खोज विफल रही। कृपया फिर कोशिश करें।</string>
+    <string name="explore_caught_up">आप नागपुर की सारी ताज़ा खबरें देख चुके हैं</string>
+    <string name="explore_caught_up_hint">रीफ़्रेश करने के लिए नीचे खींचें</string>
+    <string name="explore_scroll_top">ऊपर जाएँ</string>
 </resources>
