@@ -486,8 +486,10 @@ fun PremiumInputField(
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
     clearEmail: Boolean = false,
-    bare: Boolean = false
+    bare: Boolean = false,
+    fieldHeight: androidx.compose.ui.unit.Dp? = null
 ) {
+    val rowHeight = fieldHeight ?: if (bare) 60.dp else 56.dp
     var focused by remember { mutableStateOf(false) }
 
     // Autofill / password-manager support (Compose 1.6 API). Only active when
@@ -507,7 +509,7 @@ fun PremiumInputField(
     val shape = RoundedCornerShape(20.dp)
     val clearLabel = stringResource(com.nagpurpulse.R.string.auth_clear_email)
     Row(
-        Modifier.fillMaxWidth().height(if (bare) 60.dp else 56.dp)
+        Modifier.fillMaxWidth().height(rowHeight)
             .then(if (bare) Modifier else Modifier.clip(shape)
                 .background(containerColor ?: colors.sand)
                 .border(if (focused || errorMessage != null) 2.dp else 1.dp,
@@ -525,7 +527,7 @@ fun PremiumInputField(
             keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
             textStyle = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = if (bare) 14.sp else 15.sp),
             cursorBrush = SolidColor(colors.accent),
-            modifier = Modifier.weight(1f).height(if (bare) 60.dp else 56.dp)
+            modifier = Modifier.weight(1f).height(rowHeight)
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .semantics {
                     contentDescription = placeholder
