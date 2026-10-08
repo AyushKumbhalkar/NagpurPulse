@@ -16,6 +16,9 @@ import java.io.ByteArrayOutputStream
 import io.github.jan.supabase.storage.upload
 import java.util.UUID
 import com.nagpurpulse.data.model.Comment
+import com.nagpurpulse.data.model.CommentLikeResult
+import com.nagpurpulse.data.model.CommentPage
+import com.nagpurpulse.data.model.ThreadCommentRow
 import com.nagpurpulse.data.model.Post
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
@@ -25,7 +28,9 @@ import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.map
@@ -504,279 +509,78 @@ class PostRepository @Inject constructor(
      }
 
     // ── Comments ──────────────────────────────────────────────────────────────
+    // Raw `comments` rows are private (they contain user_id). Everything the app
+    // shows or changes goes through SECURITY DEFINER RPCs that mask anonymous
+    // authors, enforce ownership/admin rights and apply rate limits.
+    // See supabase/migrations/20261008120000_comments_overhaul.sql.
 
-    /**
-     * Emits whenever a comment row for this post is inserted, updated or deleted.
-     * The screen reloads the canonical comment list after each event so replies,
-     * edits and moderation changes appear without requiring a manual refresh.
-     */
+    /** Emits when a comment in this thread is added, edited or removed (likes do not fire it). */
     fun subscribeToComments(postId: String): Flow<Unit> = flow {
-        val channel = client.realtime.channel("thread_comments_$postId")
+        val channel = client.realtime.channel("thread_events_$postId")
         val inserts = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
-            table = "comments"
+            table = "comment_events"
             filter("post_id", FilterOperator.EQ, postId)
         }.map { Unit }
-        val updates = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
-            table = "comments"
-            filter("post_id", FilterOperator.EQ, postId)
-        }.map { Unit }
-        val deletes = channel.postgresChangeFlow<PostgresAction.Delete>(schema = "public") {
-            table = "comments"
-            filter("post_id", FilterOperator.EQ, postId)
-        }.map { Unit }
-
         channel.subscribe(blockUntilSubscribed = true)
-        merge(inserts, updates, deletes).collect { emit(Unit) }
-    }
-
-    suspend fun getComments(postId: String): Result<List<Comment>> {
-        return try {
-            val comments = client.postgrest["comments"].select {
-                filter { eq("post_id", postId) }
-                order("upvotes", Order.DESCENDING)
-            }.decodeList<Comment>()
-            Result.success(enrichCommentsWithUsernames(withCurrentUserLikeState(comments)))
-        } catch (e: Exception) {
-            Result.failure(e)
+        try {
+            inserts.collect { emit(Unit) }
+        } finally {
+            withContext(NonCancellable) { runCatching { channel.unsubscribe() } }
         }
     }
 
-    suspend fun getCommentsByUser(userId: String): Result<List<Comment>> {
-        return try {
-            val isOwnProfile = authRepository.currentUserId == userId
-            if (!isOwnProfile) {
-                val profile = fetchUserProfiles(listOf(userId))[userId]
-                // Fail closed if the profile can't be checked; never leak activity
-                // when the user hides their profile or comment history.
-                if (profile == null || profile.hideProfile || profile.hideComments) {
-                    return Result.success(emptyList())
-                }
-            }
-            val comments = client.postgrest["comments"].select {
-                filter { eq("user_id", userId) }
-                order("created_at", Order.DESCENDING)
-            }.decodeList<Comment>()
-            Result.success(enrichCommentsWithUsernames(withCurrentUserLikeState(comments)))
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    /** One page: [rootLimit] top-level comments from [rootOffset] ("top"/"new"/"old") plus all replies. */
+    suspend fun getComments(
+        postId: String, sort: String = "top", rootLimit: Int = 20, rootOffset: Int = 0
+    ): Result<CommentPage> = runCatching {
+        val rows = client.postgrest.rpc("get_thread_comments", buildJsonObject {
+            put("p_post_id", postId); put("p_sort", sort)
+            put("p_limit", rootLimit); put("p_offset", rootOffset)
+        }).decodeList<ThreadCommentRow>()
+        CommentPage(rows.map { it.toComment() }, rows.firstOrNull()?.totalRoots?.toInt() ?: 0)
     }
 
+    /** Profile comments. Other people's anonymous comments are never returned. */
+    suspend fun getCommentsByUser(userId: String): Result<List<Comment>> = runCatching {
+        client.postgrest.rpc("get_user_comments", buildJsonObject {
+            put("p_user_id", userId); put("p_limit", 100); put("p_offset", 0)
+        }).decodeList<ThreadCommentRow>().map { it.toComment() }
+    }
+
+    /** Creates a comment or reply. The server assigns the anonymous alias. */
     suspend fun addComment(
-        postId: String,
-        userId: String,
-        body: String,
-        isAnonymous: Boolean,
-        parentId: String? = null,
-        anonAlias: String? = null
-    ): Result<Comment> {
-        return try {
-
-            android.util.Log.d(
-                "ANON_DB",
-                "Saving comment. isAnonymous=$isAnonymous, anonAlias=$anonAlias"
-            )
-            val comment = client.postgrest["comments"].insert(
-                buildJsonObject {
-                    put("post_id", postId)
-                    put("user_id", userId)
-                    put("body", body)
-                    put("is_anonymous", isAnonymous)
-                    if (parentId != null) put("parent_id", parentId)
-                    // Store the alias so every anon comment in this thread uses same identity
-                    if (anonAlias != null) put("anon_alias", anonAlias)
-                }
-            ) { select() }.decodeSingle<Comment>()
-
-            // Increment comment_count on the post
-            try {
-                val post = client.postgrest["posts"]
-                    .select { filter { eq("id", postId) } }
-                    .decodeSingle<Post>()
-                client.postgrest["posts"].update(
-                    buildJsonObject {
-                        put("comment_count", post.commentCount + 1)
-                    }
-                ) {
-                    filter { eq("id", postId) }
-                }
-
-// Increase commenter karma
-                updateKarma(userId, 1)
-            } catch (_: Exception) {}
-
-            Result.success(enrichCommentWithUsername(comment))
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-     suspend fun updateComment(
-         commentId: String,
-         newBody: String
-     ): Result<Comment> = runCatching {
-
-         val currentUserId = authRepository.currentUserId
-             ?: throw Exception("You must be logged in")
-
-         if (newBody.isBlank()) {
-             throw Exception("Comment cannot be empty")
-         }
-
-         val existingComment = client.postgrest["comments"]
-             .select {
-                 filter {
-                     eq("id", commentId)
-                 }
-             }
-             .decodeSingle<Comment>()
-
-         val isOwner = existingComment.userId == currentUserId
-
-         val isAdmin = client.postgrest["admin_roles"]
-             .select {
-                 filter {
-                     eq("user_id", currentUserId)
-                 }
-             }
-             .decodeList<kotlinx.serialization.json.JsonObject>()
-             .isNotEmpty()
-
-         if (!isOwner && !isAdmin) {
-             throw Exception("You are not allowed to edit this comment")
-         }
-
-         val editedByAdmin = isAdmin && !isOwner
-
-         client.postgrest["comments"].update(
-             buildJsonObject {
-                 put("body", newBody.trim())
-                 put("edited_at", kotlinx.datetime.Clock.System.now().toString())
-                 put("edited_by_admin", editedByAdmin)
-             }
-         ) {
-             filter {
-                 eq("id", commentId)
-             }
-         }
-
-         if (editedByAdmin) {
-             try {
-                 client.postgrest["admin_actions"].insert(
-                     buildJsonObject {
-                         put("admin_id", currentUserId)
-                         put("action_type", "edit_comment")
-                         put("target_type", "comment")
-                         put("target_id", commentId)
-                         put(
-                            "reason",
-                            buildJsonObject {
-                                put("old_body", existingComment.body)
-                                put("new_body", newBody.trim())
-                            }.toString()
-                        )
-                     }
-                 )
-             } catch (e: Exception) {
-                 android.util.Log.e("EDIT_COMMENT", "Failed to log admin comment edit", e)
-             }
-         }
-
-         val updatedComment = client.postgrest["comments"]
-             .select {
-                 filter {
-                     eq("id", commentId)
-                 }
-             }
-             .decodeSingle<Comment>()
-
-         // Re-enrich the original author details so admin edits never change the visible identity.
-         enrichCommentWithUsername(updatedComment)
-     }
-    /**
-     * Toggle the current user's like on a comment. The comment_likes table is the
-     * source of truth; database triggers maintain comments.upvotes and emit
-     * notifications only for a newly inserted like.
-     *
-     * Returns true when the comment is liked after this operation, false when unliked.
-     */
-    suspend fun upvoteComment(commentId: String, userId: String): Result<Boolean> {
-        return try {
-            val authenticatedUserId = authRepository.currentUserId
-                ?: return Result.failure(Exception("You must be logged in"))
-            if (authenticatedUserId != userId) {
-                return Result.failure(Exception("Authenticated user mismatch"))
-            }
-
-            val existing = client.postgrest["comment_likes"].select {
-                filter {
-                    eq("comment_id", commentId)
-                    eq("user_id", authenticatedUserId)
-                }
-            }.decodeList<kotlinx.serialization.json.JsonObject>()
-
-            if (existing.isNotEmpty()) {
-                client.postgrest["comment_likes"].delete {
-                    filter {
-                        eq("comment_id", commentId)
-                        eq("user_id", authenticatedUserId)
-                    }
-                }
-                Result.success(false)
-            } else {
-                client.postgrest["comment_likes"].insert(
-                    buildJsonObject {
-                        put("comment_id", commentId)
-                        put("user_id", authenticatedUserId)
-                    }
-                )
-                Result.success(true)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        postId: String, body: String, isAnonymous: Boolean, parentId: String? = null
+    ): Result<Comment> = runCatching {
+        client.postgrest.rpc("add_comment", buildJsonObject {
+            put("p_post_id", postId); put("p_body", body); put("p_is_anonymous", isAnonymous)
+            if (parentId != null) put("p_parent_id", parentId)
+        }).decodeList<ThreadCommentRow>().first().toComment()
     }
 
-    private suspend fun withCurrentUserLikeState(comments: List<Comment>): List<Comment> {
-        val userId = authRepository.currentUserId
-        if (comments.isEmpty() || userId == null) return comments
-        return try {
-            val commentIds = comments.map { it.id }.distinct()
-            val likes = client.postgrest["comment_likes"].select {
-                filter {
-                    eq("user_id", userId)
-                    isIn("comment_id", commentIds)
-                }
-            }.decodeList<kotlinx.serialization.json.JsonObject>()
-            val likedIds = likes.mapNotNull { it["comment_id"]?.jsonPrimitive?.content }.toSet()
-            comments.map { it.copy(likedByCurrentUser = it.id in likedIds) }
-        } catch (_: Exception) {
-            comments
-        }
+    /** Owners and admins can edit. Owner edit => "Edited"; admin edit is silent (audited server-side). */
+    suspend fun updateComment(commentId: String, newBody: String): Result<Comment> = runCatching {
+        require(newBody.isNotBlank()) { "Comment cannot be empty" }
+        client.postgrest.rpc("edit_comment", buildJsonObject {
+            put("p_comment_id", commentId); put("p_body", newBody.trim())
+        }).decodeList<ThreadCommentRow>().first().toComment()
     }
 
-     suspend fun reportComment(
-         commentId: String,
-         reportedBy: String,
-         reason: String
-     ): Result<Unit> {
-         return try {
+    suspend fun deleteComment(commentId: String): Result<Unit> = runCatching {
+        client.postgrest.rpc("delete_comment", buildJsonObject { put("p_comment_id", commentId) })
+        Unit
+    }
 
-             client.postgrest["comment_reports"].insert(
-                 buildJsonObject {
-                     put("comment_id", commentId)
-                     put("reported_by", reportedBy)
-                     put("reason", reason)
-                     put("status", "pending")
-                 }
-             )
+    suspend fun toggleCommentLike(commentId: String): Result<CommentLikeResult> = runCatching {
+        client.postgrest.rpc("toggle_comment_like", buildJsonObject { put("p_comment_id", commentId) })
+            .decodeList<CommentLikeResult>().first()
+    }
 
-             Result.success(Unit)
-
-         } catch (e: Exception) {
-             Result.failure(e)
-         }
-     }
-
+    suspend fun reportComment(commentId: String, reason: String): Result<Unit> = runCatching {
+        client.postgrest.rpc("report_comment", buildJsonObject {
+            put("p_comment_id", commentId); put("p_reason", reason)
+        })
+        Unit
+    }
 
      suspend fun reportPost(
          postId: String,
@@ -931,22 +735,6 @@ class PostRepository @Inject constructor(
              isVerified = profile?.isVerified ?: false
          )
      }
-
-    private suspend fun enrichCommentsWithUsernames(comments: List<Comment>): List<Comment> {
-        val userIds = comments.filter { !it.isAnonymous }.map { it.userId }.distinct()
-        if (userIds.isEmpty()) return comments
-        val map = fetchUsernames(userIds)
-        return comments.map { c ->
-            if (!c.isAnonymous) c.copy(username = map[c.userId] ?: "unknown")
-            else c.copy(username = null)
-        }
-    }
-
-    private suspend fun enrichCommentWithUsername(comment: Comment): Comment {
-        if (comment.isAnonymous) return comment.copy(username = null)
-        val map = fetchUsernames(listOf(comment.userId))
-        return comment.copy(username = map[comment.userId] ?: "unknown")
-    }
 
      private suspend fun fetchUserProfiles(
          userIds: List<String>

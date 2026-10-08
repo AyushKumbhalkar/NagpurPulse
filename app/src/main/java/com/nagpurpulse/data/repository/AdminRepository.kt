@@ -508,42 +508,9 @@ class AdminRepository @Inject constructor(
     }
 
     suspend fun deleteComment(commentId: String, reason: String): Result<Unit> = runCatching {
-
-        client.postgrest["comments"].update(
-            buildJsonObject {
-                put("body", "[Removed by moderator]")
-                put("is_deleted", true)
-            }
-        ) {
-            filter {
-                eq("id", commentId)
-            }
-        }
-
-        android.util.Log.d("ADMIN_DELETE", "Comment update completed")
-
-        val updatedComment = client.postgrest["comments"]
-            .select {
-                filter {
-                    eq("id", commentId)
-                }
-            }
-            .decodeSingle<Comment>()
-
-        android.util.Log.d(
-            "ADMIN_DELETE",
-            "After update -> body=${updatedComment.body}, isDeleted=${updatedComment.isDeleted}"
-        )
-
-        try {
-            client.postgrest["comment_reports"].update(
-                mapOf("status" to "resolved")
-            ) {
-                filter {
-                    eq("comment_id", commentId)
-                }
-            }
-        } catch (_: Exception) {}
+        // Direct table updates are blocked for moderators, so removal uses an admin-checked RPC
+        // (it also resolves open reports for the comment).
+        client.postgrest.rpc("admin_remove_comment", buildJsonObject { put("p_comment_id", commentId) })
 
         logAction("delete_comment", "comment", commentId, reason)
     }

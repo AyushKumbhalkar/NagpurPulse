@@ -7,6 +7,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import javax.inject.Inject
+import kotlinx.serialization.json.put
 
 class ProfileRepository @Inject constructor(
     private val client: SupabaseClient
@@ -94,9 +95,11 @@ class ProfileRepository @Inject constructor(
 
     suspend fun getCommentCount(userId: String): Result<Int> {
         return try {
-            val count = client.postgrest["comments"].select {
-                filter { eq("user_id", userId) }
-            }.decodeList<kotlinx.serialization.json.JsonObject>().size
+            // Server-side count: other people's anonymous comments are never counted.
+            val count = client.postgrest.rpc(
+                "get_user_comment_count",
+                kotlinx.serialization.json.buildJsonObject { put("p_user_id", userId) }
+            ).decodeAs<Long>().toInt()
             Result.success(count)
         } catch (e: Exception) {
             Result.failure(e)

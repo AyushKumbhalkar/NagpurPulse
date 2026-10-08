@@ -1,30 +1,30 @@
-// This is CommentCard.kt file
-
 // java/com/nagpurpulse/ui/components/CommentCard.kt
-
 package com.nagpurpulse.ui.components
 
-
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import android.widget.Toast
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
@@ -34,575 +34,389 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.nagpurpulse.R
 import com.nagpurpulse.data.model.Comment
 import com.nagpurpulse.data.model.timeAgo
 import com.nagpurpulse.ui.theme.*
 import kotlinx.coroutines.delay
 
+private const val COLLAPSED_LINES = 6
+
+/**
+ * A single comment or reply. Likes are applied optimistically by the ViewModel; the card has
+ * no reply text field of its own: Reply points the screen's shared composer at this comment.
+ *
+ * Admins can edit any comment. That edit is silent — only the author's own edits ever show "Edited".
+ */
 @Composable
 fun CommentCard(
     navController: NavController,
     comment: Comment,
     isLoggedIn: Boolean = false,
-    currentUserId: String? = null,
     isAdmin: Boolean = false,
     isHighlighted: Boolean = false,
+    isReply: Boolean = false,
+    replyToName: String? = null,
     onUpvote: (String) -> Unit = {},
-    onReplySubmit: (String, String, Boolean) -> Unit = { _, _, _ -> },
+    onReply: (Comment) -> Unit = {},
     onReport: (String, String) -> Unit = { _, _ -> },
     onEdit: (String, String) -> Unit = { _, _ -> },
-    modifier: Modifier = Modifier,
-    depth: Int = 0
+    onDelete: (String) -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
-    // Use persistent alias if anon, else real username
-    val displayName = when {
-        comment.isAnonymous && comment.anonAlias != null -> comment.anonAlias
-        comment.isAnonymous                              -> "Anonymous"
-        else                                             -> comment.username ?: "unknown"
-    }
-    val isAnonWithAlias = comment.isAnonymous && comment.anonAlias != null
-    val avatarUrl   = "https://api.dicebear.com/7.x/avataaars/png?seed=$displayName"
-    val isReply     = comment.parentId != null || comment.body.startsWith("↪ Reply to")
-    val canEdit = currentUserId != null && (currentUserId == comment.userId || isAdmin)
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
+    val displayName = commentDisplayName(comment)
+    val nowMillis = LocalNowMillis.current
+    val haptics = LocalHapticFeedback.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
-    var menuExpanded   by remember { mutableStateOf(false) }
-    var upvoteBurst  by remember { mutableStateOf(false) }
-    var hasUpvoted by remember(comment.id, comment.likedByCurrentUser) { mutableStateOf(comment.likedByCurrentUser) }
-    var localUpvotes by remember(comment.id, comment.upvotes) { mutableIntStateOf(comment.upvotes) }
-    var showReply    by remember { mutableStateOf(false) }
-    var replyText    by remember { mutableStateOf("") }
-    var isReplyAnonymous by remember { mutableStateOf(false) }
+    val canEdit = (comment.isMine || isAdmin) && !comment.isDeleted
+    val canDelete = comment.isMine && !comment.isDeleted
+    val canReport = isLoggedIn && !comment.isMine && !comment.isDeleted
+
+    var menuExpanded by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var expanded by remember(comment.id) { mutableStateOf(false) }
+    var canExpand by remember(comment.id) { mutableStateOf(false) }
     var editText by remember { mutableStateOf(comment.body) }
 
-    val upvoteIconScale by animateFloatAsState(
-        targetValue   = if (upvoteBurst) 1.5f else 1f,
-        animationSpec = spring(Spring.DampingRatioHighBouncy, Spring.StiffnessHigh),
-        label = "comment_upvote",
-        finishedListener = { upvoteBurst = false }
+    var highlightOn by remember { mutableStateOf(isHighlighted) }
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) { highlightOn = true; delay(2500); highlightOn = false }
+    }
+
+    // Burst only when the like flips on, not when an already-liked comment loads.
+    val liked = comment.likedByCurrentUser
+    var previouslyLiked by remember(comment.id) { mutableStateOf(liked) }
+    var likeBurst by remember { mutableStateOf(false) }
+    LaunchedEffect(liked) {
+        if (liked && !previouslyLiked) { likeBurst = true; delay(180); likeBurst = false }
+        previouslyLiked = liked
+    }
+    val likeScale by animateFloatAsState(
+        targetValue = if (likeBurst) 1.5f else 1f,
+        animationSpec = spring(Spring.DampingRatioHighBouncy, Spring.StiffnessHigh), label = "comment_like_scale"
     )
 
-    val anonymousIconScale by animateFloatAsState(
-        targetValue = if (isReplyAnonymous) 1.15f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "anonymous_icon_scale"
+    val baseColor = if (isReply) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+    val bgColor by animateColorAsState(
+        if (highlightOn) OrangePrimary.copy(alpha = 0.18f) else baseColor, label = "comment_bg"
     )
+    val shape = RoundedCornerShape(if (isReply) 10.dp else 12.dp)
 
-    val anonymousIconColor by animateColorAsState(
-        targetValue =
-            if (isReplyAnonymous)
-                OrangePrimary
-            else
-                MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "anonymous_icon_color"
-    )
-
-    val indentPadding = (depth * 16).coerceAtMost(48).dp
-    val normalColor =
-        if (isReply)
-            MaterialTheme.colorScheme.surfaceVariant
-        else
-            MaterialTheme.colorScheme.surface
-
-    val bgColor =
-        if (isHighlighted)
-            OrangePrimary.copy(alpha = 0.18f)
-        else
-            normalColor
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Reply depth line
-        if (isReply) {
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .fillMaxHeight()
-                    .padding(start = (indentPadding - 8.dp).coerceAtLeast(0.dp))
-                    .background(OrangePrimary.copy(0.25f))
-                    .clip(RoundedCornerShape(1.dp))
-                    .align(Alignment.CenterStart)
-            )
+    Box(
+        modifier = modifier.fillMaxWidth().clip(shape).background(bgColor)
+            .let { if (isReply) it.border(1.dp, OrangePrimary.copy(0.12f), shape) else it }
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        if (comment.isDeleted) {
+            RemovedCommentRow(byAuthor = comment.deletedByAuthor)
+            return@Box
         }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = if (isReply) (indentPadding + 8.dp).coerceAtMost(56.dp) else 0.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(if (isReply) 10.dp else 12.dp))
-                    .background(bgColor)
-                    .let {
-                        if (isReply) it.border(
-                            1.dp, OrangePrimary.copy(0.12f),
-                            RoundedCornerShape(12.dp)
-                        ) else it
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val canOpenProfile = !comment.isAnonymous && comment.userId.isNotBlank()
+                CommentAvatar(
+                    displayName = displayName, avatarUrl = comment.avatarUrl, isAnonymous = comment.isAnonymous,
+                    modifier = Modifier.clickable(enabled = canOpenProfile) {
+                        navController.navigate("user_profile/${comment.userId}")
                     }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Column {
-                    // Header
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(avatarUrl).crossfade(true).build(),
-                            contentDescription = "Avatar",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, OrangePrimary.copy(0.18f), CircleShape)
-                                .background(OrangeGlow),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Row(
-                                    modifier = Modifier
-                                        .weight(1f, fill = false)
-                                        .clickable {
-                                            if (!comment.isAnonymous) {
-                                                navController.navigate("user_profile/${comment.userId}")
-                                            }
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (comment.isAnonymous) {
-                                        Icon(
-                                            imageVector = Icons.Filled.VisibilityOff,
-                                            contentDescription = null,
-                                            tint = OrangePrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-
-                                        Spacer(Modifier.width(4.dp))
-                                    }
-
-                                    Text(
-                                        text = if (comment.isAnonymous) displayName else "u/$displayName",
-                                        color =
-                                            if (comment.isAnonymous)
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            else
-                                                OrangePrimary,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                    )
-                                }
-                                // Alias badge — shows this is a consistent anonymous identity
-                                if (isAnonWithAlias) {
-                                    Spacer(Modifier.width(4.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                            .background(com.nagpurpulse.ui.theme.OrangeSubtle)
-                                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("anon", color = com.nagpurpulse.ui.theme.OrangePrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                                Text(
-                                    "  ·  ",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-
-                                Text(
-                                    comment.timeAgo(),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1
-                                )
-                                if (comment.editedAt != null && !comment.editedByAdmin) {
-                                    Text(
-                                        "  ·  Edited",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontStyle = FontStyle.Italic
-                                    )
-                                }
-
-
-                            }
-                        }
-                        Box {
-                            IconButton(
-                                onClick = { menuExpanded = true },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    Icons.Filled.MoreVert,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                            ) {
-
-                                if (canEdit && !comment.isDeleted) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                "Edit",
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Filled.Edit,
-                                                contentDescription = "Edit comment",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        },
-                                        onClick = {
-                                            menuExpanded = false
-                                            editText = comment.body
-                                            showEditDialog = true
-                                        }
-                                    )
-                                }
-
-                                DropdownMenuItem(
-                                    text = { Text("Copy", color = MaterialTheme.colorScheme.onSurface) },
-                                    leadingIcon = { Icon(Icons.Filled.ContentCopy, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) },
-                                    onClick = {
-                                        clipboardManager.setText(AnnotatedString(comment.body.replace("↪ Reply to", "").trimStart()))
-                                        menuExpanded = false
-                                    }
-                                )
-                                if (!comment.isDeleted) {
-                                    DropdownMenuItem(
-                                        text = { Text("Report", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Filled.Flag,
-                                                null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        },
-                                        onClick = {
-                                            onReport(comment.id, "other")
-                                            Toast.makeText(context, "Report submitted", Toast.LENGTH_SHORT).show()
-                                            menuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    if (comment.isDeleted) {
-                        AssistChip(
-                            onClick = {},
-                            enabled = false,
-                            label = {
-                                Text("Removed by moderator")
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Flag,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        )
-
-                        Spacer(Modifier.height(8.dp))
-                    }
-
-                    // Reply-to chip if it's a reply
-
-
-                    if (isReply && comment.body.startsWith("↪ Reply to")) {
-                        val replyTo = comment.body.substringAfter("↪ Reply to ").substringBefore(":")
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(OrangeSubtle)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text("↩ in reply to @$replyTo", color = OrangePrimary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
-                        }
-                        Spacer(Modifier.height(6.dp))
-                    }
-
-                    // Body
-                    val bodyText = if (comment.isDeleted) {
-                        "This comment was removed by a moderator."
-                    } else {
-                        comment.body
-                            .replace("↪ Reply to", "")
-                            .trimStart()
-                    }
-                    SelectionContainer {
                         Text(
-                            text = bodyText,
-                            color = if (comment.isDeleted)
-                                Color.Gray
-                            else
-                                MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontStyle = if (comment.isDeleted)
-                                FontStyle.Italic
-                            else
-                                FontStyle.Normal,
-                            lineHeight = 20.sp
+                            text = if (comment.isAnonymous) displayName else "u/$displayName",
+                            color = if (comment.isAnonymous) MaterialTheme.colorScheme.onSurfaceVariant else OrangePrimary,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false).clickable(enabled = canOpenProfile) {
+                                navController.navigate("user_profile/${comment.userId}")
+                            }
                         )
+                        if (comment.isAnonymous) { Spacer(Modifier.width(4.dp)); CommentBadge(stringResource(R.string.comment_anon_badge)) }
+                        if (comment.isPostAuthor) { Spacer(Modifier.width(4.dp)); CommentBadge(stringResource(R.string.comment_op_badge), filled = true) }
+                        if (comment.isMine) { Spacer(Modifier.width(4.dp)); CommentBadge(stringResource(R.string.comment_you_badge)) }
                     }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    // Actions
                     Row(verticalAlignment = Alignment.CenterVertically) {
-
-                        if (!comment.isDeleted) {
-
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (hasUpvoted) OrangeSubtle else MaterialTheme.colorScheme.surfaceVariant)
-                                    .let {
-                                        if (isLoggedIn) it.pressScale {
-                                            hasUpvoted = !hasUpvoted
-                                            upvoteBurst = hasUpvoted
-                                            localUpvotes = (localUpvotes + if (hasUpvoted) 1 else -1).coerceAtLeast(0)
-                                            onUpvote(comment.id)
-                                        } else it
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Filled.KeyboardArrowUp,
-                                    null,
-                                    tint = if (hasUpvoted) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp).scale(upvoteIconScale)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    formatCount(localUpvotes),
-                                    color = if (hasUpvoted) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-
-                        }
-
-                        if (isLoggedIn && !comment.isDeleted) {
-                            Spacer(Modifier.width(8.dp))
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (showReply) OrangeSubtle else MaterialTheme.colorScheme.surfaceVariant)
-                                    .pressScale { showReply = !showReply }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Reply,
-                                    contentDescription = null,
-                                    tint = if (showReply) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    "Reply",
-                                    color = if (showReply) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
+                        Text(comment.timeAgo(nowMillis), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        // Only the author's own edits are ever labelled.
+                        if (comment.editedAt != null) {
+                            Text("  ·  ${stringResource(R.string.comment_edited)}",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall, fontStyle = FontStyle.Italic, maxLines = 1)
                         }
                     }
+                }
+                Box {
+                    IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.comment_more_options),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded, onDismissRequest = { menuExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        if (canEdit) DropdownMenuItem(
+                            text = { Text(stringResource(R.string.comment_edit)) },
+                            leadingIcon = { MenuIcon(Icons.Filled.Edit) },
+                            onClick = { menuExpanded = false; editText = comment.body; showEditDialog = true })
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.comment_copy)) },
+                            leadingIcon = { MenuIcon(Icons.Filled.ContentCopy) },
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(comment.body))
+                                Toast.makeText(context, R.string.comment_copied, Toast.LENGTH_SHORT).show()
+                                menuExpanded = false
+                            })
+                        if (canDelete) DropdownMenuItem(
+                            text = { Text(stringResource(R.string.comment_delete)) },
+                            leadingIcon = { MenuIcon(Icons.Filled.Delete) },
+                            onClick = { menuExpanded = false; showDeleteDialog = true })
+                        if (canReport) DropdownMenuItem(
+                            text = { Text(stringResource(R.string.comment_report)) },
+                            leadingIcon = { MenuIcon(Icons.Filled.Flag) },
+                            onClick = { menuExpanded = false; showReportDialog = true })
+                    }
+                }
+            }
 
-                    // Reply field
-                    if (showReply && !comment.isDeleted) {
-                        Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = isReplyAnonymous,
-                                onCheckedChange = {
-                                    isReplyAnonymous = it
-                                },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = OrangePrimary,
-                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.VisibilityOff,
-                                    contentDescription = null,
-                                    tint = anonymousIconColor,
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .scale(anonymousIconScale)
-                                )
+            if (!replyToName.isNullOrBlank()) {
+                Box(Modifier.clip(RoundedCornerShape(6.dp)).background(OrangeSubtle)
+                    .padding(horizontal = 8.dp, vertical = 3.dp)) {
+                    Text("↩ ${stringResource(R.string.comment_replying_to, replyToName)}",
+                        color = OrangePrimary, style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.height(6.dp))
+            }
 
-                                Spacer(Modifier.width(4.dp))
+            val accent = OrangePrimary
+            val styledBody = remember(comment.body, accent) { linkifyComment(comment.body, accent) }
+            SelectionContainer {
+                Text(
+                    text = styledBody, color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge, lineHeight = 20.sp,
+                    maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { if (!expanded) canExpand = it.hasVisualOverflow }
+                )
+            }
+            if (canExpand || expanded) {
+                Text(
+                    stringResource(if (expanded) R.string.comment_show_less else R.string.comment_read_more),
+                    color = OrangePrimary, style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 2.dp).clickable { expanded = !expanded }
+                )
+            }
 
-                                Text(
-                                    text = "Reply anonymously",
-                                    color = anonymousIconColor,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = if (isReplyAnonymous)
-                                        FontWeight.SemiBold
-                                    else
-                                        FontWeight.Normal
-                                )
-                            }
+            Spacer(Modifier.height(10.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val likeColor = if (liked) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                        .background(if (liked) OrangeSubtle else MaterialTheme.colorScheme.surfaceVariant)
+                        .let {
+                            if (isLoggedIn) it.pressScale {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onUpvote(comment.id)
+                            } else it
                         }
-
-                        Spacer(Modifier.height(6.dp))
-
-                        OutlinedTextField(
-                            value = replyText,
-                            onValueChange = { replyText = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = {
-                                Text(
-                                    "Write a reply…",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.KeyboardArrowUp,
+                        contentDescription = stringResource(if (liked) R.string.comment_unlike else R.string.comment_like),
+                        tint = likeColor, modifier = Modifier.size(16.dp).scale(likeScale))
+                    if (comment.upvotes > 0) {
+                        Spacer(Modifier.width(4.dp))
+                        AnimatedContent(
+                            targetState = comment.upvotes,
+                            transitionSpec = {
+                                if (targetState > initialState)
+                                    (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut())
+                                else
+                                    (slideInVertically { -it } + fadeIn()) togetherWith (slideOutVertically { it } + fadeOut())
                             },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor   = OrangePrimary,
-                                unfocusedBorderColor = Divider,
-                                cursorColor          = OrangePrimary
-                            ),
-                            singleLine = false
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            Text(
-                                "Cancel",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.pressScale {
-
-                                    showReply = false
-
-                                    replyText = ""
-
-                                    focusManager.clearFocus()
-
-                                    keyboardController?.hide()
-                                }
-
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Text(
-                                "Post Reply",
-                                color = OrangePrimary,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.pressScale {
-                                    if (replyText.isNotBlank()) {
-
-                                        onReplySubmit(
-                                            comment.id,
-                                            replyText,
-                                            isReplyAnonymous
-                                        )
-
-                                        replyText = ""
-                                        showReply = false
-                                        isReplyAnonymous = false
-
-                                        focusManager.clearFocus()
-
-                                        keyboardController?.hide()
-                                    }
-                                }
-                            )
+                            label = "comment_like_count"
+                        ) { count ->
+                            Text(formatCount(count), color = likeColor,
+                                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                         }
+                    }
+                }
+                if (isLoggedIn) {
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .pressScale { onReply(comment) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.comment_reply), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                     }
                 }
             }
         }
     }
 
-
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit comment") },
+            title = { Text(stringResource(R.string.comment_edit_title)) },
             text = {
                 OutlinedTextField(
                     value = editText,
-                    onValueChange = { editText = it },
+                    onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) editText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Write your comment…") },
-                    minLines = 3,
-                    maxLines = 6,
+                    placeholder = { Text(stringResource(R.string.comment_edit_hint)) },
+                    minLines = 3, maxLines = 8,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = OrangePrimary,
-                        cursorColor = OrangePrimary
-                    )
+                    supportingText = {
+                        Text(stringResource(R.string.comment_char_counter, editText.length, MAX_COMMENT_LENGTH),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, cursorColor = OrangePrimary)
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (editText.isBlank()) {
-                            Toast.makeText(context, "Comment cannot be empty", Toast.LENGTH_SHORT).show()
-                        } else if (editText.trim() != comment.body.trim()) {
-                            onEdit(comment.id, editText.trim())
-                            showEditDialog = false
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        } else {
-                            showEditDialog = false
-                        }
+                TextButton(onClick = {
+                    val trimmed = editText.trim()
+                    when {
+                        trimmed.isEmpty() -> Toast.makeText(context, R.string.comment_empty_error, Toast.LENGTH_SHORT).show()
+                        trimmed != comment.body.trim() -> { onEdit(comment.id, trimmed); showEditDialog = false }
+                        else -> showEditDialog = false
                     }
-                ) { Text("Save", color = OrangePrimary) }
+                }) { Text(stringResource(R.string.comment_save), color = OrangePrimary) }
             },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.comment_cancel)) } }
         )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.comment_delete_title)) },
+            text = { Text(stringResource(R.string.comment_delete_message)) },
+            confirmButton = {
+                TextButton(onClick = { showDeleteDialog = false; onDelete(comment.id) }) {
+                    Text(stringResource(R.string.comment_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.comment_cancel)) } }
+        )
+    }
+
+    if (showReportDialog) {
+        val reasons = listOf(
+            R.string.comment_report_spam to "spam", R.string.comment_report_harassment to "harassment",
+            R.string.comment_report_misinformation to "misinformation",
+            R.string.comment_report_inappropriate to "inappropriate", R.string.comment_report_other to "other"
+        )
+        AlertDialog(
+            onDismissRequest = { showReportDialog = false },
+            title = { Text(stringResource(R.string.comment_report_title)) },
+            text = {
+                Column {
+                    reasons.forEach { (label, value) ->
+                        TextButton(onClick = { showReportDialog = false; onReport(comment.id, value) },
+                            modifier = Modifier.fillMaxWidth()) { Text(stringResource(label)) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showReportDialog = false }) { Text(stringResource(R.string.comment_cancel)) } }
+        )
+    }
+}
+
+/** One slim line instead of a card + chip + repeated text. */
+@Composable
+private fun RemovedCommentRow(byAuthor: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Block, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(if (byAuthor) R.string.comment_deleted_author else R.string.comment_removed_mod),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic)
+    }
+}
+
+@Composable
+private fun CommentBadge(text: String, filled: Boolean = false) {
+    Box(Modifier.clip(RoundedCornerShape(8.dp)).background(if (filled) OrangePrimary else OrangeSubtle)
+        .padding(horizontal = 5.dp, vertical = 2.dp)) {
+        Text(text, color = if (filled) MaterialTheme.colorScheme.onPrimary else OrangePrimary,
+            fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+@Composable
+private fun MenuIcon(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+}
+
+/** Local-only row for a comment that is still sending (or failed), with one-tap retry. */
+@Composable
+fun PendingCommentRow(
+    body: String, isAnonymous: Boolean, failed: Boolean,
+    onRetry: () -> Unit, onDiscard: () -> Unit, modifier: Modifier = Modifier
+) {
+    val accent = if (failed) MaterialTheme.colorScheme.error else OrangePrimary
+    Column(
+        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = if (failed) 1f else 0.7f))
+            .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        Text(body, color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (failed) 1f else 0.7f),
+            style = MaterialTheme.typography.bodyLarge, maxLines = COLLAPSED_LINES, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (failed) {
+                Text(stringResource(R.string.comment_failed), color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.comment_retry), color = OrangePrimary,
+                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { onRetry() })
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.comment_discard), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium, modifier = Modifier.clickable { onDiscard() })
+            } else {
+                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = OrangePrimary)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.comment_sending), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium)
+            }
+            if (isAnonymous) { Spacer(Modifier.width(8.dp)); CommentBadge(stringResource(R.string.comment_anon_badge)) }
+        }
     }
 }
