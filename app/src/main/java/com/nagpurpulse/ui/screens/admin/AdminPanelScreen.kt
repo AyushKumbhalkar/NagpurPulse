@@ -31,6 +31,10 @@ import androidx.navigation.NavController
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.theme.Background
+import com.nagpurpulse.ui.theme.Surface
+import com.nagpurpulse.ui.theme.PrimaryText
+import com.nagpurpulse.ui.theme.SecondaryText
+import com.nagpurpulse.ui.theme.Divider
 import com.nagpurpulse.ui.theme.OrangePrimary
 import com.nagpurpulse.ui.theme.RedAlert
 
@@ -124,7 +128,7 @@ private fun AdminTopBar(onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0D0D0D))
+            .background(Surface)
             .statusBarsPadding()
     ) {
         Row(
@@ -150,14 +154,14 @@ private fun AdminTopBar(onBack: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Text(
                 "ADMIN PANEL",
-                color = Color.White,
+                color = PrimaryText,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 letterSpacing = 0.8.sp
             )
             Text(
                 "  |  Restricted Access",
-                color = Color.White.copy(0.45f),
+                color = SecondaryText,
                 fontSize = 12.sp
             )
             Spacer(Modifier.weight(1f))
@@ -165,7 +169,7 @@ private fun AdminTopBar(onBack: () -> Unit) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     null,
-                    tint = Color.White.copy(0.6f),
+                    tint = SecondaryText,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -189,11 +193,11 @@ private fun AdminBottomNav(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0D0D0D))
+            .background(Surface)
             .navigationBarsPadding()
     ) {
         HorizontalDivider(
-            color = Color.White.copy(0.08f),
+            color = Divider.copy(alpha = 0.6f),
             thickness = 0.5.dp
         )
         Row(
@@ -215,7 +219,7 @@ private fun AdminBottomNav(
                         Icon(
                             tab.icon,
                             contentDescription = tab.label,
-                            tint = if (active) OrangePrimary else Color.White.copy(0.4f),
+                            tint = if (active) OrangePrimary else SecondaryText,
                             modifier = Modifier.size(22.dp)
                         )
 
@@ -223,7 +227,7 @@ private fun AdminBottomNav(
 
                         Text(
                             tab.label,
-                            color = if (active) OrangePrimary else Color.White.copy(0.4f),
+                            color = if (active) OrangePrimary else SecondaryText,
                             fontSize = 10.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
