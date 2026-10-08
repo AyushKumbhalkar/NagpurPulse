@@ -39,7 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -64,7 +64,7 @@ internal fun LoginContent(
     onSignup: () -> Unit = {}, onResend: () -> Unit = {}, onGuest: () -> Unit = {}
 ) {
     val colors = authPalette()
-    val focus = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
     val reduceMotion = rememberReduceMotion()
     val fieldMessage = emailError ?: passwordError ?: error
@@ -137,7 +137,7 @@ internal fun LoginContent(
                     {}, bare = true, fieldHeight = d.row, emailImeAction = ImeAction.Done)
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = colors.outline.copy(alpha = 0.25f))
                 AuthPasswordField(password, onPassword, !loading, stringResource(R.string.login_password_hint),
-                    passwordError, onPasswordBlur, { focus.clearFocus(); onLogin() },
+                    passwordError, onPasswordBlur, { keyboardController?.hide(); onLogin() },
                     bare = true, fieldHeight = d.row)
             }
         }
