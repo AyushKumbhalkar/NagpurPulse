@@ -159,7 +159,7 @@ fun AdminPostsContent(
                         DatePickerDialog(
                             onDismissRequest = { showDatePicker = false },
                             colors = DatePickerDefaults.colors(
-                                containerColor = Color(0xFF171318),
+                                containerColor = SurfaceAlt,
                                 selectedDayContainerColor = OrangePrimary,
                                 selectedDayContentColor = Color.White,
                                 todayDateBorderColor = OrangePrimary,
@@ -482,7 +482,7 @@ fun AdminPostsContent(
                         DatePickerDialog(
                             onDismissRequest = { showCommentDatePicker = false },
                             colors = DatePickerDefaults.colors(
-                                containerColor = Color(0xFF171318),
+                                containerColor = SurfaceAlt,
                                 selectedDayContainerColor = OrangePrimary,
                                 selectedDayContentColor = Color.White,
                                 todayDateBorderColor = OrangePrimary,
@@ -1293,9 +1293,9 @@ private fun AdminLogCard(action: AdminAction) {
             confirmButton = {
                 TextButton(onClick = { showEditDetails = false }) { Text("Close") }
             },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = SurfaceAlt,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),)
     }
 }
