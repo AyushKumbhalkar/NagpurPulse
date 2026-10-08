@@ -3,6 +3,7 @@
 package com.nagpurpulse.ui.screens.auth
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -40,18 +41,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -110,33 +108,31 @@ internal fun SignupContent(
     // Looked up by name: a missing file just hides that artwork instead of breaking the build.
     val headerArt = rememberSignupDrawable("new_header")
     val footerArt = rememberSignupDrawable("new_footer")
+    // Decoded once, off the main thread, kept in memory (see AuthArtCache). Survives keyboard toggles.
+    val headerBmp = rememberAuthArt(headerArt)
+    val footerBmp = rememberAuthArt(footerArt, fadeTop = true)
+    val headerAlpha by animateFloatAsState(if (headerBmp != null) (if (dark) 0.6f else 1f) else 0f, tween(250), label = "header-art")
+    val footerAlpha by animateFloatAsState(
+        if (footerBmp != null && !keyboard && !largeText) (if (dark) 0.5f else 1f) else 0f, tween(220), label = "footer-art"
+    )
     WelcomeSystemBars()
 
     CompositionLocalProvider(LocalAuthFont provides font) {
     Box(Modifier.fillMaxSize().background(colors.background)) {
         // Footer art: full-bleed behind everything, under the navigation bar too.
-        if (footerArt != 0 && !keyboard && !largeText) {
+        if (footerBmp != null && footerAlpha > 0.01f) {
             Image(
-                painterResource(footerArt), contentDescription = null,
+                bitmap = footerBmp, contentDescription = null,
                 contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter,
-                alpha = if (dark) 0.5f else 1f,
+                alpha = footerAlpha,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().heightIn(max = 210.dp)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(
-                            Brush.verticalGradient(0f to Color.Transparent, 0.5f to Color.Black, 1f to Color.Black),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
             )
         }
 
         Box(
             Modifier.fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                .navigationBarsPadding().imePadding()
-                .padding(bottom = if (keyboardPreview) 260.dp else 0.dp),
+                .navigationBarsPadding(),
             contentAlignment = Alignment.TopCenter
         ) {
             BoxWithConstraints(Modifier.widthIn(max = 480.dp).fillMaxSize()) {
@@ -146,16 +142,19 @@ internal fun SignupContent(
                     else -> SignupTier.Expanded
                 }
                 val compact = tier == SignupTier.Compact
-                val minimal = keyboard && maxHeight < 440.dp
+                // Heights here exclude the keyboard (constant), so nothing flips while it animates.
+                val minimal = keyboard && maxHeight < 640.dp
                 // With the keyboard up, keep headline + art if the phone is tall enough (no big empty gap).
-                val roomy = maxHeight >= 400.dp
+                val roomy = maxHeight >= 700.dp
                 val showArt = (!keyboard || roomy) && !largeText
                 val showHeadline = !keyboard || roomy
                 val headlineSp = when (tier) { SignupTier.Compact -> 30; SignupTier.Medium -> 38; SignupTier.Expanded -> 44 }
                 val controlHeight = when (tier) { SignupTier.Compact -> 48.dp; SignupTier.Medium -> 52.dp; SignupTier.Expanded -> 56.dp }
 
                 Column(
-                    Modifier.fillMaxSize().then(if (largeText) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+                    Modifier.fillMaxSize().imePadding()
+                        .padding(bottom = if (keyboardPreview) 260.dp else 0.dp)
+                        .then(if (largeText) Modifier.verticalScroll(rememberScrollState()) else Modifier),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (!minimal) WelcomeHeader(font)
@@ -179,11 +178,11 @@ internal fun SignupContent(
                             ),
                             contentAlignment = Alignment.BottomCenter
                         ) {
-                            if (headerArt != 0) {
+                            if (headerBmp != null) {
                                 Image(
-                                    painterResource(headerArt), contentDescription = null,
+                                    bitmap = headerBmp, contentDescription = null,
                                     contentScale = ContentScale.Crop, alignment = Alignment.BottomCenter,
-                                    alpha = if (dark) 0.6f else 1f,
+                                    alpha = headerAlpha,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
