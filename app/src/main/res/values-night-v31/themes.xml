@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Use a dark system launch splash when Android is in night mode. -->
+    <!-- Keep the pre-Compose three-dot splash light in both system modes.
+         The following Compose splash uses the user's saved in-app theme. -->
     <style
         name="Theme.NagpurPulse"
         parent="Theme.SplashScreen">
 
-        <item name="windowSplashScreenBackground">@color/background_dark</item>
+        <item name="windowSplashScreenBackground">@color/background_light</item>
 
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_loading_icon</item>
 
-        <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Dark</item>
+        <item name="postSplashScreenTheme">@style/Theme.NagpurPulse.Light</item>
 
     </style>
 
