@@ -28,13 +28,14 @@ internal fun AuthEmailField(
     error: String?, onBlur: () -> Unit, onNext: () -> Unit,
     focusRequester: FocusRequester? = null,
     bare: Boolean = false,
-    fieldHeight: androidx.compose.ui.unit.Dp? = null
+    fieldHeight: androidx.compose.ui.unit.Dp? = null,
+    emailImeAction: ImeAction = ImeAction.Next
 ) {
     PremiumInputField(
         value, onValue, stringResource(R.string.signup_email_hint),
         leadingIcon = { Icon(Icons.Outlined.Email, null) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-        keyboardActions = KeyboardActions(onNext = { onNext() }),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = emailImeAction),
+        keyboardActions = KeyboardActions(onNext = { onNext() }, onDone = { }),
         autofillTypes = listOf(AutofillType.EmailAddress),
         onBlur = onBlur, errorMessage = error, focusRequester = focusRequester,
         enabled = enabled, clearEmail = true, bare = bare, fieldHeight = fieldHeight
