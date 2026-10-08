@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
@@ -110,8 +111,8 @@ internal fun LoginScaffold(
     val keyboard = WindowInsets.isImeVisible || keyboardPreview
     val statusDp = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
     val navDp = with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
-    val footerId = remember(context) {
-        listOf("new_footer", "img_footer_lake")
+    val footerId = remember(context, dark) {
+        (if (dark) listOf("new_footer_dark", "new_footer", "img_footer_lake") else listOf("new_footer", "img_footer_lake"))
             .map { context.resources.getIdentifier(it, "drawable", context.packageName) }
             .firstOrNull { it != 0 } ?: 0
     }
@@ -140,7 +141,8 @@ internal fun LoginScaffold(
                         contentScale = ContentScale.Crop, alignment = Alignment.BottomCenter)
                     Box(Modifier.fillMaxWidth().height(70.dp).background(
                         Brush.verticalGradient(listOf(colors.background, colors.background.copy(alpha = 0f)))))
-                    if (dark) Box(Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.55f)))
+                    // The dark footer art is already night-toned; only a light scrim keeps the form legible.
+                    if (dark) Box(Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.25f)))
                 }
             }
 
@@ -193,18 +195,18 @@ private fun LoginHeader(height: Dp, topBarHeight: Dp, showArt: Boolean, dark: Bo
                 1f, 1.035f, infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse), label = "breathe"
             )
             Image(
-                painterResource(R.drawable.new_header), null,
+                painterResource(if (dark) R.drawable.new_header_dark else R.drawable.new_header), null,
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).graphicsLayer {
                     val sc = if (reduce) 1f else breathe
                     scaleX = sc; scaleY = sc; transformOrigin = TransformOrigin(0.5f, 1f)
                 },
                 contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter
             )
-            if (dark) Box(Modifier.matchParentSize().background(colors.background.copy(alpha = 0.55f)))
             LoginWaveFill(Modifier.fillMaxWidth().height(70.dp).align(Alignment.BottomCenter), colors.background)
             Image(
                 painterResource(R.drawable.transparent_peach_wave_footer_overlay), null,
-                modifier = Modifier.fillMaxWidth().height(70.dp).align(Alignment.BottomCenter),
+                // The solid peach crest would glare on the dark page, so keep only a faint warm glow.
+                modifier = Modifier.fillMaxWidth().height(70.dp).align(Alignment.BottomCenter).alpha(if (dark) 0.14f else 1f),
                 contentScale = ContentScale.FillBounds
             )
             // Blend the peach corners of the wave into the page so no hard edge remains.
