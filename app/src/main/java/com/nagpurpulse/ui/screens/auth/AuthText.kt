@@ -39,12 +39,12 @@ internal fun AuthFitText(
 }
 
 @Composable
-internal fun AuthHeadline(first: String, accent: String, compact: Boolean, brightAccent: Boolean = false) {
+internal fun AuthHeadline(first: String, accent: String, compact: Boolean, brightAccent: Boolean = false, sizeSp: Int? = null, lineDp: Int? = null) {
     val largeText = LocalDensity.current.fontScale > 1.3f
-    val lineModifier = if (largeText) Modifier else Modifier.height(if (compact) 24.dp else 40.dp)
+    val lineModifier = if (largeText) Modifier else Modifier.height(if (compact) 24.dp else (lineDp ?: 40).dp)
     Column(Modifier.fillMaxWidth().padding(vertical = if (compact) 0.dp else 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        AuthFitText(first, lineModifier, maxSize = if (compact) 20 else 36, minSize = 14, weight = FontWeight.ExtraBold)
-        AuthFitText(accent, lineModifier, maxSize = if (compact) 20 else 36, minSize = 14, weight = FontWeight.ExtraBold, gradient = true, brightGradient = brightAccent)
+        AuthFitText(first, lineModifier, maxSize = if (compact) 20 else (sizeSp ?: 36), minSize = 14, weight = FontWeight.ExtraBold)
+        AuthFitText(accent, lineModifier, maxSize = if (compact) 20 else (sizeSp ?: 36), minSize = 14, weight = FontWeight.ExtraBold, gradient = true, brightGradient = brightAccent)
     }
 }
 
