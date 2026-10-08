@@ -106,14 +106,14 @@ internal fun SignupContent(
     val largeText = LocalDensity.current.fontScale > 1.3f
     val keyboard = WindowInsets.isImeVisible || keyboardPreview
     // Looked up by name: a missing file just hides that artwork instead of breaking the build.
-    val headerArt = rememberSignupDrawable("new_header")
-    val footerArt = rememberSignupDrawable("new_footer")
+    val headerArt = rememberSignupDrawable(if (dark) "new_header_dark" else "new_header")
+    val footerArt = rememberSignupDrawable(if (dark) "new_footer_dark" else "new_footer")
     // Decoded once, off the main thread, kept in memory (see AuthArtCache). Survives keyboard toggles.
     val headerBmp = rememberAuthArt(headerArt)
     val footerBmp = rememberAuthArt(footerArt, fadeTop = true)
-    val headerAlpha by animateFloatAsState(if (headerBmp != null) (if (dark) 0.6f else 1f) else 0f, tween(250), label = "header-art")
+    val headerAlpha by animateFloatAsState(if (headerBmp != null) 1f else 0f, tween(250), label = "header-art")
     val footerAlpha by animateFloatAsState(
-        if (footerBmp != null && !keyboard && !largeText) (if (dark) 0.5f else 1f) else 0f, tween(220), label = "footer-art"
+        if (footerBmp != null && !keyboard && !largeText) (if (dark) 0.85f else 1f) else 0f, tween(220), label = "footer-art"
     )
     WelcomeSystemBars()
 
