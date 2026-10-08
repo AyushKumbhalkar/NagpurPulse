@@ -32,7 +32,7 @@ internal fun AuthEmailField(
 ) {
     PremiumInputField(
         value, onValue, stringResource(R.string.signup_email_hint),
-        leadingIcon = { Icon(if (bare) Icons.Outlined.Email else Icons.Filled.Email, null) },
+        leadingIcon = { Icon(Icons.Outlined.Email, null) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
         keyboardActions = KeyboardActions(onNext = { onNext() }),
         autofillTypes = listOf(AutofillType.EmailAddress),
@@ -54,7 +54,7 @@ internal fun AuthPasswordField(
     var visible by remember { mutableStateOf(false) }
     PremiumInputField(
         value, onValue, label,
-        leadingIcon = { Icon(if (bare) Icons.Outlined.Lock else Icons.Filled.Lock, null) },
+        leadingIcon = { Icon(Icons.Outlined.Lock, null) },
         trailingIcon = {
             IconButton(onClick = { visible = !visible }, enabled = enabled, modifier = Modifier.size(48.dp)) {
                 Icon(if (visible) (if (bare) Icons.Outlined.VisibilityOff else Icons.Filled.VisibilityOff) else (if (bare) Icons.Outlined.Visibility else Icons.Filled.Visibility),
