@@ -190,14 +190,14 @@ fun ReasonDialog(title: String, onDismiss: () -> Unit, onConfirm: (String) -> Un
     var reason by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF171318),
-        titleContentColor = Color(0xFFF7F3F5),
-        textContentColor = Color(0xFFC7C0CA),
+        containerColor = SurfaceAlt,
+        titleContentColor = PrimaryText,
+        textContentColor = SecondaryText,
         shape = RoundedCornerShape(28.dp),
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(title, color = Color(0xFFF7F3F5), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Help keep NagpurPulse safe for everyone.", color = Color(0xFFC7C0CA), fontSize = 13.sp)
+                Text(title, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("Help keep NagpurPulse safe for everyone.", color = SecondaryText, fontSize = 13.sp)
             }
         },
         text = {
@@ -210,7 +210,7 @@ fun ReasonDialog(title: String, onDismiss: () -> Unit, onConfirm: (String) -> Un
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (reason == opt) OrangePrimary.copy(alpha = 0.10f) else Color.Transparent)
-                            .border(1.dp, if (reason == opt) OrangePrimary.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.07f), RoundedCornerShape(12.dp))
+                            .border(1.dp, if (reason == opt) OrangePrimary.copy(alpha = 0.65f) else Divider.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
                             .pressScale(onClick = { reason = opt })
                             .padding(horizontal = 10.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -220,7 +220,7 @@ fun ReasonDialog(title: String, onDismiss: () -> Unit, onConfirm: (String) -> Un
                             onClick = { reason = opt },
                             colors = RadioButtonDefaults.colors(selectedColor = OrangePrimary, unselectedColor = TertiaryText)
                         )
-                        Text(opt, color = if (reason == opt) Color.White else SecondaryText, fontSize = 14.sp)
+                        Text(opt, color = if (reason == opt) PrimaryText else SecondaryText, fontSize = 14.sp)
                     }
                     Spacer(Modifier.height(5.dp))
                 }
