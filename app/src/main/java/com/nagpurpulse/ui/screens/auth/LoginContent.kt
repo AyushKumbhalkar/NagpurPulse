@@ -1,6 +1,21 @@
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,6 +81,17 @@ internal fun LoginContent(
     }
 
     // Rare extra rows reserve space up-front so the layout never overflows.
+    // Card lights up while a field inside it has focus.
+    var cardFocused by remember { mutableStateOf(false) }
+    val borderColor by animateColorAsState(
+        when {
+            fieldMessage != null -> colors.error.copy(alpha = 0.6f)
+            cardFocused -> colors.accent
+            else -> colors.outline.copy(alpha = 0.25f)
+        }, label = "card-border")
+    val glow by animateFloatAsState(if (cardFocused) 0.32f else 0.15f, label = "card-glow")
+    val suggestion = remember(email) { suggestEmailCorrection(email) }
+
     val extra = (if (info != null) 28.dp else 0.dp) + (if (verificationRequired) 48.dp else 0.dp)
 
     LoginScaffold(
@@ -73,22 +99,29 @@ internal fun LoginContent(
         signupText = stringResource(R.string.auth_signup_footer),
         signupEnabled = !loading, onSignup = onSignup, extraHeight = extra
     ) { d, keyboard, flex ->
-        if (!keyboard) {
-            AuthEntrance(0) {
-                Column(Modifier.padding(top = 8.dp).semantics(mergeDescendants = true) { heading() },
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                    AuthHeadline(stringResource(R.string.login_headline_prefix).trim(),
-                        stringResource(R.string.auth_talking), compact = false, brightAccent = true,
-                        sizeSp = d.headlineSp, lineDp = d.headlineLine)
-                    if (d.showWelcome) Text(
-                        stringResource(R.string.login_welcome_back), color = colors.ink,
-                        fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
-                        textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp)
-                    )
+        AnimatedVisibility(
+            visible = !keyboard,
+            enter = if (reduceMotion) EnterTransition.None else fadeIn() + expandVertically(),
+            exit = if (reduceMotion) ExitTransition.None else fadeOut() + shrinkVertically()
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AuthEntrance(0) {
+                    Column(Modifier.padding(top = 8.dp).semantics(mergeDescendants = true) { heading() },
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        AuthHeadline(stringResource(R.string.login_headline_prefix).trim(),
+                            stringResource(R.string.auth_talking), compact = false, brightAccent = true,
+                            sizeSp = d.headlineSp, lineDp = d.headlineLine)
+                        if (d.showWelcome) Text(
+                            stringResource(R.string.login_welcome_back), color = colors.ink,
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
+                            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
+                Spacer(Modifier.height(d.gap))
             }
-            Spacer(Modifier.height(d.gap))
-        } else Spacer(Modifier.height(8.dp))
+        }
+        if (keyboard) Spacer(Modifier.height(8.dp))
         FlexSpacer(flex)
 
         // One joined card: email row, hairline, password row.
@@ -97,11 +130,11 @@ internal fun LoginContent(
             Column(
                 Modifier.fillMaxWidth()
                     .graphicsLayer { translationX = shake.value.dp.toPx() }
-                    .shadow(6.dp, cardShape, ambientColor = colors.accent.copy(alpha = 0.15f),
-                        spotColor = colors.accent.copy(alpha = 0.15f))
+                    .onFocusChanged { cardFocused = it.hasFocus }
+                    .shadow(if (cardFocused) 10.dp else 6.dp, cardShape, ambientColor = colors.accent.copy(alpha = glow),
+                        spotColor = colors.accent.copy(alpha = glow))
                     .clip(cardShape).background(colors.surface.copy(alpha = 0.92f))
-                    .border(1.dp, if (fieldMessage != null) colors.error.copy(alpha = 0.6f)
-                        else colors.outline.copy(alpha = 0.25f), cardShape)
+                    .border(if (cardFocused || fieldMessage != null) 1.5.dp else 1.dp, borderColor, cardShape)
             ) {
                 AuthEmailField(email, onEmail, !loading, emailError, onEmailBlur,
                     { passwordFocus.requestFocus() }, bare = true, fieldHeight = d.row)
@@ -115,6 +148,14 @@ internal fun LoginContent(
         // Error (left) and "Forgot password?" (right) share one row, so an error never shifts the layout.
         Row(Modifier.fillMaxWidth().heightIn(min = d.forgot), verticalAlignment = Alignment.CenterVertically) {
             if (fieldMessage != null) LoginError(fieldMessage, Modifier.weight(1f))
+            else if (suggestion != null && !loading) Text(
+                stringResource(R.string.email_suggest_prompt, suggestion), color = colors.accent,
+                fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2,
+                textDecoration = TextDecoration.Underline,
+                modifier = Modifier.weight(1f).padding(start = 4.dp)
+                    .clickable(role = Role.Button) { onEmail(suggestion) }
+                    .semantics { liveRegion = LiveRegionMode.Polite }
+            )
             else Spacer(Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             Text(
@@ -130,13 +171,13 @@ internal fun LoginContent(
 
         AuthEntrance(3) {
             AuthAction(stringResource(if (loading) R.string.login_signing_in else R.string.login_button),
-                loading, contentColor = Color.White, height = d.button, onClick = onLogin)
+                loading, contentColor = Color.White, height = d.button, elevated = true, onClick = onLogin)
         }
         Spacer(Modifier.height(d.gap))
         AuthOr()
         Spacer(Modifier.height(d.gap))
         AuthAction(stringResource(R.string.login_continue_google), loading, google = true,
-            height = d.google, onClick = onGoogle)
+            height = d.google, elevated = true, onClick = onGoogle)
         FlexSpacer(flex)
     }
 }
@@ -144,7 +185,8 @@ internal fun LoginContent(
 @Composable
 private fun LoginError(message: String, modifier: Modifier = Modifier) {
     val colors = authPalette()
-    Row(modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.padding(start = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Filled.ErrorOutline, null, Modifier.size(16.dp), tint = colors.error)
         Spacer(Modifier.width(8.dp))
         Text(message, color = colors.error, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 3,
