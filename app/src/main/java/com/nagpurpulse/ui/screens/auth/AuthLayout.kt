@@ -137,7 +137,7 @@ private tailrec fun Context.authActivity(): Activity? = when (this) {
 }
 
 @Composable
-private fun AuthSystemBars() {
+internal fun AuthSystemBars() {
     val view = LocalView.current
     val dark = LocalIsDarkTheme.current
     val preview = LocalInspectionMode.current
