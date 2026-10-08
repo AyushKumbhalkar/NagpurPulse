@@ -2,6 +2,8 @@ package com.nagpurpulse.ui.screens.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,7 +23,7 @@ import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.authPalette
 
 @Composable
-internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, height: androidx.compose.ui.unit.Dp = 56.dp, onClick: () -> Unit) {
+internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, height: androidx.compose.ui.unit.Dp = 56.dp, elevated: Boolean = false, onClick: () -> Unit) {
     val colors = authPalette()
     val shape = RoundedCornerShape(24.dp)
     val ink = contentColor ?: if (google) colors.ink else AuthTokens.OnGradient
@@ -33,7 +35,13 @@ internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean
             disabledContainerColor = Color.Transparent, disabledContentColor = ink
         ),
         modifier = Modifier.fillMaxWidth().height(height).alpha(if (loading || !enabled) 0.65f else 1f)
+            .then(if (elevated && !loading && enabled) {
+                // Orange glow under the primary button, soft lift under the Google button.
+                if (google) Modifier.shadow(3.dp, shape, ambientColor = colors.ink.copy(alpha = 0.12f), spotColor = colors.ink.copy(alpha = 0.12f))
+                else Modifier.shadow(10.dp, shape, ambientColor = AuthTokens.Vermilion.copy(alpha = 0.35f), spotColor = AuthTokens.Saffron.copy(alpha = 0.55f))
+            } else Modifier)
             .clip(shape).then(if (google) Modifier.background(colors.surface) else Modifier.background(AuthTokens.Gradient))
+            .then(if (google && elevated) Modifier.border(1.dp, colors.outline.copy(alpha = 0.22f), shape) else Modifier)
     ) {
         if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = ink, strokeWidth = 2.dp)
         else if (google) Image(painterResource(R.drawable.ic_google), null, Modifier.size(20.dp))
