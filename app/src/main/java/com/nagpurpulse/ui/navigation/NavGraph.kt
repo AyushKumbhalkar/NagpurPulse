@@ -732,25 +732,14 @@ fun NagpurPulseNavGraph(
             )
         }
 
-        // Match the smooth Settings transition, without the default bouncy spring.
+        // The inbox builds its list while opening; use a lightweight fade
+        // rather than animating the full screen's position at the same time.
         composable(
             route = Screen.Notifications.route,
-            enterTransition = {
-                slideInHorizontally(initialOffsetX = { it / 8 }, animationSpec = tween(240)) +
-                    fadeIn(animationSpec = tween(220))
-            },
-            exitTransition = {
-                slideOutHorizontally(targetOffsetX = { -it / 8 }, animationSpec = tween(220)) +
-                    fadeOut(animationSpec = tween(180))
-            },
-            popEnterTransition = {
-                slideInHorizontally(initialOffsetX = { -it / 8 }, animationSpec = tween(220)) +
-                    fadeIn(animationSpec = tween(180))
-            },
-            popExitTransition = {
-                slideOutHorizontally(targetOffsetX = { it / 8 }, animationSpec = tween(220)) +
-                    fadeOut(animationSpec = tween(180))
-            }
+            enterTransition = { fadeIn(animationSpec = tween(160)) },
+            exitTransition = { fadeOut(animationSpec = tween(120)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(160)) },
+            popExitTransition = { fadeOut(animationSpec = tween(120)) }
         ) {
             NotificationsScreen(
                 navController = navController,
