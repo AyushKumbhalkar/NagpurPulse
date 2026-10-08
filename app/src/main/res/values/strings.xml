@@ -140,5 +140,16 @@
     <string name="login_reset_body">Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.</string>
     <string name="login_cancel">Cancel</string>
     <string name="login_reset_link">Send reset link</string>
+    <string name="login_reset_close">Close</string>
+    <string name="login_reset_sending">Sending…</string>
+    <string name="login_reset_secure_note">Sent only to the email linked to your account</string>
+    <string name="login_reset_success_title">Check your inbox</string>
+    <string name="login_reset_success_body">We’ve sent a secure reset link to</string>
+    <string name="login_reset_spam_tip">Can’t see it? Check your spam or promotions folder.</string>
+    <string name="login_reset_open_mail">Open email app</string>
+    <string name="login_reset_no_mail_app">No email app found on this device.</string>
+    <string name="login_reset_resend">Resend link</string>
+    <string name="login_reset_resend_in">Resend in %1$s</string>
+    <string name="login_reset_change_email">Use a different email</string>
 
 </resources>
