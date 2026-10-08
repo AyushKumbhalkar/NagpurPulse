@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.nagpurpulse.ui.locale.AppLocale
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
@@ -52,7 +54,8 @@ fun LanguagePickerChip(
     contentColor: Color,
     backgroundColor: Color,
     borderColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
@@ -71,9 +74,18 @@ fun LanguagePickerChip(
                 .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Filled.Language, contentDescription = description, tint = contentColor, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(currentName, color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (compact) {
+                Text("A", color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.semantics { contentDescription = description })
+                Spacer(Modifier.width(8.dp))
+                Text("अ", color = contentColor.copy(alpha = 0.55f), fontSize = 13.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(currentTag.take(2).uppercase(), color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            } else {
+                Icon(Icons.Filled.Language, contentDescription = description, tint = contentColor, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(currentName, color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
             Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
