@@ -523,7 +523,7 @@ fun PremiumInputField(
             value = value, onValueChange = onValueChange, enabled = enabled,
             singleLine = true, visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
-            textStyle = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = 15.sp),
+            textStyle = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = if (bare) 14.sp else 15.sp),
             cursorBrush = SolidColor(colors.accent),
             modifier = Modifier.weight(1f).height(56.dp)
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
