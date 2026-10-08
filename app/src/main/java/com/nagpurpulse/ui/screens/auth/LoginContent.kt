@@ -35,7 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -65,7 +65,6 @@ internal fun LoginContent(
 ) {
     val colors = authPalette()
     val focus = LocalFocusManager.current
-    val passwordFocus = remember { FocusRequester() }
     val haptic = LocalHapticFeedback.current
     val reduceMotion = rememberReduceMotion()
     val fieldMessage = emailError ?: passwordError ?: error
@@ -135,11 +134,11 @@ internal fun LoginContent(
                     .border(if (cardFocused || fieldMessage != null) 1.5.dp else 1.dp, borderColor, cardShape)
             ) {
                 AuthEmailField(email, onEmail, !loading, emailError, onEmailBlur,
-                    { passwordFocus.requestFocus() }, bare = true, fieldHeight = d.row)
+                    {}, bare = true, fieldHeight = d.row, emailImeAction = ImeAction.Done)
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = colors.outline.copy(alpha = 0.25f))
                 AuthPasswordField(password, onPassword, !loading, stringResource(R.string.login_password_hint),
                     passwordError, onPasswordBlur, { focus.clearFocus(); onLogin() },
-                    focusRequester = passwordFocus, bare = true, fieldHeight = d.row)
+                    bare = true, fieldHeight = d.row)
             }
         }
 
