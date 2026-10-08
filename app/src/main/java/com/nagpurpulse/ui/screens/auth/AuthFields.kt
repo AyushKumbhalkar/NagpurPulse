@@ -6,6 +6,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
@@ -27,7 +31,7 @@ internal fun AuthEmailField(
 ) {
     PremiumInputField(
         value, onValue, stringResource(R.string.signup_email_hint),
-        leadingIcon = { Icon(Icons.Filled.Email, null) },
+        leadingIcon = { Icon(if (bare) Icons.Outlined.Email else Icons.Filled.Email, null) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
         keyboardActions = KeyboardActions(onNext = { onNext() }),
         autofillTypes = listOf(AutofillType.EmailAddress),
@@ -48,10 +52,10 @@ internal fun AuthPasswordField(
     var visible by remember { mutableStateOf(false) }
     PremiumInputField(
         value, onValue, label,
-        leadingIcon = { Icon(Icons.Filled.Lock, null) },
+        leadingIcon = { Icon(if (bare) Icons.Outlined.Lock else Icons.Filled.Lock, null) },
         trailingIcon = {
             IconButton(onClick = { visible = !visible }, enabled = enabled, modifier = Modifier.size(48.dp)) {
-                Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                Icon(if (visible) (if (bare) Icons.Outlined.VisibilityOff else Icons.Filled.VisibilityOff) else (if (bare) Icons.Outlined.Visibility else Icons.Filled.Visibility),
                     stringResource(if (visible) R.string.cd_hide_password else R.string.cd_show_password),
                     tint = authPalette().ink)
             }
