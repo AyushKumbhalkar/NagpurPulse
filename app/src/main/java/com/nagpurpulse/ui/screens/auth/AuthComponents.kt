@@ -485,7 +485,8 @@ fun PremiumInputField(
     errorMessage: String? = null,
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
-    clearEmail: Boolean = false
+    clearEmail: Boolean = false,
+    bare: Boolean = false
 ) {
     var focused by remember { mutableStateOf(false) }
 
@@ -506,10 +507,11 @@ fun PremiumInputField(
     val shape = RoundedCornerShape(20.dp)
     val clearLabel = stringResource(com.nagpurpulse.R.string.auth_clear_email)
     Row(
-        Modifier.fillMaxWidth().height(56.dp).clip(shape)
-            .background(containerColor ?: colors.sand)
-            .border(if (focused || errorMessage != null) 2.dp else 1.dp,
-                if (errorMessage != null) colors.error else if (focused) colors.accent else colors.outline.copy(alpha = 0.5f), shape)
+        Modifier.fillMaxWidth().height(56.dp)
+            .then(if (bare) Modifier else Modifier.clip(shape)
+                .background(containerColor ?: colors.sand)
+                .border(if (focused || errorMessage != null) 2.dp else 1.dp,
+                    if (errorMessage != null) colors.error else if (focused) colors.accent else colors.outline.copy(alpha = 0.5f), shape))
             .padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
