@@ -87,6 +87,7 @@ fun LegalConsentText(
             color = textColor,
             fontSize = 12.sp,
             lineHeight = 14.sp,
+            fontFamily = LocalAuthFont.current,
             textAlign = TextAlign.Center
         ),
         modifier = modifier
