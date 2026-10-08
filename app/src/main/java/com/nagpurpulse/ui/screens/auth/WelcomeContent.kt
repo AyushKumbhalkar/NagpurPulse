@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -99,7 +100,7 @@ import com.nagpurpulse.ui.theme.authPalette
 // White text on the old #FF941F start colour fails contrast (2.2:1). These stops keep the same
 // saffron-to-vermilion look with 3.1:1+ against white bold 18sp text (WCAG AA large text).
 private val WelcomeButtonBrush = Brush.horizontalGradient(listOf(Color(0xFFF26A00), Color(0xFFE8321A)))
-private val WelcomeAccentBrushLight = Brush.horizontalGradient(listOf(Color(0xFFEE6A00), Color(0xFFE5381A)))
+internal val WelcomeAccentBrushLight = Brush.horizontalGradient(listOf(Color(0xFFEE6A00), Color(0xFFE5381A)))
 
 private enum class WelcomeTier { Compact, Medium, Expanded }
 
@@ -109,7 +110,7 @@ private enum class WelcomeTier { Compact, Medium, Expanded }
  * Expected files: nunito_regular, nunito_semibold, nunito_bold, nunito_extrabold (.ttf).
  */
 @Composable
-private fun rememberWelcomeFont(): FontFamily {
+internal fun rememberWelcomeFont(): FontFamily {
     val context = LocalContext.current
     return remember(context) {
         val fonts = listOf(
@@ -210,7 +211,7 @@ internal fun WelcomeContent(
 }
 
 @Composable
-private fun WelcomeHeader(font: FontFamily) {
+internal fun WelcomeHeader(font: FontFamily) {
     val colors = authPalette()
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp),
@@ -233,7 +234,7 @@ private fun WelcomeHeader(font: FontFamily) {
  * analytics event as LanguagePickerChip, which stays untouched for Login / Sign up.
  */
 @Composable
-private fun WelcomeLanguageChip(ink: Color, background: Color, font: FontFamily) {
+internal fun WelcomeLanguageChip(ink: Color, background: Color, font: FontFamily) {
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     val currentTag = AppLocale.currentTag(context)
@@ -391,7 +392,7 @@ private fun WelcomeTopicChips(font: FontFamily, modifier: Modifier = Modifier) {
 
 /** One line, shrinks to [minSize]; only if that still does not fit does it wrap to two lines. */
 @Composable
-private fun WelcomeFitText(
+internal fun WelcomeFitText(
     text: String, modifier: Modifier, color: Color, maxSize: Int, minSize: Int,
     weight: FontWeight, font: FontFamily
 ) {
@@ -410,7 +411,7 @@ private fun WelcomeFitText(
 }
 
 @Composable
-private fun WelcomeHeadline(
+internal fun WelcomeHeadline(
     first: String, accent: String, baseSp: Int, brush: Brush, inkColor: Color,
     font: FontFamily, limitLines: Boolean
 ) {
@@ -430,30 +431,39 @@ private fun WelcomeHeadline(
 }
 
 @Composable
-private fun WelcomeButton(text: String, height: Dp, font: FontFamily, onClick: () -> Unit) {
+internal fun WelcomeButton(
+    text: String, height: Dp, font: FontFamily, onClick: () -> Unit, loading: Boolean = false
+) {
     val shape = RoundedCornerShape(28.dp)
     Button(
-        onClick = onClick, shape = shape,
+        onClick = onClick, enabled = !loading, shape = shape,
         contentPadding = PaddingValues(horizontal = 16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent, contentColor = Color.White,
+            disabledContainerColor = Color.Transparent, disabledContentColor = Color.White
+        ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 0.dp, pressedElevation = 0.dp, focusedElevation = 0.dp,
             hoveredElevation = 0.dp, disabledElevation = 0.dp
         ),
-        modifier = Modifier.fillMaxWidth().height(height).clip(shape).background(WelcomeButtonBrush)
+        modifier = Modifier.fillMaxWidth().height(height).alpha(if (loading) 0.65f else 1f)
+            .clip(shape).background(WelcomeButtonBrush)
     ) {
         WelcomeFitText(
             text, Modifier.weight(1f, fill = false), Color.White,
             maxSize = 18, minSize = 12, weight = FontWeight.Bold, font = font
         )
         Spacer(Modifier.width(8.dp))
-        Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp))
+        if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+        else Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp))
     }
 }
 
 /** "Already have an account? Log in": everything after the first '?' is bold ink (any language). */
 @Composable
-private fun WelcomeLoginLink(text: String, muted: Color, ink: Color, font: FontFamily, onClick: () -> Unit) {
+internal fun WelcomeLoginLink(
+    text: String, muted: Color, ink: Color, font: FontFamily, onClick: () -> Unit, enabled: Boolean = true
+) {
     val split = text.indexOf('?').let { if (it in 0 until text.lastIndex) it + 1 else -1 }
     val styled = buildAnnotatedString {
         if (split < 0) {
@@ -464,7 +474,7 @@ private fun WelcomeLoginLink(text: String, muted: Color, ink: Color, font: FontF
         }
     }
     Box(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button, onClick = onClick),
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(styled, fontSize = 14.sp, fontFamily = font, textAlign = TextAlign.Center, maxLines = 2)
@@ -479,7 +489,7 @@ private tailrec fun Context.welcomeActivity(): Activity? = when (this) {
 
 /** Transparent status bar with dark icons on the light theme. */
 @Composable
-private fun WelcomeSystemBars() {
+internal fun WelcomeSystemBars() {
     val view = LocalView.current
     val dark = LocalIsDarkTheme.current
     val preview = LocalInspectionMode.current
