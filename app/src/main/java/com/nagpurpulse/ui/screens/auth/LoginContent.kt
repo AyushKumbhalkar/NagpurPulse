@@ -51,17 +51,17 @@ internal fun LoginContent(
     ) { keyboard, compact ->
         // Headline overlaps the wave, exactly like the mockup. Hidden while typing/erroring.
         if (!keyboard && !hasProblem) {
-            Column(Modifier.offset(y = (-12).dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 AuthHeadline(stringResource(R.string.login_headline_prefix).trim(),
-                    stringResource(R.string.auth_talking), compact)
-                Spacer(Modifier.height(4.dp))
+                    stringResource(R.string.auth_talking), compact, brightAccent = true)
                 Text(
                     stringResource(R.string.login_welcome_back), color = colors.ink,
                     fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.offset(y = (-4).dp)
                 )
             }
-            Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
+            Spacer(Modifier.height(if (compact) 6.dp else 12.dp))
         } else Spacer(Modifier.height(8.dp))
 
         // One joined card: email row, hairline, password row.
@@ -100,7 +100,7 @@ internal fun LoginContent(
 
         AuthEntrance(3) {
             AuthAction(stringResource(if (loading) R.string.login_signing_in else R.string.login_button),
-                loading, onClick = onLogin)
+                loading, contentColor = androidx.compose.ui.graphics.Color.White, onClick = onLogin)
         }
         Spacer(Modifier.height(12.dp))
         AuthOr()
