@@ -896,9 +896,16 @@ fun NagpurPulseNavGraph(
         // admin_roles check confirms the current authenticated user is an admin.
         composable(
             route = Screen.AdminPanel.route,
-            enterTransition = { sheetEnter(this) },
-            exitTransition = { sheetExit(this) },
-            popExitTransition = { sheetExit(this) }
+            // Subtle, non-spring entrance: no overshoot or bounce.
+            enterTransition = {
+                slideInVertically(
+                    initialOffsetY = { it / 12 },
+                    animationSpec = tween(durationMillis = 220)
+                ) + fadeIn(animationSpec = tween(220))
+            },
+            exitTransition = { fadeOut(animationSpec = tween(160)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(180)) },
+            popExitTransition = { fadeOut(animationSpec = tween(160)) }
         ) {
             var adminAccess by remember { mutableStateOf<Boolean?>(null) }
 
