@@ -37,8 +37,8 @@ import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import com.nagpurpulse.ui.theme.authPalette
 
-private val FooterArtHeight = 150.dp
-private val SignupPillHeight = 48.dp
+private val FooterArtHeight = 170.dp
+private val SignupPillHeight = 44.dp
 
 /**
  * Login-only layout (mockup panels 3 + 4):
@@ -73,7 +73,7 @@ internal fun LoginScaffold(
             val compact = maxHeight < 640.dp
             val headerHeight: Dp = when {
                 keyboard -> 0.dp
-                else -> (maxHeight * 0.30f).coerceIn(150.dp, 260.dp)
+                else -> (maxHeight * 0.31f).coerceIn(150.dp, 280.dp)
             }
 
             // ── Footer art (behind content, anchored to bottom) ───────────────
@@ -85,7 +85,7 @@ internal fun LoginScaffold(
                         contentScale = ContentScale.Crop, alignment = Alignment.BottomCenter
                     )
                     // Fade the top edge of the art into the page background.
-                    Box(Modifier.fillMaxWidth().height(70.dp).background(
+                    Box(Modifier.fillMaxWidth().height(90.dp).background(
                         Brush.verticalGradient(listOf(colors.background, colors.background.copy(alpha = 0f)))
                     ))
                     if (dark) Box(Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.55f)))
@@ -110,17 +110,14 @@ internal fun LoginScaffold(
                             contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter
                         )
                         if (dark) Box(Modifier.matchParentSize().background(colors.background.copy(alpha = 0.55f)))
+                        LoginWaveFill(Modifier.fillMaxWidth().height(70.dp).align(Alignment.BottomCenter), colors.background)
                         Image(
                             painterResource(R.drawable.transparent_peach_wave_footer_overlay), null,
                             modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(70.dp),
                             contentScale = ContentScale.FillBounds
                         )
-                        // Soft cream fade so the header never ends on a hard horizontal edge.
-                        Box(Modifier.fillMaxWidth().height(56.dp).align(Alignment.BottomCenter).background(
-                            Brush.verticalGradient(listOf(colors.background.copy(alpha = 0f), colors.background))
-                        ))
                     }
-                    LoginTopBar(Modifier.statusBarsPadding().padding(horizontal = 16.dp))
+                    LoginTopBar(Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp))
                 }
 
                 if (!online) {
@@ -167,7 +164,7 @@ private fun SignupPill(text: String, enabled: Boolean, onClick: () -> Unit, modi
     }
     Box(
         modifier.fillMaxWidth().heightIn(min = SignupPillHeight).clip(shape)
-            .background(colors.surface.copy(alpha = 0.94f))
+            .background(colors.surface.copy(alpha = 0.97f))
             .then(if (enabled) Modifier.pressScale { onClick() } else Modifier),
         contentAlignment = Alignment.Center
     ) {
@@ -176,33 +173,42 @@ private fun SignupPill(text: String, enabled: Boolean, onClick: () -> Unit, modi
     }
 }
 
-/** Pulse-wave mark + "Nagpur" (ink) "Pulse" (orange) wordmark, drawn natively. */
-@Composable
-private fun LoginLogo() {
-    val colors = authPalette()
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Canvas(Modifier.size(width = 34.dp, height = 24.dp)) {
-            val w = size.width; val h = size.height; val mid = h / 2f
-            val path = Path().apply {
-                moveTo(0f, mid)
-                lineTo(w * 0.22f, mid); lineTo(w * 0.34f, h * 0.05f); lineTo(w * 0.52f, h * 0.95f)
-                lineTo(w * 0.66f, mid * 0.75f); lineTo(w * 0.74f, mid); lineTo(w, mid)
-            }
-            drawPath(path, colors.ink, style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
-        Spacer(Modifier.width(6.dp))
-        Text(buildAnnotatedString {
-            withStyle(SpanStyle(color = colors.ink)) { append("Nagpur") }
-            withStyle(SpanStyle(color = AuthTokens.Saffron)) { append("Pulse") }
-        }, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-    }
-}
-
+/** Same logo asset + sizing as the onboarding Welcome header; compact language chip on the right. */
 @Composable
 private fun LoginTopBar(modifier: Modifier = Modifier) {
     val colors = authPalette()
-    Row(modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f)) { LoginLogo() }
-        LanguagePickerChip(colors.ink, colors.surface.copy(alpha = 0.75f), colors.surface.copy(alpha = 0.75f), compact = true)
+    Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painterResource(if (LocalIsDarkTheme.current) R.drawable.nagpurpulse_logo_dark else R.drawable.nagpurpulse_logo),
+            contentDescription = stringResource(R.string.app_name),
+            contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
+            modifier = Modifier.weight(1f).height(36.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        LanguagePickerChip(colors.ink, colors.surface.copy(alpha = 0.8f), colors.surface.copy(alpha = 0.8f), compact = true)
+    }
+}
+
+/**
+ * Cream fill that sits under the peach/orange wave PNG. The PNG only paints the two corners
+ * (its centre is transparent), so without this the illustration just fades out.
+ * Points = the PNG's own top edge, as a fraction of its height, sampled every 10% of width.
+ */
+@Composable
+private fun LoginWaveFill(modifier: Modifier, color: Color) {
+    val edge = floatArrayOf(0.31f, 0.50f, 0.66f, 0.77f, 0.87f, 0.91f, 0.89f, 0.79f, 0.64f, 0.38f, 0.23f)
+    Canvas(modifier) {
+        val step = size.width / (edge.size - 1)
+        val path = Path().apply {
+            moveTo(0f, edge[0] * size.height)
+            for (i in 1 until edge.size) {
+                val x0 = (i - 1) * step; val y0 = edge[i - 1] * size.height
+                val x1 = i * step; val y1 = edge[i] * size.height
+                val mx = (x0 + x1) / 2f
+                cubicTo(mx, y0, mx, y1, x1, y1)
+            }
+            lineTo(size.width, size.height); lineTo(0f, size.height); close()
+        }
+        drawPath(path, color)
     }
 }
