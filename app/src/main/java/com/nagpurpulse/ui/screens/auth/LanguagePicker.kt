@@ -63,23 +63,30 @@ fun LanguagePickerChip(
     val currentName = AppLocale.options.first { it.tag == currentTag }.nativeName
     val description = stringResource(R.string.language_picker_cd)
 
-    Box(modifier = modifier) {
+    Box(
+        modifier = if (compact) modifier.heightIn(min = 48.dp)
+            .clickable(role = Role.Button, onClickLabel = description) { expanded = true } else modifier,
+        contentAlignment = Alignment.Center
+    ) {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
                 .background(backgroundColor)
                 .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(50))
-                .heightIn(min = 48.dp)
-                .clickable(role = Role.Button, onClickLabel = description) { expanded = true }
-                .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                .heightIn(min = if (compact) 36.dp else 48.dp)
+                .then(if (compact) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = description) { expanded = true })
+                .padding(
+                    start = if (compact) 14.dp else 10.dp, end = if (compact) 10.dp else 6.dp,
+                    top = if (compact) 0.dp else 6.dp, bottom = if (compact) 0.dp else 6.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (compact) {
                 Text("A", color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     modifier = Modifier.semantics { contentDescription = description })
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
                 Text("अ", color = contentColor.copy(alpha = 0.55f), fontSize = 13.sp)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(currentTag.take(2).uppercase(), color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             } else {
                 Icon(Icons.Filled.Language, contentDescription = description, tint = contentColor, modifier = Modifier.size(18.dp))
