@@ -90,7 +90,6 @@ fun LoginScreen(
     var passwordTouched by remember { mutableStateOf(false) }
     var googleBusy by remember { mutableStateOf(false) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
-    var resetEmail by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
 
@@ -139,7 +138,7 @@ fun LoginScreen(
         onLogin = { submitLogin() },
         onForgot = {
             AuthAnalytics.log(context, "login_forgot_password_tap")
-            resetEmail = email; showForgotPasswordDialog = true
+            showForgotPasswordDialog = true
         },
         onResend = {
             AuthAnalytics.log(context, "login_resend_verification_tap")
@@ -163,138 +162,13 @@ fun LoginScreen(
     )
 
     if (showForgotPasswordDialog) {
-        androidx.compose.ui.window.Dialog(
-            onDismissRequest = { if (!uiState.isLoading) showForgotPasswordDialog = false },
-            properties = androidx.compose.ui.window.DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = !uiState.isLoading,
-                dismissOnClickOutside = !uiState.isLoading
-            )
-        ) {
-            androidx.compose.foundation.layout.BoxWithConstraints(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 22.dp)
-                        .heightIn(max = maxHeight * 0.88f)
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(colors.surface)
-                        .border(1.dp, colors.outline, RoundedCornerShape(32.dp))
-                        .padding(horizontal = 18.dp, vertical = 18.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier.width(34.dp).height(4.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(colors.outline.copy(alpha = 0.85f))
-                    )
-                    Spacer(Modifier.height(28.dp))
-                    Box(
-                        modifier = Modifier.size(92.dp).clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(colors.sand, colors.surface)
-                                )
-                            )
-                            .border(2.dp, colors.accent, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.Email,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(44.dp)
-                        )
-                    }
-                    Spacer(Modifier.height(24.dp))
-                    Text(
-                        stringResource(R.string.login_reset_title),
-                        color = ink,
-                        fontSize = 25.sp,
-                        lineHeight = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        stringResource(R.string.login_reset_body),
-                        color = muted,
-                        fontSize = 15.sp,
-                        lineHeight = 22.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    OutlinedTextField(
-                        value = resetEmail,
-                        onValueChange = { resetEmail = it },
-                        placeholder = { Text(stringResource(R.string.login_email_hint), color = muted) },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Email, contentDescription = null, tint = muted)
-                        },
-                        singleLine = true,
-                        enabled = !uiState.isLoading,
-                        shape = RoundedCornerShape(20.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = ink,
-                            unfocusedTextColor = ink,
-                            focusedBorderColor = OrangePrimary,
-                            unfocusedBorderColor = colors.outline,
-                            cursorColor = OrangePrimary,
-                            focusedContainerColor = colors.sand,
-                            unfocusedContainerColor = colors.sand
-                        )
-                    )
-                    Spacer(Modifier.height(26.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier.weight(0.8f).height(54.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(colors.sand)
-                                .border(1.dp, colors.outline, RoundedCornerShape(50))
-                                .pressScale { if (!uiState.isLoading) showForgotPasswordDialog = false },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(stringResource(R.string.login_cancel), color = ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                        Box(
-                            modifier = Modifier.weight(1.2f).height(54.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(
-                                    com.nagpurpulse.ui.theme.AuthTokens.Gradient
-                                )
-                                .pressScale {
-                                    if (android.util.Patterns.EMAIL_ADDRESS.matcher(resetEmail.trim()).matches() && !uiState.isLoading) {
-                                        viewModel.sendPasswordReset(resetEmail.trim())
-                                        showForgotPasswordDialog = false
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (uiState.isLoading) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp), color = com.nagpurpulse.ui.theme.AuthTokens.OnGradient, strokeWidth = 2.dp
-                                )
-                            } else {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(stringResource(R.string.login_reset_link), color = com.nagpurpulse.ui.theme.AuthTokens.OnGradient, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Text("→", color = com.nagpurpulse.ui.theme.AuthTokens.OnGradient, fontSize = 21.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        ForgotPasswordDialog(
+            initialEmail = email,
+            isLoading = uiState.isLoading,
+            sent = uiState.forgotPasswordSent,
+            error = uiState.error,
+            onSend = { viewModel.sendPasswordReset(it) },
+            onDismiss = { showForgotPasswordDialog = false }
+        )
     }
 }
