@@ -160,7 +160,6 @@ dependencies {
     ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // Pager for image gallery viewer
-    implementation("androidx.compose.foundation:foundation:1.6.7")
 
     // Debug
     debugImplementation(libs.androidx.ui.tooling)
