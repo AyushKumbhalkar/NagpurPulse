@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.nagpurpulse.R
 import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.authPalette
+
+/** Font used by the shared auth widgets. Screens that want Nunito provide it; default keeps old look. */
+internal val LocalAuthFont = staticCompositionLocalOf<FontFamily> { FontFamily.Default }
 
 /** Width adaptation, not a font-scale cap. Large-text overflow can use the scroll fallback. */
 @Composable
@@ -33,7 +37,7 @@ internal fun AuthFitText(
 ) {
     var size by remember(text, maxSize) { mutableStateOf(maxSize) }
     Text(text, modifier, color = if (gradient) Color.Unspecified else color, fontSize = size.sp, lineHeight = (size + 4).sp,
-        fontWeight = weight, textAlign = TextAlign.Center, maxLines = maxLines,
+        fontWeight = weight, fontFamily = LocalAuthFont.current, textAlign = TextAlign.Center, maxLines = maxLines,
         style = if (gradient) TextStyle(brush = if (brightGradient || LocalIsDarkTheme.current) AuthTokens.Gradient else AuthTokens.HeadlineGradient) else TextStyle.Default,
         onTextLayout = { if (it.hasVisualOverflow && size > minSize) size-- })
 }
