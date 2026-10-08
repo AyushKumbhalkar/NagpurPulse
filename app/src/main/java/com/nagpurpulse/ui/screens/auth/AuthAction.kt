@@ -21,10 +21,10 @@ import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.authPalette
 
 @Composable
-internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, onClick: () -> Unit) {
+internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, onClick: () -> Unit) {
     val colors = authPalette()
     val shape = RoundedCornerShape(24.dp)
-    val ink = if (google) colors.ink else AuthTokens.OnGradient
+    val ink = contentColor ?: if (google) colors.ink else AuthTokens.OnGradient
     Button(
         onClick = onClick, enabled = enabled && !loading, shape = shape,
         contentPadding = PaddingValues(horizontal = 16.dp),
