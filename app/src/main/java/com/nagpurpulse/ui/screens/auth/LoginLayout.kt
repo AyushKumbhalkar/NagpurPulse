@@ -9,13 +9,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -110,7 +106,6 @@ internal fun LoginScaffold(
     val context = LocalContext.current
     val density = LocalDensity.current
     AuthSystemBars()
-    val focus = LocalFocusManager.current
     val reduceMotion = rememberReduceMotion()
     val keyboard = WindowInsets.isImeVisible || keyboardPreview
     val statusDp = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
@@ -138,12 +133,6 @@ internal fun LoginScaffold(
 
             val animatedHeader by animateDpAsState(headerHeight, tween(if (reduceMotion) 0 else 220), label = "login-header")
 
-            // Tap on empty space dismisses the keyboard. This layer sits BEHIND the content (a sibling,
-            // not a parent), so it never competes with the text fields for focus.
-            Box(Modifier.fillMaxSize()
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { focus.clearFocus() }
-                .clearAndSetSemantics { })
-
             // Footer lake art: behind the Google button / pill, only when there is room.
             if (fit && footerId != 0 && maxHeight >= 640.dp) {
                 Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(dims.footerArt + navDp)) {
@@ -155,10 +144,12 @@ internal fun LoginScaffold(
                 }
             }
 
+            // Keep the scroll modifier (and its focus nodes) attached during IME changes.
+            // Previously the scroll node was inserted as the keyboard appeared, which
+            // could invalidate the active text field's focus ancestry mid-gesture.
             Column(
                 Modifier.fillMaxSize().navigationBarsPadding().imePadding()
-                    .then(if (fit) Modifier else Modifier.verticalScroll(rememberScrollState()))
-
+                    .verticalScroll(rememberScrollState())
             ) {
                 LoginHeader(animatedHeader, topBarHeight, showArt = animatedHeader > topBarHeight + 6.dp, dark = dark)
 
@@ -166,8 +157,15 @@ internal fun LoginScaffold(
                     AuthNotice(stringResource(R.string.auth_offline), isError = false)
                 }
 
+                // A scrollable parent measures children with unbounded height. In the
+                // normal no-scroll case, give the form its exact remaining height so
+                // FlexSpacer weights still distribute free space without a weighted
+                // child on the scroll container itself.
+                val formHeight = (maxHeight - navDp - animatedHeader - pillBlock - offlineExtra)
+                    .coerceAtLeast(0.dp)
                 Column(
-                    Modifier.fillMaxWidth().then(if (fit) Modifier.weight(1f) else Modifier)
+                    Modifier.fillMaxWidth()
+                        .then(if (fit) Modifier.height(formHeight) else Modifier)
                         .padding(horizontal = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) { content(dims, keyboard, fit) }
