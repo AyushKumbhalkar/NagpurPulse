@@ -666,74 +666,40 @@ fun HomeScreen(
 
     Scaffold(
         modifier = Modifier.pointerInput(uiState.sortBy) {
+            val tabs = listOf("top", "new", "hot")
             var horizontalDistance = 0f
-            Log.d("HomeSortTrace", "GESTURE detector CREATED keySort=${uiState.sortBy}")
+            var sortAtDragStart = uiState.sortBy.trim().lowercase()
+            fun targetForSwipe(distance: Float): String? {
+                val index = tabs.indexOf(sortAtDragStart)
+                if (index < 0 || distance == 0f) return null
+                // Finger right advances Top -> New -> Hot; finger left reverses.
+                val nextIndex = (index + if (distance > 0f) 1 else -1)
+                    .coerceIn(0, tabs.lastIndex)
+                return tabs[nextIndex].takeIf { it != sortAtDragStart }
+            }
             detectHorizontalDragGestures(
-                onDragStart = { offset ->
+                onDragStart = {
                     horizontalDistance = 0f
-                    Log.d("HomeSortTrace", "GESTURE START x=${offset.x} y=${offset.y} sortAtStart=${uiState.sortBy} detectorKey=${uiState.sortBy}")
+                    sortAtDragStart = uiState.sortBy.trim().lowercase()
+                    dragPreviewTab = null
                 },
-                onHorizontalDrag = { change, dragAmount ->
+                onHorizontalDrag = { _, dragAmount ->
                     horizontalDistance += dragAmount
-                    val tabs = listOf("top", "new", "hot")
-                    val sortSnapshot = uiState.sortBy.lowercase()
-                    val currentIndex = tabs.indexOf(sortSnapshot)
-                    dragPreviewTab = if (abs(horizontalDistance) > 12f && currentIndex >= 0) {
-                        when {
-                            sortSnapshot == "top" -> "new"
-                            // From New: swipe right previews Hot; swipe left previews Top.
-                            sortSnapshot == "new" && horizontalDistance > 0f -> "hot"
-                            sortSnapshot == "new" && horizontalDistance < 0f -> "top"
-                            // From Hot: swipe right goes to New; swipe left wraps to Top.
-                            sortSnapshot == "hot" && horizontalDistance > 0f -> "new"
-                            sortSnapshot == "hot" && horizontalDistance < 0f -> "top"
-                            else -> null
-                        }
+                    dragPreviewTab = if (abs(horizontalDistance) > 12f) {
+                        targetForSwipe(horizontalDistance)
                     } else null
-                    Log.d("HomeSortTrace", "GESTURE DRAG dx=$dragAmount totalDx=$horizontalDistance pointerX=${change.position.x} previousX=${change.previousPosition.x} sortSnapshot=${uiState.sortBy} consumed=${change.isConsumed}")
                 },
                 onDragEnd = {
-                    val tabs = listOf("top", "new", "hot")
-                    val sortSnapshot = uiState.sortBy.lowercase()
-                    val currentIndex = tabs.indexOf(sortSnapshot)
-                    val direction = when {
-                        horizontalDistance < 0f -> "LEFT / next tab"
-                        horizontalDistance > 0f -> "RIGHT / previous tab"
-                        else -> "NO HORIZONTAL MOVEMENT"
-                    }
-                    Log.d("HomeSortTrace", "GESTURE END totalDx=$horizontalDistance direction=$direction sortSnapshot=$sortSnapshot index=$currentIndex tabs=$tabs threshold=80")
                     if (abs(horizontalDistance) > 80f) {
-                        if (currentIndex >= 0) {
-                            // Top always leads to New. From New, direction matters:
-                            // swipe right -> Hot; swipe left -> Top.
-                            // From Hot, swipe right -> New; swipe left wraps to Top.
-                            val targetIndex = when {
-                                sortSnapshot == "top" -> tabs.indexOf("new")
-                                sortSnapshot == "new" && horizontalDistance > 0f -> tabs.indexOf("hot")
-                                sortSnapshot == "new" && horizontalDistance < 0f -> tabs.indexOf("top")
-                                sortSnapshot == "hot" && horizontalDistance > 0f -> tabs.indexOf("new")
-                                sortSnapshot == "hot" && horizontalDistance < 0f -> tabs.indexOf("top")
-                                else -> currentIndex
-                            }
-                            val target = tabs[targetIndex]
-                            val gestureDirection = if (horizontalDistance < 0f) "LEFT/NEXT" else "RIGHT/PREVIOUS"
-                            Log.d(
-                                "HomeSortTrace",
-                                "GESTURE ACTION $gestureDirection target=$target old=$sortSnapshot index=$currentIndex targetIndex=$targetIndex"
-                            )
+                        targetForSwipe(horizontalDistance)?.let { target ->
+                            Log.d("HomeSortTrace", "SWIPE sort=$sortAtDragStart dx=$horizontalDistance target=$target")
                             viewModel.setSortBy(target)
-                            Log.d("HomeSortTrace", "GESTURE ACTION setSortBy invoked target=$target")
-                        } else {
-                            Log.w("HomeSortTrace", "GESTURE BAD_INDEX dx=$horizontalDistance sort=$sortSnapshot index=$currentIndex")
                         }
-                    } else {
-                        Log.d("HomeSortTrace", "GESTURE IGNORED below threshold absDx=${abs(horizontalDistance)}")
                     }
                     horizontalDistance = 0f
                     dragPreviewTab = null
                 },
                 onDragCancel = {
-                    Log.w("HomeSortTrace", "GESTURE CANCEL totalDx=$horizontalDistance sortSnapshot=${uiState.sortBy}")
                     horizontalDistance = 0f
                     dragPreviewTab = null
                 }
