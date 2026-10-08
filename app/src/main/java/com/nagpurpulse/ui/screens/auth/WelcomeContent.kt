@@ -39,12 +39,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,6 +71,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
@@ -75,29 +80,51 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.nagpurpulse.R
+import com.nagpurpulse.ui.locale.AppLocale
 import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.LocalIsDarkTheme
 import com.nagpurpulse.ui.theme.authPalette
 
-// White text on the old #FF941F start colour fails contrast (2.2:1). These two stops keep the
-// same saffron-to-vermilion look but give 3.1:1+ against white bold 18sp text (WCAG AA large).
+// White text on the old #FF941F start colour fails contrast (2.2:1). These stops keep the same
+// saffron-to-vermilion look with 3.1:1+ against white bold 18sp text (WCAG AA large text).
 private val WelcomeButtonBrush = Brush.horizontalGradient(listOf(Color(0xFFF26A00), Color(0xFFE8321A)))
 private val WelcomeAccentBrushLight = Brush.horizontalGradient(listOf(Color(0xFFEE6A00), Color(0xFFE5381A)))
 
 private enum class WelcomeTier { Compact, Medium, Expanded }
 
 /**
- * Welcome screen. Self-contained: it does not use AuthScaffold, because the scaffold pads the
- * artwork inside 16dp margins and clips all four corners. Existing callbacks are unchanged.
+ * Nunito from res/font. Looked up by name so a wrong file name can never break the build:
+ * if the files are missing or misnamed the screen simply falls back to the system font.
+ * Expected files: nunito_regular, nunito_semibold, nunito_bold, nunito_extrabold (.ttf).
  */
+@Composable
+private fun rememberWelcomeFont(): FontFamily {
+    val context = LocalContext.current
+    return remember(context) {
+        val fonts = listOf(
+            "nunito_regular" to FontWeight.Normal,
+            "nunito_semibold" to FontWeight.SemiBold,
+            "nunito_bold" to FontWeight.Bold,
+            "nunito_extrabold" to FontWeight.ExtraBold
+        ).mapNotNull { (name, weight) ->
+            val id = context.resources.getIdentifier(name, "font", context.packageName)
+            if (id != 0) Font(id, weight) else null
+        }
+        if (fonts.isEmpty()) FontFamily.Default else FontFamily(fonts)
+    }
+}
+
 @Composable
 internal fun WelcomeContent(
     onGetStarted: () -> Unit = {},
@@ -108,6 +135,7 @@ internal fun WelcomeContent(
     val colors = authPalette()
     val dark = LocalIsDarkTheme.current
     val largeText = LocalDensity.current.fontScale > 1.3f
+    val font = rememberWelcomeFont()
     WelcomeSystemBars()
 
     Box(
@@ -133,20 +161,21 @@ internal fun WelcomeContent(
                 Modifier.fillMaxSize().then(if (largeText) Modifier.verticalScroll(rememberScrollState()) else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                WelcomeHeader()
+                WelcomeHeader(font)
                 WelcomeHero(
                     modifier = Modifier.fillMaxWidth().then(if (largeText) Modifier.height(220.dp) else Modifier.weight(1f)),
                     liveCount = liveCount.takeIf { !compact },
-                    dark = dark
+                    dark = dark,
+                    font = font
                 )
                 if (!compact) {
-                    WelcomeTopicChips(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
+                    WelcomeTopicChips(font, Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
                 }
                 Column(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
                     AuthEntrance(1) {
                         WelcomeHeadline(
                             first = stringResource(R.string.auth_city),
@@ -154,23 +183,25 @@ internal fun WelcomeContent(
                             baseSp = headlineSp,
                             brush = if (dark) AuthTokens.Gradient else WelcomeAccentBrushLight,
                             inkColor = colors.ink,
+                            font = font,
                             limitLines = !largeText
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     AuthEntrance(2) {
                         Text(
                             stringResource(R.string.auth_welcome_subtitle),
                             Modifier.fillMaxWidth(),
                             color = colors.muted, fontSize = subtitleSp.sp, lineHeight = (subtitleSp + 6).sp,
+                            fontFamily = font, fontWeight = FontWeight.Normal,
                             textAlign = TextAlign.Center, maxLines = if (largeText) Int.MAX_VALUE else 3
                         )
                     }
-                    Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
+                    Spacer(Modifier.height(if (compact) 12.dp else 18.dp))
                     AuthEntrance(3) {
-                        WelcomeButton(stringResource(R.string.auth_get_started), buttonHeight, onGetStarted)
+                        WelcomeButton(stringResource(R.string.auth_get_started), buttonHeight, font, onGetStarted)
                     }
-                    WelcomeLoginLink(stringResource(R.string.auth_login_footer), colors.muted, colors.ink, onLogin)
+                    WelcomeLoginLink(stringResource(R.string.auth_login_footer), colors.muted, colors.ink, font, onLogin)
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -179,10 +210,10 @@ internal fun WelcomeContent(
 }
 
 @Composable
-private fun WelcomeHeader() {
+private fun WelcomeHeader(font: FontFamily) {
     val colors = authPalette()
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
@@ -190,20 +221,68 @@ private fun WelcomeHeader() {
             contentDescription = stringResource(R.string.app_name),
             contentScale = ContentScale.Fit,
             alignment = Alignment.CenterStart,
-            modifier = Modifier.weight(1f).height(40.dp)
+            modifier = Modifier.weight(1f).height(36.dp)
         )
         Spacer(Modifier.width(8.dp))
-        LanguagePickerChip(colors.ink, colors.sand, colors.sand)
+        WelcomeLanguageChip(colors.ink, colors.sand, font)
+    }
+}
+
+/**
+ * Compact language chip: 36dp visible pill inside a 48dp touch target. Same behaviour and
+ * analytics event as LanguagePickerChip, which stays untouched for Login / Sign up.
+ */
+@Composable
+private fun WelcomeLanguageChip(ink: Color, background: Color, font: FontFamily) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    val currentTag = AppLocale.currentTag(context)
+    val currentName = AppLocale.options.first { it.tag == currentTag }.nativeName
+    val description = stringResource(R.string.language_picker_cd)
+    Box(
+        Modifier.heightIn(min = 48.dp).clickable(role = Role.Button, onClickLabel = description) { expanded = true },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            Modifier.height(36.dp).clip(RoundedCornerShape(50)).background(background)
+                .padding(start = 10.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Filled.Language, contentDescription = description, tint = ink, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(currentName, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = font)
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            AppLocale.options.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option.nativeName,
+                            fontWeight = if (option.tag == currentTag) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        if (option.tag != currentTag) {
+                            AuthAnalytics.log(context, "language_changed", "language" to option.tag)
+                            context.welcomeActivity()?.let { AppLocale.apply(it, option.tag) }
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 
 /**
  * Full-bleed hero: sunset sky drawn in Compose, then the transparent illustration on top.
- * FillWidth + BottomCenter keeps the steps and faces anchored; when space is short, only
- * the top (sky / tree tops) is cropped. Only the bottom corners are rounded.
+ * FillWidth + BottomCenter keeps the steps and faces anchored; when space is short, only the
+ * top (sky / tree tops) is cropped. Sky details are positioned in dp from the TOP so they stay
+ * in the open sky on every screen height. Only the bottom corners are rounded.
  */
 @Composable
-private fun WelcomeHero(modifier: Modifier, liveCount: Int?, dark: Boolean) {
+private fun WelcomeHero(modifier: Modifier, liveCount: Int?, dark: Boolean, font: FontFamily) {
     val sky = if (dark) {
         listOf(Color(0xFF3A2A1E), Color(0xFF5A3A22), Color(0xFF171411))
     } else {
@@ -212,19 +291,21 @@ private fun WelcomeHero(modifier: Modifier, liveCount: Int?, dark: Boolean) {
     Box(
         modifier.clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)).drawBehind {
             drawRect(Brush.verticalGradient(sky))
-            val sun = Offset(size.width * 0.66f, size.height * 0.30f)
-            val core = 26.dp.toPx()
+            // soft clouds (fade out at both ends, so no hard oval edges)
+            val cloud = Color.White.copy(alpha = if (dark) 0.10f else 0.55f)
+            drawCloud(Offset(size.width * 0.02f, 84.dp.toPx()), Size(110.dp.toPx(), 18.dp.toPx()), cloud)
+            drawCloud(Offset(size.width * 0.58f, 14.dp.toPx()), Size(120.dp.toPx(), 18.dp.toPx()), cloud)
+            // sun in the gap between the Zero Mile stone and the dome
+            val sun = Offset(size.width * 0.66f, 46.dp.toPx())
+            val core = 20.dp.toPx()
             drawCircle(
                 Brush.radialGradient(listOf(Color(0xCCFFE9B0), Color(0x00FFE9B0)), sun, core * 3.2f),
                 radius = core * 3.2f, center = sun
             )
             drawCircle(Color(0xFFFFF1C9), radius = core, center = sun)
-            val cloud = Color.White.copy(alpha = if (dark) 0.08f else 0.35f)
-            drawOval(cloud, Offset(size.width * 0.06f, size.height * 0.16f), Size(96.dp.toPx(), 20.dp.toPx()))
-            drawOval(cloud, Offset(size.width * 0.58f, size.height * 0.09f), Size(110.dp.toPx(), 22.dp.toPx()))
             val bird = Color(0xFF8A4B1F).copy(alpha = 0.55f)
-            drawBird(Offset(size.width * 0.30f, size.height * 0.13f), 7.dp.toPx(), bird)
-            drawBird(Offset(size.width * 0.38f, size.height * 0.19f), 5.dp.toPx(), bird)
+            drawBird(Offset(size.width * 0.76f, 20.dp.toPx()), 7.dp.toPx(), bird)
+            drawBird(Offset(size.width * 0.82f, 34.dp.toPx()), 5.dp.toPx(), bird)
         }
     ) {
         Image(
@@ -235,9 +316,16 @@ private fun WelcomeHero(modifier: Modifier, liveCount: Int?, dark: Boolean) {
             modifier = Modifier.fillMaxSize()
         )
         if (liveCount != null && liveCount >= 0) {
-            Box(Modifier.align(Alignment.TopCenter).padding(top = 12.dp)) { LiveActivityPill(liveCount) }
+            Box(Modifier.align(Alignment.TopCenter).padding(top = 12.dp)) { LiveActivityPill(liveCount, font) }
         }
     }
+}
+
+private fun DrawScope.drawCloud(topLeft: Offset, size: Size, color: Color) {
+    drawOval(
+        Brush.horizontalGradient(listOf(Color.Transparent, color, Color.Transparent), startX = topLeft.x, endX = topLeft.x + size.width),
+        topLeft, size
+    )
 }
 
 private fun DrawScope.drawBird(center: Offset, s: Float, color: Color) {
@@ -251,7 +339,7 @@ private fun DrawScope.drawBird(center: Offset, s: Float, color: Color) {
 
 /** Only drawn when a REAL count is supplied. There is deliberately no placeholder number. */
 @Composable
-internal fun LiveActivityPill(count: Int?) {
+internal fun LiveActivityPill(count: Int?, font: FontFamily = FontFamily.Default) {
     if (count == null || count < 0) return
     val colors = authPalette()
     val reduce = rememberReduceMotion()
@@ -269,13 +357,13 @@ internal fun LiveActivityPill(count: Int?) {
         Spacer(Modifier.width(8.dp))
         Text(
             stringResource(R.string.auth_live_count, count),
-            color = colors.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1
+            color = colors.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = font, maxLines = 1
         )
     }
 }
 
 @Composable
-private fun WelcomeTopicChips(modifier: Modifier = Modifier) {
+private fun WelcomeTopicChips(font: FontFamily, modifier: Modifier = Modifier) {
     val colors = authPalette()
     val topics = listOf(
         Icons.Filled.DirectionsCar to R.string.auth_topic_traffic,
@@ -285,25 +373,46 @@ private fun WelcomeTopicChips(modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         topics.forEach { (icon, label) ->
             Row(
-                Modifier.weight(1f).heightIn(min = 36.dp).clip(RoundedCornerShape(50)).background(colors.sand)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                Modifier.weight(1f).heightIn(min = 32.dp).clip(RoundedCornerShape(50)).background(colors.sand)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Icon(icon, contentDescription = null, tint = colors.accent, modifier = Modifier.size(16.dp))
+                Icon(icon, contentDescription = null, tint = colors.accent, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(4.dp))
-                AuthFitText(
-                    stringResource(label), Modifier.weight(1f, fill = false), color = colors.ink,
-                    maxSize = 12, minSize = 9, maxLines = 2, weight = FontWeight.SemiBold
+                WelcomeFitText(
+                    stringResource(label), Modifier.weight(1f, fill = false), colors.ink,
+                    maxSize = 12, minSize = 10, weight = FontWeight.SemiBold, font = font
                 )
             }
         }
     }
 }
 
+/** One line, shrinks to [minSize]; only if that still does not fit does it wrap to two lines. */
+@Composable
+private fun WelcomeFitText(
+    text: String, modifier: Modifier, color: Color, maxSize: Int, minSize: Int,
+    weight: FontWeight, font: FontFamily
+) {
+    var size by remember(text, maxSize) { mutableStateOf(maxSize) }
+    var wrap by remember(text, maxSize) { mutableStateOf(false) }
+    Text(
+        text, modifier, color = color, fontSize = size.sp, lineHeight = (size + 3).sp,
+        fontWeight = weight, fontFamily = font, textAlign = TextAlign.Center,
+        maxLines = if (wrap) 2 else 1, softWrap = wrap, overflow = TextOverflow.Ellipsis,
+        onTextLayout = {
+            if (it.hasVisualOverflow) {
+                if (size > minSize) size-- else if (!wrap) wrap = true
+            }
+        }
+    )
+}
+
 @Composable
 private fun WelcomeHeadline(
-    first: String, accent: String, baseSp: Int, brush: Brush, inkColor: Color, limitLines: Boolean
+    first: String, accent: String, baseSp: Int, brush: Brush, inkColor: Color,
+    font: FontFamily, limitLines: Boolean
 ) {
     var size by remember(first, accent, baseSp) { mutableStateOf(baseSp) }
     val text = buildAnnotatedString {
@@ -314,14 +423,14 @@ private fun WelcomeHeadline(
     Text(
         text, Modifier.fillMaxWidth(),
         color = inkColor, fontSize = size.sp, lineHeight = (size + 2).sp,
-        fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp, textAlign = TextAlign.Center,
+        fontWeight = FontWeight.ExtraBold, fontFamily = font, letterSpacing = (-0.5).sp, textAlign = TextAlign.Center,
         maxLines = if (limitLines) 2 else Int.MAX_VALUE,
         onTextLayout = { if (limitLines && it.hasVisualOverflow && size > 26) size -= 2 }
     )
 }
 
 @Composable
-private fun WelcomeButton(text: String, height: Dp, onClick: () -> Unit) {
+private fun WelcomeButton(text: String, height: Dp, font: FontFamily, onClick: () -> Unit) {
     val shape = RoundedCornerShape(28.dp)
     Button(
         onClick = onClick, shape = shape,
@@ -333,9 +442,9 @@ private fun WelcomeButton(text: String, height: Dp, onClick: () -> Unit) {
         ),
         modifier = Modifier.fillMaxWidth().height(height).clip(shape).background(WelcomeButtonBrush)
     ) {
-        AuthFitText(
-            text, Modifier.weight(1f, fill = false), color = Color.White,
-            maxSize = 18, minSize = 12, weight = FontWeight.Bold
+        WelcomeFitText(
+            text, Modifier.weight(1f, fill = false), Color.White,
+            maxSize = 18, minSize = 12, weight = FontWeight.Bold, font = font
         )
         Spacer(Modifier.width(8.dp))
         Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -344,7 +453,7 @@ private fun WelcomeButton(text: String, height: Dp, onClick: () -> Unit) {
 
 /** "Already have an account? Log in": everything after the first '?' is bold ink (any language). */
 @Composable
-private fun WelcomeLoginLink(text: String, muted: Color, ink: Color, onClick: () -> Unit) {
+private fun WelcomeLoginLink(text: String, muted: Color, ink: Color, font: FontFamily, onClick: () -> Unit) {
     val split = text.indexOf('?').let { if (it in 0 until text.lastIndex) it + 1 else -1 }
     val styled = buildAnnotatedString {
         if (split < 0) {
@@ -358,7 +467,7 @@ private fun WelcomeLoginLink(text: String, muted: Color, ink: Color, onClick: ()
         Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(styled, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2)
+        Text(styled, fontSize = 14.sp, fontFamily = font, textAlign = TextAlign.Center, maxLines = 2)
     }
 }
 
@@ -368,7 +477,7 @@ private tailrec fun Context.welcomeActivity(): Activity? = when (this) {
     else -> null
 }
 
-/** Transparent status bar with dark icons on the light theme (white-on-cream was unreadable). */
+/** Transparent status bar with dark icons on the light theme. */
 @Composable
 private fun WelcomeSystemBars() {
     val view = LocalView.current
