@@ -858,36 +858,102 @@ fun NagpurPulseNavGraph(
             UserSearchScreen(navController = navController)
         }
 
+        // Settings flow: fast, gentle slide + fade, with no spring overshoot.
+        val settingsEnter: AnimatedContentTransitionScope<*>.() -> EnterTransition = {
+            slideInHorizontally(initialOffsetX = { it / 8 }, animationSpec = tween(240)) +
+                fadeIn(animationSpec = tween(220))
+        }
+        val settingsExit: AnimatedContentTransitionScope<*>.() -> ExitTransition = {
+            slideOutHorizontally(targetOffsetX = { -it / 8 }, animationSpec = tween(220)) +
+                fadeOut(animationSpec = tween(180))
+        }
+        val settingsPopEnter: AnimatedContentTransitionScope<*>.() -> EnterTransition = {
+            slideInHorizontally(initialOffsetX = { -it / 8 }, animationSpec = tween(220)) +
+                fadeIn(animationSpec = tween(180))
+        }
+        val settingsPopExit: AnimatedContentTransitionScope<*>.() -> ExitTransition = {
+            slideOutHorizontally(targetOffsetX = { it / 8 }, animationSpec = tween(220)) +
+                fadeOut(animationSpec = tween(180))
+        }
+
         // ── Settings ──────────────────────────────────────────────────────────
-        composable(Screen.Settings.route) {
+        composable(
+            route = Screen.Settings.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             SettingsScreen(navController = navController)
         }
 
-        composable(Screen.AccountProfile.route) {
+        composable(
+            route = Screen.AccountProfile.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             AccountProfileScreen(navController = navController)
         }
 
-        composable(Screen.PrivacySettings.route) {
+        composable(
+            route = Screen.PrivacySettings.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             PrivacySettingsScreen(navController = navController)
         }
 
-        composable(Screen.IncognitoSettings.route) {
+        composable(
+            route = Screen.IncognitoSettings.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             IncognitoSettingsScreen(navController = navController)
         }
 
-        composable(Screen.SecuritySettings.route) {
+        composable(
+            route = Screen.SecuritySettings.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             SecuritySettingsScreen(navController = navController)
         }
 
-        composable(Screen.NotifSettings.route) {
+        composable(
+            route = Screen.NotifSettings.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             NotifSettingsScreen(navController = navController)
         }
 
-        composable(Screen.TextSize.route) {
+        composable(
+            route = Screen.TextSize.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             TextSizeScreen(navController = navController)
         }
 
-        composable(Screen.DisplayDensity.route) {
+        composable(
+            route = Screen.DisplayDensity.route,
+            enterTransition = { settingsEnter(this) },
+            exitTransition = { settingsExit(this) },
+            popEnterTransition = { settingsPopEnter(this) },
+            popExitTransition = { settingsPopExit(this) }
+        ) {
             DisplayDensityScreen(navController = navController)
         }
 
