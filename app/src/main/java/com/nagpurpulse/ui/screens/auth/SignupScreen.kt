@@ -341,3 +341,48 @@ fun SignupScreen(
         )
     }
 }
+
+
+@Composable
+private fun SignupSuccessOverlay() {
+    androidx.compose.foundation.layout.Box(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color(0xB3000000)),
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
+        androidx.compose.foundation.layout.Column(
+            modifier = androidx.compose.ui.Modifier
+                .padding(32.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                .background(androidx.compose.ui.graphics.Color(0xFFFFFCF7))
+                .padding(horizontal = 32.dp, vertical = 36.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = androidx.compose.material.icons.Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFF22A06B),
+                modifier = androidx.compose.ui.Modifier.size(72.dp)
+            )
+            androidx.compose.foundation.layout.Spacer(
+                modifier = androidx.compose.ui.Modifier.height(18.dp)
+            )
+            androidx.compose.material3.Text(
+                text = "Email verified!",
+                color = androidx.compose.ui.graphics.Color(0xFF142033),
+                style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            androidx.compose.foundation.layout.Spacer(
+                modifier = androidx.compose.ui.Modifier.height(8.dp)
+            )
+            androidx.compose.material3.Text(
+                text = "Your account is ready. Welcome to NagpurPulse.",
+                color = androidx.compose.ui.graphics.Color(0xFF64748B),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
