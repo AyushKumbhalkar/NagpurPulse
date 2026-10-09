@@ -5,6 +5,7 @@
     <string name="auth_online">are online.</string>
     <string name="auth_talking">are talking.</string>
     <string name="auth_signup_subtitle">Join the conversations happening around Nagpur.</string>
+    <string name="signup_checking_email">Checking email…</string>
     <string name="auth_continue_email">Continue with email</string>
     <string name="auth_explore_guest">Explore as guest</string>
     <string name="auth_login_footer">Already have an account? Log in</string>
