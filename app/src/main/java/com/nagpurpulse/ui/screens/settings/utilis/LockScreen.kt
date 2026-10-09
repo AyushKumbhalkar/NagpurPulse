@@ -2,55 +2,147 @@
 
 package com.nagpurpulse.ui.screens.settings.utilis
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import com.nagpurpulse.ui.screens.settings.GlowIcon
+import com.nagpurpulse.ui.theme.Background
+import com.nagpurpulse.ui.theme.OrangeLight
+import com.nagpurpulse.ui.theme.OrangePrimary
+import com.nagpurpulse.ui.theme.PrimaryText
+import com.nagpurpulse.ui.theme.SecondaryText
+import com.nagpurpulse.ui.theme.TertiaryText
 
 @Composable
 fun LockScreen(
     onAuthenticated: () -> Unit
 ) {
+    val activity = LocalContext.current as FragmentActivity
 
-    val activity =
-        LocalContext.current as FragmentActivity
+    // Bumping this re-opens the biometric sheet, so a dismissed prompt is never a dead end.
+    var attempt by remember { mutableStateOf(0) }
+    var shown by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-
-        BiometricPromptManager.show(
-            activity = activity,
-            onSuccess = onAuthenticated
-        )
+    LaunchedEffect(Unit) { shown = true }
+    LaunchedEffect(attempt) {
+        BiometricPromptManager.show(activity = activity, onSuccess = onAuthenticated)
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background),
         contentAlignment = Alignment.Center
     ) {
+        // Ambient brand glow
+        Box(
+            Modifier
+                .size(340.dp)
+                .background(
+                    Brush.radialGradient(listOf(OrangePrimary.copy(alpha = 0.16f), Color.Transparent)),
+                    CircleShape
+                )
+        )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        AnimatedVisibility(
+            visible = shown,
+            enter = fadeIn(tween(500)) + slideInVertically(tween(500, easing = FastOutSlowInEasing)) { it / 10 }
         ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                GlowIcon(Icons.Filled.Fingerprint, OrangePrimary, active = true, size = 84.dp)
 
-            Icon(
-                imageVector = Icons.Default.Fingerprint,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp)
-            )
+                Spacer(Modifier.height(10.dp))
 
-            Spacer(
-                modifier = Modifier.height(12.dp)
-            )
+                Text(
+                    "Welcome back",
+                    color = PrimaryText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "NagpurPulse is locked to keep your account safe. A quick check and you're in.",
+                    color = SecondaryText,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center
+                )
 
-            Text("Unlock NagpurPulse")
+                Spacer(Modifier.height(28.dp))
+
+                Button(
+                    onClick = { attempt++ },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = OrangePrimary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.Filled.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Unlock", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                }
+
+                Spacer(Modifier.height(18.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Lock, contentDescription = null, tint = TertiaryText, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Protected on this device",
+                        color = TertiaryText,
+                        fontSize = 12.sp
+                    )
+                }
+                Spacer(Modifier.navigationBarsPadding())
+            }
         }
     }
 }
