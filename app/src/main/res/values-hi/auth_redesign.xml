@@ -5,6 +5,7 @@
     <string name="auth_online">ऑनलाइन हैं।</string>
     <string name="auth_talking">बात कर रहे हैं।</string>
     <string name="auth_signup_subtitle">नागपुर में चल रही बातचीत से जुड़ें।</string>
+    <string name="signup_checking_email">ईमेल जांच रहे हैं…</string>
     <string name="auth_continue_email">ईमेल से आगे बढ़ें</string>
     <string name="auth_explore_guest">अतिथि के रूप में देखें</string>
     <string name="auth_login_footer">पहले से खाता है? लॉग इन करें</string>
