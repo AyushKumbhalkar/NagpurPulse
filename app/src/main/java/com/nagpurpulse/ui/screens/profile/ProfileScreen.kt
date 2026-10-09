@@ -1,54 +1,61 @@
 // this is the ProfileScreen.kt file
 
 // java/com/nagpurpulse/ui/screens/profile/ProfileScreen.kt
+//
+// The signed-in user's own account screen.
+// Pure logic (levels, streaks, milestones...) lives in ProfileGamification.kt and the
+// reusable pieces live in ProfileComponents.kt.
 
 package com.nagpurpulse.ui.screens.profile
 
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.os.SystemClock
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import kotlinx.coroutines.async
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.nagpurpulse.data.model.*
 import com.nagpurpulse.data.repository.*
 import com.nagpurpulse.ui.components.*
@@ -56,18 +63,30 @@ import com.nagpurpulse.ui.navigation.BottomNavBar
 import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Locale
 import javax.inject.Inject
+
+// ── UI state ──────────────────────────────────────────────────────────────────
 
 data class ProfileUiState(
     val profile: Profile? = null,
     val posts: List<Post> = emptyList(),
     val comments: List<Comment> = emptyList(),
+    /** postId -> thread title, so "my comments" can show which thread they belong to. */
+    val postTitles: Map<String, String> = emptyMap(),
     val savedPosts: List<Post> = emptyList(),
     val badges: List<Badge> = emptyList(),
-    val commentCount: Int = -1,
+    val rank: KarmaRank? = null,
+    val postsLoaded: Boolean = false,
+    val commentsLoaded: Boolean = false,
     val savedCount: Int = 0,
     val unreadNotifCount: Int = 0,
     val isLoading: Boolean = false,
@@ -86,6 +105,8 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState
 
+    private var lastFullRefreshAt = 0L
+
     val guestAvatarUrl: String?
         get() = authRepository.guestAvatarUrl
 
@@ -94,66 +115,91 @@ class ProfileViewModel @Inject constructor(
 
     init { refresh(showLoading = true) }
 
-    /**
-     * Load only the data needed for the current profile tab. Comments and saved posts
-     * are fetched on demand instead of blocking every profile opening.
-     */
+    /** Cheap profile-only refresh (karma, avatar, tagline). */
     fun refreshProfile() {
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             profileRepository.getProfile(userId).onSuccess { profile ->
-                _uiState.value = _uiState.value.copy(profile = profile)
+                _uiState.update { it.copy(profile = profile) }
             }
         }
     }
 
-    fun refresh(showLoading: Boolean = false) {
+    /**
+     * Called every time the screen resumes (e.g. after posting a thread and coming back).
+     * Always refreshes the profile; refreshes everything silently at most every 20 seconds
+     * so streaks, karma and the impact card never look stale.
+     */
+    fun onResume() {
+        refreshProfile()
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastFullRefreshAt >= 20_000L) refresh(showLoading = false, silent = true)
+    }
+
+    fun refresh(showLoading: Boolean = false, silent: Boolean = false) {
         val userId = authRepository.currentUserId ?: return
+        lastFullRefreshAt = SystemClock.elapsedRealtime()
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = showLoading && _uiState.value.profile == null,
-                isRefreshing = !showLoading
-            )
+            _uiState.update {
+                it.copy(
+                    isLoading = showLoading && it.profile == null,
+                    isRefreshing = !showLoading && !silent
+                )
+            }
             try {
                 val profileJob = async { profileRepository.getProfile(userId) }
                 val postsJob = async { postRepository.getPostsByUser(userId) }
+                val commentsJob = async { postRepository.getCommentsByUser(userId) }
                 val badgesJob = async { profileRepository.getBadges(userId) }
                 val notifJob = async { notificationRepository.getUnreadCount(userId) }
                 val savedIdsJob = async { savedPostsRepository.getSavedPostIds(userId) }
-                profileJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(profile = p) }
-                postsJob.await().onSuccess { p -> _uiState.value = _uiState.value.copy(posts = p) }
-                badgesJob.await().onSuccess { b -> _uiState.value = _uiState.value.copy(badges = b) }
-                notifJob.await().onSuccess { count -> _uiState.value = _uiState.value.copy(unreadNotifCount = count) }
-                savedIdsJob.await().onSuccess { ids -> _uiState.value = _uiState.value.copy(savedCount = ids.size) }
-                if (_uiState.value.activeTab == 1) loadComments(userId)
+                val rankJob = async { profileRepository.getKarmaRank() }
+
+                profileJob.await().onSuccess { p -> _uiState.update { it.copy(profile = p) } }
+                postsJob.await().onSuccess { p -> _uiState.update { it.copy(posts = p, postsLoaded = true) } }
+                badgesJob.await().onSuccess { b -> _uiState.update { it.copy(badges = b) } }
+                notifJob.await().onSuccess { c -> _uiState.update { it.copy(unreadNotifCount = c) } }
+                savedIdsJob.await().onSuccess { ids -> _uiState.update { it.copy(savedCount = ids.size) } }
+                rankJob.await()?.let { r -> _uiState.update { it.copy(rank = r) } }
+                commentsJob.await().onSuccess { c -> applyComments(c) }
                 if (_uiState.value.activeTab == 2) loadSavedPosts(userId)
             } finally {
-                _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
+        }
+    }
+
+    /** Stores the comments, then fills in the thread titles they belong to. */
+    private suspend fun applyComments(all: List<Comment>) {
+        val comments = all.filter { !it.isDeleted }
+        _uiState.update { it.copy(comments = comments, commentsLoaded = true) }
+        val missing = comments.map { it.postId }.distinct().filter { it !in _uiState.value.postTitles }
+        if (missing.isNotEmpty()) {
+            postRepository.getPostTitles(missing).onSuccess { titles ->
+                _uiState.update { it.copy(postTitles = it.postTitles + titles) }
             }
         }
     }
 
     private suspend fun loadComments(userId: String) {
-        postRepository.getCommentsByUser(userId).onSuccess { comments ->
-            _uiState.value = _uiState.value.copy(comments = comments, commentCount = comments.size)
-        }
+        postRepository.getCommentsByUser(userId).onSuccess { applyComments(it) }
     }
 
     private suspend fun loadSavedPosts(userId: String) {
         savedPostsRepository.getSavedPostIds(userId).onSuccess { ids ->
             postRepository.getSavedPosts(ids).onSuccess { posts ->
-                _uiState.value = _uiState.value.copy(savedPosts = posts, savedCount = posts.size)
+                _uiState.update { it.copy(savedPosts = posts, savedCount = posts.size) }
             }
         }
     }
 
     fun setActiveTab(tab: Int) {
         if (_uiState.value.activeTab == tab) return
-        _uiState.value = _uiState.value.copy(activeTab = tab)
+        _uiState.update { it.copy(activeTab = tab) }
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             when (tab) {
-                1 -> loadComments(userId)
+                1 -> if (!_uiState.value.commentsLoaded) loadComments(userId)
                 2 -> loadSavedPosts(userId)
             }
         }
@@ -167,8 +213,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             postRepository.deletePost(postId).fold(
                 onSuccess = {
-                    _uiState.value =
-                        _uiState.value.copy(posts = _uiState.value.posts.filter { it.id != postId })
+                    _uiState.update { s -> s.copy(posts = s.posts.filter { it.id != postId }) }
                 },
                 onFailure = {}
             )
@@ -179,74 +224,236 @@ class ProfileViewModel @Inject constructor(
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             savedPostsRepository.unsavePost(userId, postId)
-            _uiState.value =
-                _uiState.value.copy(savedPosts = _uiState.value.savedPosts.filter { it.id != postId })
+            _uiState.update { s ->
+                s.copy(
+                    savedPosts = s.savedPosts.filter { it.id != postId },
+                    savedCount = (s.savedCount - 1).coerceAtLeast(0)
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Entrance animations play once per app session; coming back to the tab is instant.
+private var profileIntroPlayed = false
+
+private const val PREFS_NAME = "profile_progress"
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun ProfileScreen(
     navController: NavController,
     onPostClick: (String) -> Unit,
     onCreatePost: () -> Unit,
     onNotifications: () -> Unit,
+    // Sign-out lives in Settings. Kept so existing call sites keep compiling.
     onLogout: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val haptic = rememberHaptic()
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
+
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshProfile()
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onResume()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val guestAvatarUrl = viewModel.guestAvatarUrl
-    val guestUsername = viewModel.guestUsername
+    val profile = uiState.profile
+    val userId = profile?.id?.takeIf { it.isNotBlank() }
 
-    var showLogoutDialog by remember { mutableStateOf(false) }
-
-    // Premium logout confirmation dialog
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            containerColor = SurfaceAlt,
-            titleContentColor = PrimaryText,
-            textContentColor = SecondaryText,
-            shape = RoundedCornerShape(28.dp),
-            icon = {
-                Box(
-                    Modifier.size(54.dp).clip(CircleShape)
-                        .background(RedAlert.copy(alpha = 0.12f))
-                        .border(1.dp, RedAlert.copy(alpha = 0.35f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = RedAlert, modifier = Modifier.size(24.dp))
-                }
-            },
-            title = { Text("Sign out?", color = PrimaryText, fontWeight = FontWeight.Bold) },
-            text = { Text("You'll need to sign in again to post or comment.", color = SecondaryText) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLogoutDialog = false
-                        android.util.Log.e("AYUSH_LOGOUT", "BUTTON CLICKED")
-                        onLogout()
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedAlert)
-                ) { Text("Sign out", color = Color.White, fontWeight = FontWeight.SemiBold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Stay signed in", color = SecondaryText)
-                }
-            }
+    // ── Derived data ─────────────────────────────────────────────────────────
+    val karma = profile?.karma ?: 0
+    val levelProgress = remember(karma) { ProfileLevels.progress(karma) }
+    val activity = remember(uiState.posts, uiState.comments) {
+        activityByDay(uiState.posts.map { it.createdAt } + uiState.comments.map { it.createdAt })
+    }
+    val streak = remember(activity) { computeStreak(activity.keys, LocalDate.now()) }
+    val heatmap = remember(activity) { buildHeatmap(activity, LocalDate.now()) }
+    val impact = remember(uiState.posts) {
+        computeImpact(uiState.posts.map { PostStat(it.createdAt, it.upvotes, it.commentCount, it.viewCount) })
+    }
+    val completeness = remember(profile, uiState.posts.size) {
+        computeCompleteness(
+            hasAvatar = !profile?.avatarUrl.isNullOrBlank(),
+            hasTagline = !profile?.tagline.isNullOrBlank(),
+            hasLocation = !profile?.location.isNullOrBlank(),
+            hasAreas = !profile?.areas.isNullOrEmpty(),
+            hasThread = uiState.posts.isNotEmpty()
         )
+    }
+    val milestones = remember(uiState.posts.size, uiState.comments.size, impact.totalUpvotes, karma, streak.longest, completeness.isComplete) {
+        sortMilestones(
+            buildMilestones(
+                MilestoneInput(
+                    threads = uiState.posts.size,
+                    comments = uiState.comments.size,
+                    upvotesReceived = impact.totalUpvotes,
+                    karma = karma,
+                    longestStreak = streak.longest,
+                    profileComplete = completeness.isComplete
+                )
+            )
+        )
+    }
+    val badgeTiles = remember(milestones, uiState.badges) {
+        val serverTiles = uiState.badges.map {
+            BadgeTileUi(
+                id = "server_${it.id}",
+                emoji = it.emoji(),
+                title = it.displayName(),
+                earned = true,
+                fraction = 1f,
+                caption = "Awarded",
+                hint = "Awarded by Nagpur Pulse"
+            )
+        }
+        val milestoneTiles = milestones.map {
+            BadgeTileUi(
+                id = it.id,
+                emoji = it.emoji,
+                title = it.title,
+                earned = it.earned,
+                fraction = it.fraction,
+                caption = if (it.earned) "Unlocked" else "${it.current.coerceAtMost(it.target)}/${it.target}",
+                hint = it.hint
+            )
+        }
+        serverTiles + milestoneTiles
+    }
+    val bestPost = remember(uiState.posts) { uiState.posts.filter { it.upvotes > 0 }.maxByOrNull { it.upvotes } }
+    val nextAction = remember(uiState.posts.size, uiState.comments.size, streak) {
+        pickNextAction(uiState.posts.size, uiState.comments.size, streak)
+    }
+    val rank = uiState.rank?.takeIf { it.totalUsers >= 10 }
+
+    // ── "Since your last visit" + celebrations (stored on device) ────────────
+    val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+    val baselineUpvotes = remember(userId) { userId?.let { prefs.getInt("up_$it", -1) } ?: -1 }
+    val baselineReplies = remember(userId) { userId?.let { prefs.getInt("re_$it", -1) } ?: -1 }
+    val deltaUpvotes =
+        if (uiState.postsLoaded && baselineUpvotes >= 0) (impact.totalUpvotes - baselineUpvotes).coerceAtLeast(0) else 0
+    val deltaReplies =
+        if (uiState.postsLoaded && baselineReplies >= 0) (impact.totalReplies - baselineReplies).coerceAtLeast(0) else 0
+
+    val latestSnapshot by rememberUpdatedState(Triple(userId, impact, uiState.postsLoaded))
+    DisposableEffect(lifecycleOwner) {
+        fun save() {
+            val (id, stats, loaded) = latestSnapshot
+            if (id != null && loaded) {
+                prefs.edit().putInt("up_$id", stats.totalUpvotes).putInt("re_$id", stats.totalReplies).apply()
+            }
+        }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) save() }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { save(); lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    var celebration by remember { mutableStateOf<CelebrationMessage?>(null) }
+    val dataReady = uiState.postsLoaded && uiState.commentsLoaded
+    val earnedCount = milestones.count { it.earned }
+    LaunchedEffect(userId, dataReady, levelProgress.level.number, earnedCount) {
+        if (userId == null || !dataReady) return@LaunchedEffect
+        val levelKey = "level_$userId"
+        val earnedKey = "earned_$userId"
+        val storedLevel = prefs.getInt(levelKey, 0)
+        val storedEarned = prefs.getStringSet(earnedKey, null)
+        val earnedNow = milestones.filter { it.earned }.map { it.id }.toSet()
+        val level = levelProgress.level
+
+        var message: CelebrationMessage? = null
+        if (storedLevel in 1 until level.number) {
+            message = CelebrationMessage(level.emoji, "Level up! You're now a ${level.title}", "${level.unlock} unlocked")
+        } else if (storedEarned != null) {
+            val fresh = milestones.firstOrNull { it.earned && it.id !in storedEarned }
+            if (fresh != null) {
+                message = CelebrationMessage(fresh.emoji, "Badge unlocked: ${fresh.title}", "Nice work, keep going!")
+            }
+        }
+        prefs.edit()
+            .putInt(levelKey, level.number)
+            .putStringSet(earnedKey, (storedEarned.orEmpty() + earnedNow).toSet())
+            .apply()
+        if (message != null) {
+            haptic.success()
+            celebration = message
+        }
+    }
+
+    // Plays the entrance animation only the first time in this app session.
+    val animateIntro = remember { !profileIntroPlayed }
+    LaunchedEffect(uiState.isLoading, profile) {
+        if (!uiState.isLoading && profile != null) {
+            delay(1200)
+            profileIntroPlayed = true
+        }
+    }
+
+    // ── Dialogs / sheets ─────────────────────────────────────────────────────
+    var showLevels by remember { mutableStateOf(false) }
+    var showStreak by remember { mutableStateOf(false) }
+    var showBadges by remember { mutableStateOf(false) }
+    if (showLevels) LevelsDialog(karma) { showLevels = false }
+    if (showStreak) StreakDialog(streak) { showStreak = false }
+    if (showBadges) BadgesSheet(badgeTiles) { showBadges = false }
+
+    // ── Header values ────────────────────────────────────────────────────────
+    val displayName = profile?.displayName?.takeIf { it.isNotBlank() }
+        ?: profile?.username?.takeIf { it.isNotBlank() }
+        ?: viewModel.guestUsername?.takeIf { it.isNotBlank() }
+        ?: "NagpurUser"
+    val avatarUrl = profile?.avatarUrl?.takeIf { it.isNotBlank() }
+        ?: viewModel.guestAvatarUrl?.takeIf { it.isNotBlank() }
+
+    val goHome: () -> Unit = {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+    val goEditProfile: () -> Unit = { navController.navigate(Screen.AccountProfile.route) }
+    val shareProfile: () -> Unit = {
+        val level = levelProgress.level
+        val text = buildString {
+            append("I'm a ${level.emoji} ${level.title} on Nagpur Pulse with ${formatCount(karma)} karma")
+            if (streak.days > 1) append(" and a ${streak.days}-day streak 🔥")
+            append(". Come join the conversation about our city!")
+        }
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(send, "Share your profile")
+        if (context !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+    }
+
+    // Sections shown between the header and the tabs. Order = order on screen.
+    val sections = buildList {
+        if (profile != null && !completeness.isComplete) add("complete")
+        add("level")
+        add("next")
+        if (impact.hasAnything || deltaUpvotes > 0 || deltaReplies > 0 || rank != null) add("impact")
+        add("badges")
+        if (bestPost != null) add("best")
+        if (activity.isNotEmpty()) add("heatmap")
+    }
+    val tabsIndex = 1 + sections.size
+
+    fun selectTab(tab: Int, scrollToTabs: Boolean) {
+        haptic.tap()
+        viewModel.setActiveTab(tab)
+        if (scrollToTabs) scope.launch { listState.animateScrollToItem(tabsIndex) }
     }
 
     Scaffold(
@@ -257,7 +464,7 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surface)
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -267,770 +474,492 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.headlineMedium
                 )
                 Spacer(Modifier.weight(1f))
-
-                // Notification bell
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .pressScale(onClick = onNotifications),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Notifications,
-                        null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    if (uiState.unreadNotifCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(OrangePrimary)
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-3).dp, y = 3.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.width(10.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .pressScale { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Settings.route) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Settings,
-                        null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                TopBarIconButton(
+                    icon = Icons.Filled.Notifications,
+                    description = "Notifications",
+                    onClick = onNotifications,
+                    badgeCount = uiState.unreadNotifCount
+                )
+                Spacer(Modifier.width(4.dp))
+                TopBarIconButton(
+                    icon = Icons.Filled.Settings,
+                    description = "Settings",
+                    onClick = { navController.navigate(Screen.Settings.route) }
+                )
             }
         },
         bottomBar = { BottomNavBar(navController = navController, onCreatePost = onCreatePost) }
     ) { paddingValues ->
-        if (uiState.isLoading) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues), Alignment.Center
-            ) {
-                CircularProgressIndicator(color = OrangePrimary)
-            }
-            return@Scaffold
-        }
-
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(uiState.isRefreshing),
-            onRefresh = { viewModel.refresh(showLoading = false) },
-            indicator = { state, trigger -> com.google.accompanist.swiperefresh.SwipeRefreshIndicator(state, trigger, contentColor = OrangePrimary) }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            // ── Header ──────────────────────────────────────────────────────
-            item {
-                ProfileHeader(
-                    profile = uiState.profile,
-                    guestAvatarUrl = guestAvatarUrl,
-                    guestUsername = guestUsername,
-                    badges = uiState.badges,
-                    postCount = uiState.posts.size,
-                    savedCount = uiState.savedCount,
-                    onEditProfile = {
-                        navController.navigate(Screen.AccountProfile.route)
-                    }
-                )
-            }
-
-            // ── Tabs ─────────────────────────────────────────────────────────
-            item {
-                val tabs = listOf(
-                    "Threads (${uiState.posts.size})",
-                    if (uiState.commentCount >= 0) "Comments (${uiState.commentCount})" else "Comments",
-                    "Saved (${uiState.savedCount})"
-                )
-                TabRow(
-                    selectedTabIndex = uiState.activeTab,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = OrangePrimary,
-                    indicator = { tabPositions ->
-                        Box(
-                            modifier = Modifier
-                                .tabIndicatorOffset(tabPositions[uiState.activeTab])
-                                .height(2.5.dp)
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            OrangePrimary,
-                                            OrangeLight
-                                        )
-                                    )
-                                )
-                        )
-                    },
-                    divider = {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            thickness = 0.5.dp
+            if (uiState.isLoading) {
+                ProfileSkeleton()
+            } else {
+                SwipeRefresh(
+                    state = rememberSwipeRefreshState(uiState.isRefreshing),
+                    onRefresh = { viewModel.refresh(showLoading = false) },
+                    indicator = { state, trigger ->
+                        com.google.accompanist.swiperefresh.SwipeRefreshIndicator(
+                            state, trigger, contentColor = OrangePrimary
                         )
                     }
                 ) {
-                    tabs.forEachIndexed { i, label ->
-                        Tab(
-                            selected = uiState.activeTab == i,
-                            onClick = { viewModel.setActiveTab(i) },
-                            text = {
-                                Text(
-                                    label,
-                                    color = if (uiState.activeTab == i) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = if (uiState.activeTab == i) FontWeight.SemiBold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                            }
-                        )
-                    }
-                }
-            }
-
-            // ── Tab content ──────────────────────────────────────────────────
-            when (uiState.activeTab) {
-                0 -> {
-                    if (uiState.posts.isEmpty()) {
-                        item {
-                            EmptyTabState(
-                                Icons.Filled.ChatBubbleOutline,
-                                "No posts yet\nShare what's happening in Nagpur!"
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        // ── Header (banner, avatar, identity, actions, stats) ─────────
+                        item(key = "header") {
+                            ProfileHeader(
+                                profile = profile,
+                                displayName = displayName,
+                                avatarUrl = avatarUrl,
+                                levelProgress = levelProgress,
+                                streak = streak,
+                                completeness = completeness,
+                                threads = uiState.posts.size,
+                                comments = uiState.comments.size,
+                                animateIn = animateIntro,
+                                onEdit = goEditProfile,
+                                onShare = shareProfile,
+                                onKarma = { showLevels = true },
+                                onThreads = { selectTab(0, true) },
+                                onComments = { selectTab(1, true) },
+                                onStreak = { showStreak = true }
                             )
                         }
-                    } else {
-                        itemsIndexed(uiState.posts) { i, item ->
-                            StaggeredItem(i) {
-                                PostCard(
-                                    post = item,
-                                    onClick = { onPostClick(item.id) },
-                                    isOwnPost = true,
 
-                                    onEdit = {
-                                        navController.navigate(
-                                            Screen.CreatePost.createEditRoute(item.id)
+                        // ── Sections ───────────────────────────────────────────────
+                        items(sections, key = { "section_$it" }) { key ->
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .padding(top = 12.dp)
+                            ) {
+                                when (key) {
+                                    "complete" -> CompleteProfileCard(completeness, goEditProfile)
+                                    "level" -> LevelCard(levelProgress, karma) { showLevels = true }
+                                    "next" -> NextActionCard(
+                                        action = nextAction,
+                                        firstArea = profile?.areas?.firstOrNull(),
+                                        onClick = {
+                                            when (nextAction) {
+                                                NextAction.FIRST_THREAD, NextAction.SAVE_STREAK -> onCreatePost()
+                                                else -> goHome()
+                                            }
+                                        }
+                                    )
+                                    "impact" -> ImpactCard(impact, deltaUpvotes, deltaReplies, rank)
+                                    "badges" -> BadgesSection(badgeTiles) { showBadges = true }
+                                    "best" -> bestPost?.let {
+                                        BestThreadCard(
+                                            title = it.title,
+                                            upvotes = it.upvotes,
+                                            replies = it.commentCount,
+                                            views = it.viewCount,
+                                            onClick = { onPostClick(it.id) }
                                         )
-                                    },
+                                    }
+                                    "heatmap" -> ActivityHeatmapCard(heatmap)
+                                }
+                            }
+                        }
 
-                                    onDelete = { viewModel.deletePost(item.id) },
-                                    modifier = Modifier
-                                        .padding(horizontal = 14.dp)
-                                        .padding(top = 10.dp)
+                        // ── Sticky tabs ────────────────────────────────────────────
+                        stickyHeader(key = "tabs") {
+                            Column(
+                                Modifier
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .padding(top = 12.dp)
+                            ) {
+                                ProfileTabs(
+                                    activeTab = uiState.activeTab,
+                                    threads = uiState.posts.size,
+                                    comments = if (uiState.commentsLoaded) uiState.comments.size else null,
+                                    saved = uiState.savedCount,
+                                    onSelect = { selectTab(it, false) }
                                 )
                             }
                         }
-                    }
-                }
 
-                1 -> {
-                    if (uiState.comments.isEmpty()) {
-                        item {
-                            EmptyTabState(
-                                Icons.Filled.ChatBubbleOutline,
-                                "No comments yet\nJoin the conversation!"
-                            )
-                        }
-                    } else {
-                        itemsIndexed(uiState.comments) { i, item ->
-                            StaggeredItem(i) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 14.dp)
-                                        .padding(top = 10.dp)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(MaterialTheme.colorScheme.surface)
-                                        .padding(14.dp)
-                                ) {
-                                    Column {
-                                        Text(
-                                            "On a thread:",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.padding(bottom = 6.dp)
+                        // ── Tab content ────────────────────────────────────────────
+                        when (uiState.activeTab) {
+                            0 -> {
+                                if (uiState.posts.isEmpty()) {
+                                    item(key = "empty_threads") {
+                                        ProfileEmptyState(
+                                            emoji = "✍️",
+                                            title = "Start your Nagpur story",
+                                            subtitle = "Share what's happening around you and start earning karma.",
+                                            buttonLabel = "Create your first thread",
+                                            onClick = onCreatePost
                                         )
-                                        Text(
-                                            item.body,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.bodyLarge
+                                    }
+                                } else {
+                                    itemsIndexed(uiState.posts, key = { _, p -> "post_${p.id}" }) { i, item ->
+                                        StaggeredItem(i) {
+                                            PostCard(
+                                                post = item,
+                                                onClick = { onPostClick(item.id) },
+                                                isOwnPost = true,
+                                                onEdit = {
+                                                    navController.navigate(Screen.CreatePost.createEditRoute(item.id))
+                                                },
+                                                onDelete = { viewModel.deletePost(item.id) },
+                                                modifier = Modifier
+                                                    .padding(horizontal = 14.dp)
+                                                    .padding(top = 10.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            1 -> {
+                                if (!uiState.commentsLoaded) {
+                                    item(key = "comments_loading") {
+                                        Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
+                                            CircularProgressIndicator(color = OrangePrimary, modifier = Modifier.size(28.dp))
+                                        }
+                                    }
+                                } else if (uiState.comments.isEmpty()) {
+                                    item(key = "empty_comments") {
+                                        ProfileEmptyState(
+                                            emoji = "💬",
+                                            title = "Join the conversation",
+                                            subtitle = "Reply to a thread and your comments will show up here.",
+                                            buttonLabel = "Browse threads",
+                                            onClick = goHome
                                         )
-                                        Spacer(Modifier.height(6.dp))
-                                        Text(
-                                            item.timeAgo(),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelSmall
+                                    }
+                                } else {
+                                    items(uiState.comments, key = { "comment_${it.id}" }) { c ->
+                                        MyCommentCard(
+                                            comment = c,
+                                            threadTitle = uiState.postTitles[c.postId],
+                                            onClick = { onPostClick(c.postId) },
+                                            modifier = Modifier
+                                                .padding(horizontal = 14.dp)
+                                                .padding(top = 10.dp)
                                         )
+                                    }
+                                }
+                            }
+
+                            else -> {
+                                if (uiState.savedPosts.isEmpty()) {
+                                    item(key = "empty_saved") {
+                                        ProfileEmptyState(
+                                            emoji = "🔖",
+                                            title = "Nothing saved yet",
+                                            subtitle = "Tap the bookmark on any thread to keep it here.",
+                                            buttonLabel = "Find threads to save",
+                                            onClick = goHome
+                                        )
+                                    }
+                                } else {
+                                    itemsIndexed(uiState.savedPosts, key = { _, p -> "saved_${p.id}" }) { i, item ->
+                                        StaggeredItem(i) {
+                                            PostCard(
+                                                post = item,
+                                                onClick = { onPostClick(item.id) },
+                                                isSaved = true,
+                                                onToggleSave = { viewModel.toggleSave(item.id) },
+                                                modifier = Modifier
+                                                    .padding(horizontal = 14.dp)
+                                                    .padding(top = 10.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-
-                2 -> {
-                    if (uiState.savedPosts.isEmpty()) {
-                        item {
-                            EmptyTabState(
-                                Icons.Filled.BookmarkBorder,
-                                "Nothing saved yet\nTap the bookmark icon on any post to save it"
-                            )
-                        }
-                    } else {
-                        itemsIndexed(uiState.savedPosts) { i, item ->
-                            StaggeredItem(i) {
-                                PostCard(
-                                    post = item,
-                                    onClick = { onPostClick(item.id) },
-                                    isSaved = true,
-                                    onToggleSave = { viewModel.toggleSave(item.id) },
-                                    modifier = Modifier
-                                        .padding(horizontal = 14.dp)
-                                        .padding(top = 10.dp)
-                                )
-                            }
-                        }
-                    }
-                }
             }
-
-            item { Spacer(Modifier.height(16.dp)) }
-        }
+            CelebrationOverlay(celebration) { celebration = null }
         }
     }
 }
+
+// ── Header ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ProfileHeader(
     profile: Profile?,
-    guestAvatarUrl: String?,
-    guestUsername: String?,
-    badges: List<Badge>,
-    postCount: Int,
-    savedCount: Int,
-    onEditProfile: () -> Unit
+    displayName: String,
+    avatarUrl: String?,
+    levelProgress: LevelProgress,
+    streak: StreakInfo,
+    completeness: Completeness,
+    threads: Int,
+    comments: Int,
+    animateIn: Boolean,
+    onEdit: () -> Unit,
+    onShare: () -> Unit,
+    onKarma: () -> Unit,
+    onThreads: () -> Unit,
+    onComments: () -> Unit,
+    onStreak: () -> Unit
 ) {
-    val displayName =
-        profile?.displayName
-            ?.takeIf { it.isNotBlank() }
-            ?: profile?.username
-            ?: guestUsername?.takeIf { it.isNotBlank() }
-            ?: "NagpurUser"
-
-
-    val avatarUrl =
-        profile?.avatarUrl
-            ?: guestAvatarUrl
-            ?: "https://api.dicebear.com/7.x/avataaars/png?seed=$displayName"
-
-    // val bannerUrl = profile?.coverUrl
-
-    // android.util.Log.d("PROFILE_UI", "banner=$bannerUrl")
-
-
-    // Staggered entrance
-    var av by remember { mutableStateOf(false) }
-    var nv by remember { mutableStateOf(false) }
-    var sv by remember { mutableStateOf(false) }
-    var bv by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(60); av = true
-        delay(100); nv = true
-        delay(80); sv = true
-        delay(80); bv = true
+    val level = levelProgress.level
+    val screenWidth = LocalConfiguration.current.screenWidthDp
+    val nameSize = when {
+        displayName.length > 20 -> 20.sp
+        screenWidth < 360 -> 22.sp
+        else -> 26.sp
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        OrangePrimary.copy(alpha = 0.06f),
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
-    ) {
-        // Background city motif (subtle)
-        /*
+    var shown by remember { mutableStateOf(!animateIn) }
+    LaunchedEffect(Unit) { if (animateIn) { delay(60); shown = true } }
+    val avatarAlpha by animateFloatAsState(if (shown) 1f else 0f, tween(450), label = "avatar_alpha")
+    val avatarScale by animateFloatAsState(
+        if (shown) 1f else 0.7f,
+        spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
+        label = "avatar_scale"
+    )
+    val textAlpha by animateFloatAsState(
+        if (shown) 1f else 0f, tween(450, delayMillis = 120, easing = FastOutSlowInEasing), label = "text_alpha"
+    )
 
-        if (!bannerUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(bannerUrl)
-                    .crossfade(true)
-                    .listener(
-                        onSuccess = { _, _ ->
-                            android.util.Log.d("BANNER_LOAD", "SUCCESS")
-                        },
-                        onError = { _, result ->
-                            android.util.Log.e(
-                                "BANNER_LOAD",
-                                result.throwable.message ?: "ERROR"
-                            )
-                        }
-                    )
-                    .build(),
-                contentDescription = "Banner",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                OrangePrimary.copy(alpha = 0.25f),
-                                MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    )
-            )
-        }
+    val joined = remember(profile?.createdAt) { joinedLabel(profile?.createdAt) }
+    val location = profile?.location?.takeIf { it.isNotBlank() }
 
-        */
-
-
-
-
+    Box(Modifier.fillMaxWidth()) {
+        ProfileBanner(
+            coverUrl = profile?.coverUrl,
+            level = level,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(ProfileDims.bannerHeight)
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(top = ProfileDims.bannerHeight - ProfileDims.avatarBox / 2)
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar with glow ring
-            AnimatedVisibility(
-                av,
-                enter = fadeIn(tween(500)) + scaleIn(
-                    initialScale = 0.65f,
-                    animationSpec = spring(Spring.DampingRatioMediumBouncy)
-                )
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    // Glow
-                    Box(
-                        modifier = Modifier
-                            .size(132.dp)
-                            .clip(CircleShape)
-                            .background(OrangePrimary.copy(0.12f))
-                    )
-                    // Ring
-                    Box(
-                        modifier = Modifier
-                            .size(122.dp)
-                            .border(
-                                2.5.dp,
-                                Brush.sweepGradient(
-                                    listOf(
-                                        OrangePrimary,
-                                        OrangeLight,
-                                        OrangePrimary.copy(0.3f),
-                                        OrangePrimary
-                                    )
-                                ),
-                                CircleShape
-                            )
-                            .clip(CircleShape)
-                    )
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(avatarUrl)
-                            .crossfade(true)
-                            .listener(
-                                onSuccess = { _, _ ->
-                                    android.util.Log.d("AVATAR_LOAD", "SUCCESS")
-                                },
-                                onError = { _, result ->
-                                    android.util.Log.e(
-                                        "AVATAR_LOAD",
-                                        result.throwable.message ?: "ERROR"
-                                    )
-                                }
-                            )
-                            .build(),
-                        contentDescription = "Avatar",
-                        modifier = Modifier
-                            .size(108.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentScale = ContentScale.Crop
-                    )
-                    // Edit button
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(OrangePrimary)
-                            .align(Alignment.BottomEnd)
-                            .pressScale(onClick = onEditProfile),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.Edit,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
+            ProfileAvatar(
+                avatarUrl = avatarUrl,
+                initial = displayName.firstOrNull()?.uppercase() ?: "N",
+                level = level,
+                completeness = completeness,
+                onEdit = onEdit,
+                modifier = Modifier.graphicsLayer {
+                    alpha = avatarAlpha
+                    scaleX = avatarScale
+                    scaleY = avatarScale
                 }
-            }
+            )
 
-            Spacer(Modifier.height(14.dp))
-
-            // Name + meta
-            AnimatedVisibility(nv, enter = fadeIn(tween(400)) + slideInVertically { 20 }) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val profileScreenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+            Column(
+                Modifier.graphicsLayer {
+                    alpha = textAlpha
+                    translationY = (1f - textAlpha) * 40f
+                },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Text(
                         displayName,
                         color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = nameSize,
                         fontWeight = FontWeight.Bold,
-                        fontSize = if (profileScreenWidth < 360) 23.sp else if (profileScreenWidth < 400) 26.sp else 28.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            "u/${profile?.username ?: ""}",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        if (profile?.isVerified == true) {
-                            Spacer(Modifier.width(5.dp))
-
-                            Icon(
-                                Icons.Filled.CheckCircle,
-                                contentDescription = "Verified",
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
+                    if (profile?.isVerified == true) {
+                        Spacer(Modifier.width(6.dp))
+                        VerifiedTick()
                     }
-                    if (!profile?.tagline.isNullOrBlank()) {
-                        Spacer(Modifier.height(4.dp))
-
-
-                        Text(
-                            profile!!.tagline!!,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 24.dp)
-                        )
-                    }
-
+                }
+                if (!profile?.username.isNullOrBlank()) {
+                    Text(
+                        "u/${profile?.username}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                if (!profile?.tagline.isNullOrBlank()) {
                     Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.LocationOn,
-                            contentDescription = null,
-                            tint = OrangePrimary,
-                            modifier = Modifier.size(14.dp)
-                        )
-
-                        Spacer(Modifier.width(4.dp))
-
-                        Text(
-                            buildString {
-                                if (!profile?.location.isNullOrBlank()) {
-                                    append(profile.location)
-                                }
-
-                                val joinedText = profile?.memberSince()
-                                    ?.replace("Member since ", "Joined ")
-
-                                if (!joinedText.isNullOrBlank()) {
-                                    if (!profile?.location.isNullOrBlank()) {
-                                        append(" • ")
-                                    }
-                                    append(joinedText)
-                                }
-                            },
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-
+                    Text(
+                        profile?.tagline.orEmpty(),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-            }
 
-            Spacer(Modifier.height(20.dp))
-
-            // Stats row
-            AnimatedVisibility(sv, enter = fadeIn(tween(400)) + slideInVertically { 30 }) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatCard(profile?.karma ?: 0, "Karma", OrangePrimary, Modifier.weight(1f))
-                    StatCard(postCount, "Threads", BlueInfo, Modifier.weight(1f))
-                    StatCard(savedCount, "Saved", GreenSuccess, Modifier.weight(1f))
+                Spacer(Modifier.height(ProfileDims.spaceM))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ProfilePill(
+                        text = "Lv ${level.number} · ${level.title}",
+                        leadingEmoji = level.emoji,
+                        tint = level.colorStart.asColor()
+                    )
+                    StreakChip(streak, onStreak)
                 }
-            }
 
-            Spacer(Modifier.height(12.dp))
+                val areas = profile?.areas.orEmpty()
+                if (areas.isNotEmpty()) {
+                    Spacer(Modifier.height(ProfileDims.spaceM))
+                    AreaChipFlow(areas)
+                }
 
-
-
-            Button(
-                onClick = onEditProfile,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(25.dp)
-            ) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-
-                Spacer(Modifier.width(8.dp))
-
-                Text(
-                    "Edit Profile",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            AnimatedVisibility(
-                bv,
-                enter = fadeIn(tween(400)) + slideInVertically { 25 }
-            ) {
-                Column {
-
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Earned Badges",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Row(
-                            Modifier.pressScale(onClick = {}),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "View all",
-                                color = OrangePrimary,
-                                style = MaterialTheme.typography.titleSmall
-                            )
-
+                if (location != null || joined != null) {
+                    Spacer(Modifier.height(ProfileDims.spaceM))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (location != null) {
                             Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                Icons.Filled.LocationOn,
                                 contentDescription = null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(16.dp)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                location,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (location != null && joined != null) {
+                            Text(
+                                "  •  ",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (joined != null) {
+                            Text(
+                                joined,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(ProfileDims.spaceL))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PillButton("Edit profile", Icons.Filled.Edit, onEdit, Modifier.weight(1f), primary = true)
+                    PillButton("Share", Icons.Filled.Share, onShare, Modifier.weight(1f))
+                }
 
-                    val displayBadges: List<Triple<String, ImageVector, String>> = if (badges.isEmpty()) {
-                        listOf(
-                            Triple("food_expert", Icons.Filled.Restaurant, "Food Expert"),
-                            Triple("night_owl", Icons.Filled.Nightlight, "Night Owl"),
-                            Triple("top_contributor", Icons.Filled.LocalFireDepartment, "Top Contributor"),
-                            Triple("trend_spotter", Icons.Filled.Star, "Trend Spotter")
+                Spacer(Modifier.height(ProfileDims.spaceM))
+                StatsCard(
+                    karma = profile?.karma ?: 0,
+                    threads = threads,
+                    comments = comments,
+                    animate = animateIn,
+                    onKarma = onKarma,
+                    onThreads = onThreads,
+                    onComments = onComments
+                )
+            }
+        }
+    }
+}
+
+private fun joinedLabel(createdAt: String?): String? {
+    val date = parseInstant(createdAt)?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: return null
+    val month = date.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH)
+    return "Joined $month ${date.year}"
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileTabs(
+    activeTab: Int,
+    threads: Int,
+    comments: Int?,
+    saved: Int,
+    onSelect: (Int) -> Unit
+) {
+    val labels = listOf("Threads", "Comments", "Saved")
+    val counts = listOf<Int?>(threads, comments, saved)
+    TabRow(
+        selectedTabIndex = activeTab,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = OrangePrimary,
+        indicator = { tabPositions ->
+            TabRowDefaults.SecondaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(tabPositions[activeTab]),
+                color = OrangePrimary
+            )
+        }
+    ) {
+        labels.forEachIndexed { i, label ->
+            val selected = activeTab == i
+            Tab(
+                selected = selected,
+                onClick = { onSelect(i) },
+                modifier = Modifier.defaultMinSize(minHeight = ProfileDims.minTouch),
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            label,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    } else {
-                        badges.mapNotNull { badge ->
-                            val icon = when (badge.badgeType) {
-                                "food_expert"     -> Icons.Filled.Restaurant
-                                "night_owl"      -> Icons.Filled.Nightlight
-                                "top_contributor" -> Icons.Filled.LocalFireDepartment
-                                "trend_spotter"  -> Icons.Filled.Star
-                                else             -> null
-                            }
-
-                            icon?.let {
-                                Triple(
-                                    badge.badgeType,
-                                    it,
-                                    badge.displayName()
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        displayBadges.forEachIndexed { i, (type, icon, label) ->
-                            var cv by remember { mutableStateOf(false) }
-
-                            LaunchedEffect(Unit) {
-                                delay(i * 80L)
-                                cv = true
-                            }
-
-                            AnimatedVisibility(
-                                cv,
-                                enter = fadeIn(tween(300)) +
-                                        scaleIn(
-                                            initialScale = 0.7f,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioHighBouncy
-                                            )
-                                        )
-                            ) {
-                                BadgeChip(icon, label, type)
-                            }
+                        val count = counts[i]
+                        if (count != null && count > 0) {
+                            Spacer(Modifier.width(6.dp))
+                            CountPill(count, selected)
                         }
                     }
                 }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 0.5.dp
-            )
-
-        }
-    }
-}
-
-@Composable
-private fun StatCard(value: Int, label: String, accentColor: Color, modifier: Modifier = Modifier) {
-    val animated by animateIntAsState(
-        value,
-        tween(1000, easing = FastOutSlowInEasing),
-        label = "stat_$label"
-    )
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(250); visible = true }
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.75f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy
-        ),
-        label = "stat_scale"
-    )
-
-    Box(
-        modifier = modifier
-            .scale(scale)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, accentColor.copy(0.30f), RoundedCornerShape(14.dp))
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                formatCount(animated),
-                color = accentColor,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Spacer(Modifier.height(3.dp))
-            Text(
-                label,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center
             )
         }
     }
 }
 
+// ── My comments ───────────────────────────────────────────────────────────────
+
 @Composable
-private fun BadgeChip(icon: ImageVector, label: String, badgeType: String) {
-    val bg = when (badgeType) {
-        "food_expert" -> OrangePrimary.copy(alpha = 0.15f)
-        "night_owl" -> MaterialTheme.colorScheme.primaryContainer
-        "top_contributor" -> OrangePrimary.copy(alpha = 0.12f)
-        "trend_spotter" -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(22.dp))
-            .background(bg)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(Modifier.width(5.dp))
+private fun MyCommentCard(
+    comment: Comment,
+    threadTitle: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ProfileCard(modifier = modifier, onClick = onClick) {
         Text(
-            label,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
+            "💬 On: ${threadTitle?.takeIf { it.isNotBlank() } ?: "a thread"}",
+            color = OrangePrimary,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
-    }
-}
-
-@Composable
-private fun EmptyTabState(icon: ImageVector, text: String) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(48.dp), Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = OrangePrimary,
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            comment.body,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            buildString {
+                append("▲ ${formatCount(comment.upvotes)}  ·  ${comment.timeAgo()}")
+                if (comment.isAnonymous) append("  ·  🕶 Anonymous")
+            },
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }

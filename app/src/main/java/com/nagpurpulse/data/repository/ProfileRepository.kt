@@ -1,6 +1,7 @@
 package com.nagpurpulse.data.repository
 
 import com.nagpurpulse.data.model.Badge
+import com.nagpurpulse.data.model.KarmaRank
 import com.nagpurpulse.data.model.Notification
 import com.nagpurpulse.data.model.Profile
 import io.github.jan.supabase.SupabaseClient
@@ -103,6 +104,22 @@ class ProfileRepository @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * "Top X%" position by karma, overall and inside the user's first area.
+     * Returns null (never throws) if the RPC is not deployed yet or the user has no rank,
+     * so the UI can simply hide the rank row.
+     */
+    suspend fun getKarmaRank(): KarmaRank? {
+        return try {
+            client.postgrest
+                .rpc("get_my_karma_rank", kotlinx.serialization.json.buildJsonObject { })
+                .decodeList<KarmaRank>()
+                .firstOrNull()
+        } catch (e: Exception) {
+            null
         }
     }
 }

@@ -196,4 +196,6 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
+    // Unit tests (pure-Kotlin profile gamification logic)
+    testImplementation("junit:junit:4.13.2")
 }

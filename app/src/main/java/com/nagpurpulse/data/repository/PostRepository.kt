@@ -43,6 +43,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 
+@kotlinx.serialization.Serializable
+private data class PostTitleRow(val id: String = "", val title: String = "")
+
 class PostRepository @Inject constructor(
     private val client: SupabaseClient,
     private val authRepository: AuthRepository
@@ -617,6 +620,20 @@ class PostRepository @Inject constructor(
             put("p_limit", rootLimit); put("p_offset", rootOffset)
         }).decodeList<ThreadCommentRow>()
         CommentPage(rows.map { it.toComment() }, rows.firstOrNull()?.totalRoots?.toInt() ?: 0)
+    }
+
+    /** Thread titles for a set of post ids, used to give "my comments" some context. */
+    suspend fun getPostTitles(postIds: List<String>): Result<Map<String, String>> = runCatching {
+        val ids = postIds.filter { it.isNotBlank() }.distinct()
+        if (ids.isEmpty()) {
+            emptyMap()
+        } else {
+            ids.chunked(50).flatMap { chunk ->
+                client.postgrest["posts"]
+                    .select(Columns.list("id", "title")) { filter { isIn("id", chunk) } }
+                    .decodeList<PostTitleRow>()
+            }.associate { it.id to it.title }
+        }
     }
 
     /** Profile comments. Other people's anonymous comments are never returned. */

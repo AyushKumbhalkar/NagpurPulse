@@ -776,7 +776,6 @@ fun NagpurPulseNavGraph(
 },
                 onNotifications = { navController.navigate(Screen.Notifications.route) },
                 onLogout = {
-                    android.util.Log.e("AYUSH_LOGOUT", "LOGOUT CALLBACK EXECUTED")
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }

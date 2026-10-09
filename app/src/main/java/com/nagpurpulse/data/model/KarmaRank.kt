@@ -1,14 +1,19 @@
 package com.nagpurpulse.data.model
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
 /**
- * Ranking summary displayed on the profile impact card.
+ * "Top X%" karma position shown on the profile impact card.
  *
- * Percentages are expected to be calculated by the backend/repository; this model
- * only represents the returned values and does not invent ranking data.
+ * Returned by the get_my_karma_rank() RPC (supabase/migrations/20261009120000_profile_karma_rank.sql).
+ * It only contains aggregate percentages for the calling user, never other users' data.
  */
+@Serializable
 data class KarmaRank(
-    val rankPercent: Int,
-    val areaRankPercent: Int? = null,
+    @SerialName("rank_percent")      val rankPercent: Int = 100,
+    @SerialName("total_users")       val totalUsers: Int = 0,
     val area: String? = null,
-    val areaUsers: Int? = null
+    @SerialName("area_rank_percent") val areaRankPercent: Int? = null,
+    @SerialName("area_users")        val areaUsers: Int? = null
 )
