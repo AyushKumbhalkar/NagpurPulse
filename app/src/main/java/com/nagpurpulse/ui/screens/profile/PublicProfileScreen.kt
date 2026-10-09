@@ -4,6 +4,10 @@ package com.nagpurpulse.ui.screens.profile
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.content.Intent
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.semantics.contentDescription
@@ -135,15 +139,7 @@ fun PublicProfileScreen(
             PublicProfileTopBar(
                 handle = handle,
                 isOnline = isOnline,
-                canShare = canShare,
-                onBack = onBack,
-                onShare = {
-                    val send = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Check out u/$handle on NagpurPulse")
-                    }
-                    context.startActivity(Intent.createChooser(send, "Share profile"))
-                }
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -192,14 +188,8 @@ private fun PublicProfileTopBar(
                 Text("Online now", color = GreenSuccess, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
         }
-        // Keeps the title optically centred whether or not the share button is shown.
-        if (canShare) {
-            IconButton(onClick = onShare) {
-                Icon(Icons.Filled.Share, contentDescription = "Share profile", tint = SecondaryText)
-            }
-        } else {
-            Spacer(Modifier.size(48.dp))
-        }
+        // Balances the back button so the title stays optically centred.
+        Spacer(Modifier.size(48.dp))
     }
 }
 
@@ -465,21 +455,46 @@ private fun PublicProfileContent(
                     Spacer(Modifier.height(20.dp))
 
                     Reveal(shown, 170) {
-                        Button(
-                            onClick = { },
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(26.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
-                        ) {
-                            Icon(Icons.Filled.PersonAdd, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Follow", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = {
+                                    val send = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, "Check out u/${profile.username} on NagpurPulse")
+                                    }
+                                    context.startActivity(Intent.createChooser(send, "Share profile"))
+                                },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(25.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
+                            ) {
+                                Icon(Icons.Filled.Share, null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Share profile", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    clipboard.setText(AnnotatedString("u/${profile.username}"))
+                                    Toast.makeText(context, "Username copied", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(25.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, OrangePrimary.copy(alpha = 0.5f))
+                            ) {
+                                Icon(Icons.Filled.ContentCopy, null, tint = OrangePrimary, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Copy handle", color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            }
                         }
                     }
 
+                    Spacer(Modifier.height(16.dp))
+
+                    Reveal(shown, 230) { CommunityLevelCard(progress) }
+
                     Spacer(Modifier.height(18.dp))
 
-                    Reveal(shown, 250) {
+                    Reveal(shown, 300) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             PublicStatBox(formatCount(profile.karma), "Karma", OrangePrimary, Modifier.weight(1f))
                             PublicStatBox(
@@ -514,6 +529,12 @@ private fun PublicProfileContent(
                             .background(OrangePrimary.copy(alpha = 0.12f))
                             .padding(horizontal = 9.dp, vertical = 2.dp)
                     )
+                    if (posts.size > 1) {
+                        Spacer(Modifier.weight(1f))
+                        SortPill("Latest", selected = !sortTop) { sortTop = false }
+                        Spacer(Modifier.width(6.dp))
+                        SortPill("Top", selected = sortTop) { sortTop = true }
+                    }
                 }
             }
         }
@@ -617,4 +638,82 @@ private fun PublicStatBox(value: String, label: String, accentColor: Color, modi
             Text(label, color = SecondaryText, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+}
+
+@Composable
+private fun CommunityLevelCard(progress: LevelProgress) {
+    val start = Color(progress.level.colorStart)
+    val end = Color(progress.level.colorEnd)
+    val animated by animateFloatAsState(
+        targetValue = progress.fraction,
+        animationSpec = tween(900, delayMillis = 350, easing = FastOutSlowInEasing),
+        label = "level_progress"
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Surface)
+            .border(1.dp, start.copy(alpha = 0.30f), RoundedCornerShape(18.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(start, end))),
+            contentAlignment = Alignment.Center
+        ) { Text(progress.level.emoji, fontSize = 22.sp) }
+
+        Spacer(Modifier.width(14.dp))
+
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(progress.level.title, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Level ${progress.level.number}", color = start, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(start.copy(alpha = 0.14f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(start.copy(alpha = 0.15f))
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(animated.coerceIn(0.04f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(50))
+                        .background(Brush.horizontalGradient(listOf(start, end)))
+                )
+            }
+            Spacer(Modifier.height(5.dp))
+            Text(
+                if (progress.next != null) "${progress.remaining} karma to ${progress.next.emoji} ${progress.next.title}"
+                else "Top level reached — a true city legend",
+                color = SecondaryText, fontSize = 11.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SortPill(label: String, selected: Boolean, onClick: () -> Unit) {
+    val bg by animateColorAsState(if (selected) OrangePrimary else SurfaceAlt, tween(200), label = "sort_bg")
+    Text(
+        label,
+        color = if (selected) Color.White else SecondaryText,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    )
 }
