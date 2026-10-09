@@ -5,6 +5,7 @@ package com.nagpurpulse.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class Message(
@@ -15,9 +16,17 @@ data class Message(
     @SerialName("message_type")    val messageType: String = "text",   // text | image | voice
     @SerialName("is_read")         val isRead: Boolean = false,
     @SerialName("created_at")      val createdAt: String = "",
+    // Added by supabase/migrations/20261010120000_messaging_upgrade.sql. All have safe
+    // defaults, so the app keeps working before the migration is applied.
+    @SerialName("reply_to_id")     val replyToId: String? = null,
+    @SerialName("edited_at")       val editedAt: String? = null,
+    // emoji -> user ids that reacted with it (one reaction per user per message)
+    val reactions: Map<String, List<String>> = emptyMap(),
     // Enriched client-side only
     val senderUsername: String? = null,
-    val senderAvatarUrl: String? = null
+    val senderAvatarUrl: String? = null,
+    // Client-only delivery state: "" (confirmed) | "sending" | "failed". Never serialized.
+    @Transient val sendState: String = ""
 )
 
 @Serializable
@@ -27,6 +36,8 @@ data class Conversation(
     @SerialName("participant_two") val participantTwo: String = "",
     @SerialName("last_message")    val lastMessage: String? = null,
     @SerialName("last_message_at") val lastMessageAt: String = "",
+    // Added by the messaging_upgrade migration; null until it is applied / for old rows.
+    @SerialName("last_message_sender") val lastMessageSender: String? = null,
     @SerialName("unread_count_one") val unreadCountOne: Int = 0,
     @SerialName("unread_count_two") val unreadCountTwo: Int = 0,
     @SerialName("created_at")      val createdAt: String = "",

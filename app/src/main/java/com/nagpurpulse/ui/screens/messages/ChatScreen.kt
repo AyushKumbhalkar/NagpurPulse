@@ -8,6 +8,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,22 +17,35 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,26 +56,49 @@ import com.nagpurpulse.data.model.Message
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.MessageRepository
 import com.nagpurpulse.data.repository.PresenceRepository
+import com.nagpurpulse.data.repository.TypingSession
+import com.nagpurpulse.ui.components.EmptyState
 import com.nagpurpulse.ui.components.pressScale
+import com.nagpurpulse.ui.components.rememberHaptic
 import com.nagpurpulse.ui.components.shimmerEffect
+import com.nagpurpulse.ui.preferences.DensityManager
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.nagpurpulse.ui.preferences.DensityManager
+import kotlin.math.roundToInt
+
 // ── ViewModel ─────────────────────────────────────────────────────────────────
+private const val CHAT_PAGE_SIZE = 30
+private const val MAX_MESSAGE_LENGTH = 2000
+private const val STATE_SENDING = "sending"
+private const val STATE_FAILED = "failed"
+
 data class ChatUiState(
+    // Ascending (oldest -> newest). Includes locally pending / failed messages.
     val messages: List<Message> = emptyList(),
     val otherUsername: String = "Chat",
     val otherAvatarSeed: String = "anon",
     val otherUserId: String = "",
     val isLoading: Boolean = true,
-    val isSending: Boolean = false,
-    val error: String? = null,
-    val isOtherOnline: Boolean = false
+    val isLoadingOlder: Boolean = false,
+    val hasMoreOlder: Boolean = false,
+    val loadError: String? = null,
+    val isOtherOnline: Boolean = false,
+    val isOtherTyping: Boolean = false,
+    val isMuted: Boolean = false,
+    val isPinned: Boolean = false,
+    val isBlockedByMe: Boolean = false,
+    // First message that was unread when the chat was opened (for the "New messages" divider).
+    val firstUnreadId: String? = null,
+    val replyingTo: Message? = null
 )
 
 @HiltViewModel
@@ -76,40 +114,95 @@ class ChatViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState
 
+    // One-off snackbar texts.
+    private val _events = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val events: SharedFlow<String> = _events
+
+    // How many rows the server has returned so far (offset for the next older page).
+    private var serverLoaded = 0
+
+    private var typingSession: TypingSession? = null
+    private var typingStopJob: Job? = null
+    private var iAmTyping = false
+
     init {
         presenceRepository.start()
         viewModelScope.launch {
             presenceRepository.onlineUserIds.collect { ids ->
-                _uiState.value = _uiState.value.copy(
-                    isOtherOnline = _uiState.value.otherUserId in ids
-                )
+                _uiState.update { it.copy(isOtherOnline = it.otherUserId in ids) }
             }
         }
         loadMessages()
         subscribeRealtime()
+        openTyping()
     }
 
     private fun loadMessages() {
         viewModelScope.launch {
-            val messagesTask = async { messageRepository.getMessages(conversationId) }
+            _uiState.update { it.copy(isLoading = true, loadError = null) }
+            val pageTask = async { messageRepository.getMessagesPage(conversationId, 0, CHAT_PAGE_SIZE) }
             val conversationTask = async { messageRepository.getConversationById(conversationId) }
-            val messagesResult = messagesTask.await()
-            val conversationResult = conversationTask.await()
-            messagesResult.fold(
-                onSuccess = { msgs ->
-                    val conv = conversationResult.getOrNull()
-                    _uiState.value = _uiState.value.copy(
-                        messages = msgs,
-                        otherUsername = conv?.otherUsername ?: "Chat",
-                        otherAvatarSeed = conv?.otherAvatarSeed ?: "anon",
-                        otherUserId = conv?.otherUserId ?: "",
-                        isOtherOnline = (conv?.otherUserId ?: "") in presenceRepository.onlineUserIds.value,
-                        isLoading = false
-                    )
+            val blockedTask = async { messageRepository.getBlockedUserIds() }
+            val pageResult = pageTask.await()
+            val conv = conversationTask.await().getOrNull()
+            val blocked = blockedTask.await()
+
+            pageResult.fold(
+                onSuccess = { page ->
+                    serverLoaded = page.serverCount
+                    val otherId = conv?.otherUserId ?: ""
+                    val me = myUserId
+                    // Remember where the unread block starts BEFORE we mark everything read.
+                    val firstUnread = page.messages.firstOrNull { it.senderId != me && !it.isRead }?.id
+                    _uiState.update {
+                        it.copy(
+                            messages = page.messages,
+                            hasMoreOlder = page.hasMore,
+                            otherUsername = conv?.otherUsername ?: "Chat",
+                            otherAvatarSeed = conv?.otherAvatarSeed ?: "anon",
+                            otherUserId = otherId,
+                            isOtherOnline = otherId in presenceRepository.onlineUserIds.value,
+                            isMuted = conv?.isMuted ?: false,
+                            isPinned = conv?.isPinned ?: false,
+                            isBlockedByMe = otherId.isNotBlank() && otherId in blocked,
+                            firstUnreadId = firstUnread,
+                            isLoading = false,
+                            loadError = null
+                        )
+                    }
                     messageRepository.markConversationRead(conversationId)
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: "Couldn't load this chat") }
+                }
+            )
+        }
+    }
+
+    fun retryLoad() = loadMessages()
+
+    /** Prepends the next page of older messages. */
+    fun loadOlder() {
+        val s = _uiState.value
+        if (s.isLoading || s.isLoadingOlder || !s.hasMoreOlder) return
+        _uiState.update { it.copy(isLoadingOlder = true) }
+        viewModelScope.launch {
+            messageRepository.getMessagesPage(conversationId, serverLoaded, CHAT_PAGE_SIZE).fold(
+                onSuccess = { page ->
+                    serverLoaded += page.serverCount
+                    _uiState.update { cur ->
+                        val existing = cur.messages.map { it.id }.toSet()
+                        val older = page.messages.filter { it.id !in existing }
+                        cur.copy(
+                            messages = older + cur.messages,
+                            hasMoreOlder = page.hasMore,
+                            isLoadingOlder = false
+                        )
+                    }
+                },
+                onFailure = {
+                    _uiState.update { it.copy(isLoadingOlder = false) }
+                    _events.tryEmit("Couldn't load earlier messages.")
                 }
             )
         }
@@ -117,85 +210,164 @@ class ChatViewModel @Inject constructor(
 
     private fun subscribeRealtime() {
         viewModelScope.launch {
-
-            android.util.Log.d("CHAT_RT", "Realtime started")
-
-            messageRepository.subscribeToMessages(conversationId)
-                .collect { newMsg ->
-
-                    android.util.Log.d(
-                        "CHAT_RT",
-                        "Realtime received: ${newMsg.content}"
-                    )
-
-                    val current = _uiState.value.messages.toMutableList()
-
-                    if (current.none { it.id == newMsg.id }) {
-                        current.add(newMsg)
-
-                        _uiState.value = _uiState.value.copy(
-                            messages = current
+            messageRepository.subscribeToMessages(conversationId).collect { incoming ->
+                val me = myUserId
+                _uiState.update { s ->
+                    val list = s.messages.toMutableList()
+                    val idx = list.indexOfFirst { it.id == incoming.id }
+                    when {
+                        // Existing message changed: read receipt, edit, delete or reaction.
+                        idx >= 0 -> list[idx] = incoming.copy(
+                            senderUsername = incoming.senderUsername ?: list[idx].senderUsername
                         )
+                        // My own message arriving over realtime: replace the matching pending bubble.
+                        incoming.senderId == me -> {
+                            val pendingIdx = list.indexOfFirst {
+                                it.sendState == STATE_SENDING && it.senderId == me && it.content == incoming.content
+                            }
+                            if (pendingIdx >= 0) list[pendingIdx] = incoming else list.add(incoming)
+                        }
+                        else -> list.add(incoming)
                     }
-
-                    if (newMsg.senderId != myUserId) {
-                        messageRepository.markConversationRead(conversationId)
-                    }
+                    s.copy(messages = list)
                 }
-        }
-    }
-
-    fun sendMessage(content: String) {
-        if (content.isBlank() || _uiState.value.isSending) return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSending = true, error = null)
-            // Use the server-confirmed message as the single source of truth.
-            // Optimistic + Realtime + request-response inserts made the same
-            // message appear to animate twice on slower connections.
-            messageRepository.sendMessage(conversationId, content).fold(
-                onSuccess = { real ->
-                    val updated = _uiState.value.messages.toMutableList()
-                    val existingIndex = updated.indexOfFirst { it.id == real.id }
-                    if (existingIndex >= 0) updated[existingIndex] = real
-                    else updated.add(real)
-                    _uiState.value = _uiState.value.copy(
-                        messages = updated,
-                        isSending = false
-                    )
-                },
-                onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isSending = false,
-                        error = e.message
-                    )
-                }
-            )
-        }
-    }
-
-    fun refreshMessages() {
-        viewModelScope.launch {
-            messageRepository.getMessages(conversationId).fold(
-                onSuccess = { messages ->
-                    _uiState.value = _uiState.value.copy(
-                        messages = messages,
-                        error = null,
-                        isLoading = false
-                    )
+                if (incoming.senderId != me) {
                     messageRepository.markConversationRead(conversationId)
+                }
+            }
+        }
+    }
+
+    // ── Typing indicator ─────────────────────────────────────────────────────
+    private fun openTyping() {
+        viewModelScope.launch {
+            val session = messageRepository.openTypingSession(viewModelScope, conversationId) ?: return@launch
+            typingSession = session
+            session.othersTyping.collect { ids ->
+                _uiState.update { it.copy(isOtherTyping = ids.isNotEmpty()) }
+            }
+        }
+    }
+
+    /** Call on every keystroke; announces "typing" and auto-clears after 3s of silence. */
+    fun onInputChanged(text: String) {
+        if (text.isBlank()) { stopTyping(); return }
+        typingStopJob?.cancel()
+        if (!iAmTyping) {
+            iAmTyping = true
+            viewModelScope.launch { typingSession?.setTyping(true) }
+        }
+        typingStopJob = viewModelScope.launch {
+            delay(3_000)
+            stopTyping()
+        }
+    }
+
+    private fun stopTyping() {
+        typingStopJob?.cancel()
+        if (iAmTyping) {
+            iAmTyping = false
+            viewModelScope.launch { typingSession?.setTyping(false) }
+        }
+    }
+
+    // ── Sending (optimistic) ─────────────────────────────────────────────────
+    fun sendMessage(content: String) {
+        val text = content.trim()
+        if (text.isEmpty() || _uiState.value.isBlockedByMe) return
+        val reply = _uiState.value.replyingTo
+        val localId = "local-" + java.util.UUID.randomUUID()
+        val pending = Message(
+            id = localId,
+            conversationId = conversationId,
+            senderId = myUserId,
+            content = text,
+            createdAt = java.time.Instant.now().toString(),
+            replyToId = reply?.id,
+            sendState = STATE_SENDING
+        )
+        // Show it instantly; confirm (or fail) in the background.
+        _uiState.update { it.copy(messages = it.messages + pending, replyingTo = null) }
+        stopTyping()
+        dispatchSend(localId, text, reply?.id)
+    }
+
+    private fun dispatchSend(localId: String, text: String, replyToId: String?) {
+        viewModelScope.launch {
+            messageRepository.sendMessage(conversationId, text, replyToId).fold(
+                onSuccess = { real ->
+                    _uiState.update { s ->
+                        val list = s.messages.toMutableList()
+                        val localIdx = list.indexOfFirst { it.id == localId }
+                        val realIdx = list.indexOfFirst { it.id == real.id }
+                        when {
+                            // Realtime already inserted the real row: just drop the pending bubble.
+                            localIdx >= 0 && realIdx >= 0 -> list.removeAt(localIdx)
+                            localIdx >= 0 -> list[localIdx] = real
+                            realIdx < 0 -> list.add(real)
+                        }
+                        s.copy(messages = list)
+                    }
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(error = e.message)
+                    updateMessage(localId) { it.copy(sendState = STATE_FAILED) }
+                    _events.tryEmit(e.message?.takeIf { it.length < 80 } ?: "Message not sent. Tap it to retry.")
                 }
             )
         }
     }
 
+    fun retrySend(localId: String) {
+        val msg = _uiState.value.messages.firstOrNull { it.id == localId && it.sendState == STATE_FAILED } ?: return
+        updateMessage(localId) { it.copy(sendState = STATE_SENDING) }
+        dispatchSend(localId, msg.content, msg.replyToId)
+    }
+
+    fun discardFailed(localId: String) {
+        _uiState.update { s -> s.copy(messages = s.messages.filterNot { it.id == localId && it.sendState == STATE_FAILED }) }
+    }
+
+    private fun updateMessage(id: String, transform: (Message) -> Message) {
+        _uiState.update { s -> s.copy(messages = s.messages.map { if (it.id == id) transform(it) else it }) }
+    }
+
+    // ── Reply / reactions ────────────────────────────────────────────────────
+    fun startReply(msg: Message) {
+        if (msg.sendState.isNotEmpty() || isDeletedMessage(msg.content)) return
+        _uiState.update { it.copy(replyingTo = msg) }
+    }
+
+    fun cancelReply() { _uiState.update { it.copy(replyingTo = null) } }
+
+    private fun reactLocally(reactions: Map<String, List<String>>, me: String, emoji: String): Map<String, List<String>> {
+        val hadSame = reactions[emoji]?.contains(me) == true
+        // One reaction per person: remove me everywhere, then add back unless I'm toggling it off.
+        val cleaned = reactions
+            .mapValues { (_, users) -> users.filterNot { it == me } }
+            .filterValues { it.isNotEmpty() }
+        return if (hadSame) cleaned else cleaned + (emoji to ((cleaned[emoji] ?: emptyList()) + me))
+    }
+
+    fun toggleReaction(messageId: String, emoji: String) {
+        val target = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        if (target.sendState.isNotEmpty() || isDeletedMessage(target.content)) return
+        val previous = target.reactions
+        val me = myUserId
+        updateMessage(messageId) { it.copy(reactions = reactLocally(it.reactions, me, emoji)) }
+        viewModelScope.launch {
+            messageRepository.toggleReaction(messageId, emoji).onFailure {
+                updateMessage(messageId) { m -> m.copy(reactions = previous) }
+                _events.tryEmit("Couldn't add that reaction.")
+            }
+        }
+    }
+
+    // ── Existing message actions ─────────────────────────────────────────────
     fun deleteMessageForMe(messageId: String) {
         viewModelScope.launch {
             messageRepository.deleteMessageForMe(messageId).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(messages = _uiState.value.messages.filterNot { it.id == messageId }) },
-                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+                onSuccess = { _uiState.update { s -> s.copy(messages = s.messages.filterNot { it.id == messageId }) } },
+                onFailure = { err -> _events.tryEmit(err.message ?: "Couldn't delete that message.") }
             )
         }
     }
@@ -203,24 +375,99 @@ class ChatViewModel @Inject constructor(
     fun deleteMessageForBoth(messageId: String) {
         viewModelScope.launch {
             messageRepository.deleteMessageForBoth(messageId).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(messages = _uiState.value.messages.map { if (it.id == messageId) it.copy(content = "This message was deleted") else it }) },
-                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+                onSuccess = { updateMessage(messageId) { it.copy(content = DELETED_MESSAGE_TEXT, reactions = emptyMap()) } },
+                onFailure = { err -> _events.tryEmit(err.message ?: "Couldn't delete that message.") }
             )
         }
     }
 
     fun editMessage(messageId: String, content: String) {
-        if (content.isBlank()) return
+        val text = content.trim()
+        if (text.isBlank()) return
         viewModelScope.launch {
-            messageRepository.editMessage(messageId, content.trim()).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(messages = _uiState.value.messages.map { if (it.id == messageId) it.copy(content = content.trim()) else it }) },
-                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+            messageRepository.editMessage(messageId, text).fold(
+                onSuccess = { updateMessage(messageId) { it.copy(content = text, editedAt = java.time.Instant.now().toString()) } },
+                onFailure = { err -> _events.tryEmit(err.message ?: "Couldn't edit that message.") }
             )
         }
+    }
+
+    // ── Safety: mute / block / report ────────────────────────────────────────
+    fun toggleMute() {
+        val s = _uiState.value
+        val newMuted = !s.isMuted
+        _uiState.update { it.copy(isMuted = newMuted) }
+        viewModelScope.launch {
+            messageRepository.setConversationPrefs(conversationId, newMuted, s.isPinned).fold(
+                onSuccess = { _events.tryEmit(if (newMuted) "Chat muted" else "Chat unmuted") },
+                onFailure = {
+                    _uiState.update { it.copy(isMuted = !newMuted) }
+                    _events.tryEmit("Couldn't update this chat.")
+                }
+            )
+        }
+    }
+
+    fun blockOther() {
+        val other = _uiState.value.otherUserId
+        if (other.isBlank()) return
+        viewModelScope.launch {
+            messageRepository.blockUser(other).fold(
+                onSuccess = {
+                    stopTyping()
+                    _uiState.update { it.copy(isBlockedByMe = true, replyingTo = null) }
+                    _events.tryEmit("Blocked ${_uiState.value.otherUsername}")
+                },
+                onFailure = { _events.tryEmit("Couldn't block. Please try again.") }
+            )
+        }
+    }
+
+    fun unblockOther() {
+        val other = _uiState.value.otherUserId
+        if (other.isBlank()) return
+        viewModelScope.launch {
+            messageRepository.unblockUser(other).fold(
+                onSuccess = {
+                    _uiState.update { it.copy(isBlockedByMe = false) }
+                    _events.tryEmit("Unblocked ${_uiState.value.otherUsername}")
+                },
+                onFailure = { _events.tryEmit("Couldn't unblock. Please try again.") }
+            )
+        }
+    }
+
+    fun reportOther(reason: String, alsoBlock: Boolean) {
+        val other = _uiState.value.otherUserId
+        if (other.isBlank()) return
+        viewModelScope.launch {
+            messageRepository.reportUser(conversationId, other, reason).fold(
+                onSuccess = {
+                    _events.tryEmit("Thanks. We'll review this report.")
+                    if (alsoBlock) blockOther()
+                },
+                onFailure = { _events.tryEmit("Couldn't send the report. Please try again.") }
+            )
+        }
+    }
+
+    override fun onCleared() {
+        // Leave the typing channel even though viewModelScope is already cancelled.
+        val session = typingSession
+        typingSession = null
+        if (session != null) {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                session.setTyping(false)
+                session.close()
+            }
+        }
+        super.onCleared()
     }
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
+private val ConversationStarters = listOf("👋 Hey!", "How's it going?", "Saw your post 🙂")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -234,29 +481,61 @@ fun ChatScreen(
     val listState    = rememberLazyListState()
     val clipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val screenScope = rememberCoroutineScope()
-    LaunchedEffect(uiState.error) {
-        uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
+    val scope = rememberCoroutineScope()
+    val haptic = rememberHaptic()
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { snackbarHostState.showSnackbar(it) }
     }
+
     var showChatMenu by remember { mutableStateOf(false) }
     var editingMessage by remember { mutableStateOf<Message?>(null) }
     var editText by remember { mutableStateOf("") }
     var deletingMessage by remember { mutableStateOf<Message?>(null) }
+    var showBlockConfirm by remember { mutableStateOf(false) }
+    var showReport by remember { mutableStateOf(false) }
+
     val reversedMessages = remember(uiState.messages) { uiState.messages.asReversed() }
-    LaunchedEffect(uiState.messages.size) {
+    val messagesById = remember(uiState.messages) { uiState.messages.associateBy { it.id } }
+    val myId = viewModel.myUserId
 
-        if (uiState.messages.isNotEmpty()) {
+    // ── Scrolling rules ──────────────────────────────────────────────────────
+    // Newest message is index 0 (reverseLayout). "At bottom" tolerates the typing bubble at index 0.
+    val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex <= 1 } }
+    var newBelow by remember { mutableIntStateOf(0) }
+    var lastSeenNewestId by remember { mutableStateOf<String?>(null) }
+    val newestMessage = uiState.messages.lastOrNull()
 
+    LaunchedEffect(newestMessage?.id) {
+        val newest = newestMessage ?: return@LaunchedEffect
+        if (lastSeenNewestId == null) {
+            // First render: reverseLayout already shows the newest message.
+            lastSeenNewestId = newest.id
+            return@LaunchedEffect
+        }
+        lastSeenNewestId = newest.id
+        // Follow along for my own messages or when already reading the latest;
+        // otherwise don't yank the user away from history, count it instead.
+        if (newest.senderId == myId || atBottom) {
             listState.animateScrollToItem(0)
+            newBelow = 0
+        } else {
+            newBelow += 1
         }
     }
+    LaunchedEffect(atBottom) { if (atBottom) newBelow = 0 }
 
-    val myId         = viewModel.myUserId
-    val avatarColor  = incognitoColor(uiState.otherAvatarSeed)
-    val avatarEmoji  = incognitoEmoji(uiState.otherAvatarSeed)
-
-    // Auto-scroll to bottom on new messages
-
+    // Load older pages as the user nears the top of the history.
+    val nearOldest by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 6
+        }
+    }
+    LaunchedEffect(nearOldest, uiState.messages.size) {
+        if (nearOldest) viewModel.loadOlder()
+    }
 
     val sendEnabled  = messageText.isNotBlank()
     val sendBg by animateColorAsState(
@@ -265,32 +544,72 @@ fun ChatScreen(
         label = "send_bg"
     )
 
+    // ── Dialogs (all theme-aware) ────────────────────────────────────────────
     if (editingMessage != null) {
         AlertDialog(
             onDismissRequest = { editingMessage = null },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = Surface,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),
             title = { Text("Edit message") },
-            text = { OutlinedTextField(value = editText, onValueChange = { editText = it }, modifier = Modifier.fillMaxWidth(), maxLines = 5) },
-            confirmButton = { TextButton(onClick = { editingMessage?.let { viewModel.editMessage(it.id, editText) }; editingMessage = null }) { Text("Save") } },
-            dismissButton = { TextButton(onClick = { editingMessage = null }) { Text("Cancel") } }
+            text = {
+                OutlinedTextField(
+                    value = editText,
+                    onValueChange = { if (it.length <= MAX_MESSAGE_LENGTH) editText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 5,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OrangePrimary,
+                        cursorColor = OrangePrimary,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText
+                    )
+                )
+            },
+            confirmButton = { TextButton(onClick = { editingMessage?.let { viewModel.editMessage(it.id, editText) }; editingMessage = null }) { Text("Save", color = OrangePrimary) } },
+            dismissButton = { TextButton(onClick = { editingMessage = null }) { Text("Cancel", color = SecondaryText) } }
         )
     }
     if (deletingMessage != null) {
         AlertDialog(
             onDismissRequest = { deletingMessage = null },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = Surface,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),
             title = { Text("Delete message for both?") },
             text = { Text("This replaces the message content for both participants.") },
             confirmButton = { TextButton(onClick = { deletingMessage?.let { viewModel.deleteMessageForBoth(it.id) }; deletingMessage = null }) { Text("Delete for both", color = RedAlert) } },
-            dismissButton = { TextButton(onClick = { deletingMessage = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { deletingMessage = null }) { Text("Cancel", color = SecondaryText) } }
         )
     }
+    if (showBlockConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBlockConfirm = false },
+            containerColor = Surface,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
+            shape = RoundedCornerShape(28.dp),
+            icon = { Icon(Icons.Filled.Block, contentDescription = null, tint = RedAlert) },
+            title = { Text("Block ${uiState.otherUsername}?") },
+            text = { Text("They won't be able to message you and you won't be able to message them. You can unblock any time from this chat.") },
+            confirmButton = { TextButton(onClick = { showBlockConfirm = false; viewModel.blockOther() }) { Text("Block", color = RedAlert, fontWeight = FontWeight.SemiBold) } },
+            dismissButton = { TextButton(onClick = { showBlockConfirm = false }) { Text("Cancel", color = SecondaryText) } }
+        )
+    }
+    if (showReport) {
+        ReportDialog(
+            username = uiState.otherUsername,
+            isAlreadyBlocked = uiState.isBlockedByMe,
+            onDismiss = { showReport = false },
+            onSubmit = { reason, alsoBlock ->
+                showReport = false
+                viewModel.reportOther(reason, alsoBlock)
+            }
+        )
+    }
+
     Scaffold(
         containerColor = Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -298,28 +617,20 @@ fun ChatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Surface, Background),
-                            0f,
-                            120f
-                        )
-                    )
+                    .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 120f))
                     .statusBarsPadding()
                     .padding(horizontal = 8.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = PrimaryText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
                 }
 
-                // Avatar
-                Box(
-                    modifier = Modifier.size(40.dp).clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(avatarColor.copy(0.5f), avatarColor.copy(0.2f))))
-                        .border(1.5.dp, avatarColor.copy(0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) { Text(avatarEmoji, fontSize = 18.sp) }
+                IncognitoAvatar(
+                    seed = uiState.otherAvatarSeed,
+                    size = 40.dp,
+                    isOnline = uiState.isOtherOnline
+                )
 
                 Spacer(Modifier.width(10.dp))
 
@@ -334,13 +645,25 @@ fun ChatScreen(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    // typing > active now > profile hint
+                    val (statusText, statusColor) = when {
+                        uiState.isBlockedByMe -> "Blocked" to RedAlert
+                        uiState.isOtherTyping -> "typing…" to OrangePrimary
+                        uiState.isOtherOnline -> "Active now" to GreenSuccess
+                        else -> "View profile" to SecondaryText
+                    }
                     Text(
-                        text = if (uiState.isOtherOnline) "Online" else "View profile",
-                        color = if (uiState.isOtherOnline) Color(0xFF22C55E) else SecondaryText,
-                        fontSize = 11.sp,
+                        text = statusText,
+                        color = statusColor,
+                        fontWeight = if (uiState.isOtherTyping) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+
+                if (uiState.isMuted) {
+                    Icon(Icons.Filled.NotificationsOff, contentDescription = "Muted", tint = TertiaryText, modifier = Modifier.size(18.dp))
                 }
 
                 Box {
@@ -351,14 +674,8 @@ fun ChatScreen(
                         expanded = showChatMenu,
                         onDismissRequest = { showChatMenu = false },
                         modifier = Modifier
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color(0xFF26191A), Color(0xFF111116), Color(0xFF21171B))
-                                ),
-                                RoundedCornerShape(18.dp)
-                            )
-                            .border(1.dp, Color(0xFFFF6848).copy(alpha = 0.78f), RoundedCornerShape(18.dp))
+                            .background(Surface)
+                            .border(1.dp, Divider, RoundedCornerShape(12.dp))
                     ) {
                         DropdownMenuItem(
                             text = { Text("View profile", color = PrimaryText) },
@@ -370,167 +687,400 @@ fun ChatScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Copy conversation ID", color = PrimaryText) },
-                            leadingIcon = { Icon(Icons.Filled.ContentCopy, null, tint = OrangePrimary) },
+                            text = { Text(if (uiState.isMuted) "Unmute notifications" else "Mute notifications", color = PrimaryText) },
+                            leadingIcon = {
+                                Icon(
+                                    if (uiState.isMuted) Icons.Filled.Notifications else Icons.Filled.NotificationsOff,
+                                    null, tint = OrangePrimary
+                                )
+                            },
+                            onClick = { showChatMenu = false; viewModel.toggleMute() }
+                        )
+                        HorizontalDivider(color = Divider.copy(alpha = 0.6f))
+                        DropdownMenuItem(
+                            text = { Text(if (uiState.isBlockedByMe) "Unblock" else "Block", color = RedAlert) },
+                            leadingIcon = { Icon(Icons.Filled.Block, null, tint = RedAlert) },
+                            enabled = uiState.otherUserId.isNotBlank(),
                             onClick = {
                                 showChatMenu = false
-                                clipboardManager.setText(AnnotatedString(conversationId))
-                                screenScope.launch { snackbarHostState.showSnackbar("Conversation ID copied") }
+                                if (uiState.isBlockedByMe) viewModel.unblockOther() else showBlockConfirm = true
                             }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Report", color = RedAlert) },
+                            leadingIcon = { Icon(Icons.Filled.Flag, null, tint = RedAlert) },
+                            enabled = uiState.otherUserId.isNotBlank(),
+                            onClick = { showChatMenu = false; showReport = true }
                         )
                     }
                 }
             }
         },
         bottomBar = {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Surface)
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value         = messageText,
-                    onValueChange = { messageText = it },
-                    modifier      = Modifier.weight(1f),
-                    placeholder   = { Text("Type a message…", color = TertiaryText, fontSize = 14.sp) },
-                    shape         = RoundedCornerShape(26.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor      = OrangePrimary,
-                        unfocusedBorderColor    = Divider,
-                        cursorColor             = OrangePrimary,
-
-                        focusedTextColor        = PrimaryText,
-                        unfocusedTextColor      = PrimaryText,
-
-                        focusedContainerColor   = SurfaceAlt,
-                        unfocusedContainerColor = SurfaceAlt,
-
-                        focusedLabelColor       = OrangePrimary,
-                        unfocusedLabelColor     = SecondaryText
-                    ),
-                    singleLine = false,
-                    maxLines   = 4
-                )
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(sendBg)
-                        .pressScale {
-                            if (sendEnabled && !uiState.isSending) {
-
-                                viewModel.sendMessage(messageText)
-                                messageText = ""
-
-                                screenScope.launch {
-                                    listState.animateScrollToItem(0)
+                // Reply preview
+                AnimatedVisibility(visible = uiState.replyingTo != null && !uiState.isBlockedByMe) {
+                    val target = uiState.replyingTo
+                    if (target != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 12.dp, end = 4.dp, top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(SurfaceAlt)
+                                    .height(IntrinsicSize.Min)
+                            ) {
+                                Box(Modifier.width(4.dp).fillMaxHeight().background(OrangePrimary))
+                                Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                                    Text(
+                                        if (target.senderId == myId) "Replying to yourself" else "Replying to ${uiState.otherUsername}",
+                                        color = OrangePrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                    )
+                                    Text(target.content, color = SecondaryText, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
-
-
                             }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (uiState.isSending) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.AutoMirrored.Filled.Send, null,
-                            tint = if (sendEnabled) Color.White else TertiaryText,
-                            modifier = Modifier.size(20.dp))
+                            IconButton(onClick = { viewModel.cancelReply() }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Cancel reply", tint = SecondaryText)
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.isBlockedByMe) {
+                    // Blocked: replace the composer with a clear, reversible state.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Block, contentDescription = null, tint = RedAlert, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("You blocked ${uiState.otherUsername}", color = SecondaryText, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        TextButton(onClick = { viewModel.unblockOther() }) { Text("Unblock", color = OrangePrimary, fontWeight = FontWeight.SemiBold) }
+                    }
+                } else {
+                    var inputFocused by remember { mutableStateOf(false) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 46.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(SurfaceAlt)
+                                .border(1.dp, if (inputFocused) OrangePrimary.copy(alpha = 0.7f) else Divider, RoundedCornerShape(24.dp))
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            BasicTextField(
+                                value = messageText,
+                                onValueChange = {
+                                    if (it.length <= MAX_MESSAGE_LENGTH) {
+                                        messageText = it
+                                        viewModel.onInputChanged(it)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().onFocusChanged { inputFocused = it.isFocused },
+                                textStyle = TextStyle(color = PrimaryText, fontSize = 15.sp, lineHeight = 20.sp),
+                                cursorBrush = SolidColor(OrangePrimary),
+                                maxLines = 5,
+                                decorationBox = { inner ->
+                                    Box {
+                                        if (messageText.isEmpty()) {
+                                            Text("Type a message…", color = TertiaryText, fontSize = 15.sp)
+                                        }
+                                        inner()
+                                    }
+                                }
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(sendBg)
+                                .semantics { contentDescription = "Send message" }
+                                .pressScale(pressedScale = 0.88f) {
+                                    if (sendEnabled) {
+                                        haptic.tap()
+                                        viewModel.sendMessage(messageText)
+                                        messageText = ""
+                                        scope.launch { listState.animateScrollToItem(0) }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send, null,
+                                tint = if (sendEnabled) Color.White else TertiaryText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     ) { padding ->
-        if (uiState.isLoading) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(
-    DensityManager.cardPadding.dp
-), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                repeat(6) { i ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(if (i % 2 == 0) 0.65f else 0.55f)
-                            .height(48.dp)
-                            .align(if (i % 2 == 0) Alignment.End else Alignment.Start)
-                            .shimmerEffect(RoundedCornerShape(18.dp))
+        when {
+            uiState.isLoading -> {
+                Column(
+                    Modifier.fillMaxSize().padding(padding).padding(DensityManager.cardPadding.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    repeat(6) { i ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(if (i % 2 == 0) 0.65f else 0.55f)
+                                .height(48.dp)
+                                .align(if (i % 2 == 0) Alignment.End else Alignment.Start)
+                                .shimmerEffect(RoundedCornerShape(18.dp))
+                        )
+                    }
+                }
+            }
+
+            uiState.loadError != null && uiState.messages.isEmpty() -> {
+                Box(Modifier.fillMaxSize().padding(padding)) {
+                    EmptyState(
+                        icon = Icons.Filled.CloudOff,
+                        title = "Couldn't open this chat",
+                        subtitle = "Check your connection and try again.",
+                        ctaLabel = "Try again",
+                        onCta = { viewModel.retryLoad() },
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
             }
-            return@Scaffold
-        }
 
-        if (uiState.messages.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(28.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier.size(76.dp).clip(CircleShape)
-                            .background(OrangePrimary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Forum, contentDescription = null,
-                            tint = OrangePrimary, modifier = Modifier.size(34.dp))
+            uiState.messages.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(padding).padding(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IncognitoAvatar(seed = uiState.otherAvatarSeed, size = 76.dp, isOnline = uiState.isOtherOnline)
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Say hi to ${uiState.otherUsername}", color = PrimaryText,
+                            fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2,
+                            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Start a private conversation. A friendly first line goes a long way.",
+                            color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp,
+                            maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center
+                        )
+                        if (!uiState.isBlockedByMe) {
+                            Spacer(Modifier.height(18.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ConversationStarters.forEach { starter ->
+                                    Text(
+                                        starter,
+                                        color = OrangePrimary,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(OrangePrimary.copy(alpha = 0.12f))
+                                            .clickable {
+                                                haptic.tap()
+                                                messageText = starter.removePrefix("👋 ").trim().ifEmpty { starter }
+                                                viewModel.onInputChanged(messageText)
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
-                    Spacer(Modifier.height(16.dp))
-                    Text("Your conversation starts here", color = PrimaryText,
-                        fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Spacer(Modifier.height(6.dp))
-                    Text("Send a message to start a private conversation.",
-                        color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
-        } else LazyColumn(
-            state          = listState,
-            reverseLayout = true,
-            modifier       = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            itemsIndexed(reversedMessages, key = { _, msg -> msg.id }) { idx, msg ->
-                val isMe = msg.senderId == myId
-                // Show date separator when day changes
-                val showDate = idx == 0 ||
-                    !sameDay(reversedMessages[idx - 1].createdAt, msg.createdAt)
-                if (showDate) {
-                    Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), Alignment.Center) {
-                        Text(formatMsgDate(msg.createdAt), color = TertiaryText, fontSize = 11.sp,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(SurfaceAlt).padding(horizontal = 10.dp, vertical = 4.dp))
+
+            else -> Box(Modifier.fillMaxSize().padding(padding)) {
+                LazyColumn(
+                    state = listState,
+                    reverseLayout = true,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)
+                ) {
+                    // Typing bubble sits at the very bottom (index 0 in a reversed list).
+                    if (uiState.isOtherTyping) {
+                        item(key = "typing_indicator") {
+                            Row(Modifier.fillMaxWidth().padding(top = 8.dp).animateItem()) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomEnd = 18.dp, bottomStart = 4.dp))
+                                        .background(SurfaceAlt)
+                                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                                ) { TypingDots() }
+                            }
+                        }
+                    }
+
+                    itemsIndexed(reversedMessages, key = { _, msg -> msg.id }) { idx, msg ->
+                        val isMe = msg.senderId == myId
+                        val newer = reversedMessages.getOrNull(idx - 1)
+                        val older = reversedMessages.getOrNull(idx + 1)
+
+                        // Consecutive messages from the same person within 5 minutes form a group.
+                        val joinsNewer = newer != null && newer.senderId == msg.senderId &&
+                            sameDay(newer.createdAt, msg.createdAt) && withinMinutes(newer.createdAt, msg.createdAt, 5)
+                        val joinsOlder = older != null && older.senderId == msg.senderId &&
+                            sameDay(older.createdAt, msg.createdAt) && withinMinutes(older.createdAt, msg.createdAt, 5)
+                        val isLastInGroup = !joinsNewer
+                        val isFirstInGroup = !joinsOlder
+
+                        // Date chip goes ABOVE the first message of each day.
+                        val showDate = older == null || !sameDay(older.createdAt, msg.createdAt)
+                        val showUnreadDivider = msg.id == uiState.firstUnreadId
+
+                        Column(Modifier.fillMaxWidth().animateItem()) {
+                            if (showDate) DateChip(formatMsgDate(msg.createdAt))
+                            if (showUnreadDivider) UnreadDivider()
+                            MessageRow(
+                                msg = msg,
+                                isMe = isMe,
+                                myId = myId,
+                                otherName = uiState.otherUsername,
+                                repliedTo = msg.replyToId?.let { messagesById[it] },
+                                isFirstInGroup = isFirstInGroup,
+                                isLastInGroup = isLastInGroup,
+                                onReply = { viewModel.startReply(msg) },
+                                onReact = { emoji -> viewModel.toggleReaction(msg.id, emoji) },
+                                onEdit = { if (isMe) { editingMessage = msg; editText = msg.content } },
+                                onDeleteForMe = { viewModel.deleteMessageForMe(msg.id) },
+                                onDeleteForBoth = { if (isMe) deletingMessage = msg },
+                                onCopy = { text ->
+                                    clipboardManager.setText(AnnotatedString(text))
+                                    scope.launch { snackbarHostState.showSnackbar("Message copied") }
+                                },
+                                onRetry = { viewModel.retrySend(msg.id) },
+                                onDiscard = { viewModel.discardFailed(msg.id) }
+                            )
+                        }
+                    }
+
+                    if (uiState.isLoadingOlder) {
+                        item(key = "loading_older") {
+                            Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = OrangePrimary, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                            }
+                        }
                     }
                 }
-                MessageBubble(
-                    msg      = msg,
-                    isMe     = isMe,
-                    onEdit = { if (isMe) { editingMessage = msg; editText = msg.content } },
-                    onDeleteForMe = { viewModel.deleteMessageForMe(msg.id) },
-                    onDeleteForBoth = { if (isMe) deletingMessage = msg },
-                    onCopy = { text ->
-                        clipboardManager.setText(AnnotatedString(text))
-                        screenScope.launch { snackbarHostState.showSnackbar("Message copied") }
+
+                // Jump to latest, with a count of what arrived while reading history.
+                AnimatedVisibility(
+                    visible = !atBottom,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut(),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 12.dp)
+                ) {
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Surface)
+                                .border(1.dp, Divider, CircleShape)
+                                .semantics { contentDescription = "Scroll to latest message" }
+                                .pressScale { scope.launch { listState.animateScrollToItem(0) } },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = PrimaryText)
+                        }
+                        if (newBelow > 0) {
+                            Text(
+                                if (newBelow > 9) "9+" else newBelow.toString(),
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                                    .clip(CircleShape)
+                                    .background(OrangePrimary)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }
 }
 
-// ── Message bubble ────────────────────────────────────────────────────────────
+// ── Pieces ────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun MessageBubble(
+private fun DateChip(text: String) {
+    Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), Alignment.Center) {
+        Text(
+            text, color = TertiaryText, fontSize = 11.sp,
+            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(SurfaceAlt).padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun UnreadDivider() {
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        HorizontalDivider(Modifier.weight(1f), color = OrangePrimary.copy(alpha = 0.5f), thickness = 1.dp)
+        Text(
+            "New messages", color = OrangePrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp)
+        )
+        HorizontalDivider(Modifier.weight(1f), color = OrangePrimary.copy(alpha = 0.5f), thickness = 1.dp)
+    }
+}
+
+/**
+ * One message with: grouped corners/spacing, swipe-right to reply, double-tap to ❤️,
+ * long-press menu (reactions + actions), reply quote, reactions, edited label and delivery ticks.
+ */
+@Composable
+private fun MessageRow(
     msg: Message,
     isMe: Boolean,
+    myId: String,
+    otherName: String,
+    repliedTo: Message?,
+    isFirstInGroup: Boolean,
+    isLastInGroup: Boolean,
+    onReply: () -> Unit,
+    onReact: (String) -> Unit,
     onEdit: () -> Unit,
     onDeleteForMe: () -> Unit,
     onDeleteForBoth: () -> Unit,
-    onCopy: (String) -> Unit
+    onCopy: (String) -> Unit,
+    onRetry: () -> Unit,
+    onDiscard: () -> Unit
 ) {
-    var showOptions by remember { mutableStateOf(false) }
+    val haptic = rememberHaptic()
+    val scope = rememberCoroutineScope()
+    var showMenu by remember { mutableStateOf(false) }
+    var showMeta by remember { mutableStateOf(false) }
+    val offsetX = remember { Animatable(0f) }
+    val deleted = isDeletedMessage(msg.content)
+    val sending = msg.sendState == STATE_SENDING
+    val failed = msg.sendState == STATE_FAILED
+    val maxBubbleWidth = (LocalConfiguration.current.screenWidthDp * 0.78f).dp
+    val triggerPx = with(LocalDensity.current) { 56.dp.toPx() }
 
     val bubbleBg = if (isMe)
         Brush.linearGradient(listOf(OrangePrimary, OrangeLight))
@@ -538,105 +1088,241 @@ private fun MessageBubble(
         Brush.linearGradient(listOf(SurfaceAlt, SurfaceAlt))
     val textColor = if (isMe) Color.White else PrimaryText
 
-    // Entrance animation
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible = true }
+    // Tight corners where bubbles in a group join; the "tail" only on the last bubble.
+    val inner = 6.dp
+    val shape = RoundedCornerShape(
+        topStart = if (!isMe && !isFirstInGroup) inner else 18.dp,
+        topEnd = if (isMe && !isFirstInGroup) inner else 18.dp,
+        bottomStart = if (!isMe) (if (isLastInGroup) 4.dp else inner) else 18.dp,
+        bottomEnd = if (isMe) (if (isLastInGroup) 4.dp else inner) else 18.dp
+    )
 
-    AnimatedVisibility(
-        visible = visible,
-        enter   = fadeIn(tween(120)) + androidx.compose.animation.scaleIn(
-            initialScale = 0.98f,
-            animationSpec = tween(120, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+    Box(Modifier.fillMaxWidth().padding(top = if (isFirstInGroup) 8.dp else 2.dp)) {
+        // Reply affordance revealed behind the bubble while swiping.
+        Icon(
+            Icons.AutoMirrored.Filled.Reply,
+            contentDescription = null,
+            tint = OrangePrimary,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 6.dp)
+                .size(22.dp)
+                .alpha((offsetX.value / triggerPx).coerceIn(0f, 1f))
         )
-    ) {
+
         Column(
-            modifier            = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .pointerInput(msg.id, msg.sendState) {
+                    if (msg.sendState.isNotEmpty() || deleted) return@pointerInput
+                    var triggered = false
+                    detectHorizontalDragGestures(
+                        onDragStart = { triggered = false },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            val target = (offsetX.value + dragAmount).coerceIn(0f, triggerPx * 1.4f)
+                            scope.launch { offsetX.snapTo(target) }
+                            if (!triggered && target >= triggerPx) {
+                                triggered = true
+                                haptic.tap()
+                            }
+                        },
+                        onDragEnd = {
+                            if (triggered) onReply()
+                            scope.launch { offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy)) }
+                        },
+                        onDragCancel = { scope.launch { offsetX.animateTo(0f) } }
+                    )
+                },
             horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart    = 18.dp,
-                            topEnd      = 18.dp,
-                            bottomStart = if (isMe) 18.dp else 4.dp,
-                            bottomEnd   = if (isMe) 4.dp else 18.dp
-                        )
-                    )
-                    .background(bubbleBg)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = { showOptions = true }
-                        )
-                    }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Text(msg.content, color = textColor, fontSize = 15.sp, lineHeight = 21.sp)
-            }
-
-            // Timestamp
-            Text(
-                formatMsgTime(msg.createdAt),
-                color    = TertiaryText,
-                fontSize = 10.sp,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
-            )
-
-            // Keep message actions in a predictable centered popup.
-            if (showOptions) {
-                AlertDialog(
-                    onDismissRequest = { showOptions = false },
-                    containerColor = Color(0xFF171318),
-                    titleContentColor = Color(0xFFF7F3F5),
-                    textContentColor = Color(0xFFC7C0CA),
-                    shape = RoundedCornerShape(28.dp),
-                    title = { Text("Message options") },
-                    text = {
-                        Column {
-                            if (isMe) {
-                                TextButton(onClick = { showOptions = false; onEdit() }, modifier = Modifier.fillMaxWidth()) {
-                                    Icon(Icons.Filled.Edit, null); Spacer(Modifier.width(12.dp)); Text("Edit message")
+            Box {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = maxBubbleWidth)
+                        .clip(shape)
+                        .alpha(if (sending) 0.7f else 1f)
+                        .background(bubbleBg)
+                        .pointerInput(msg.id, msg.sendState, deleted) {
+                            detectTapGestures(
+                                onTap = { if (failed) onRetry() else showMeta = !showMeta },
+                                onDoubleTap = {
+                                    if (msg.sendState.isEmpty() && !deleted) {
+                                        haptic.like()
+                                        onReact("❤️")
+                                    }
+                                },
+                                onLongPress = {
+                                    if (!sending) {
+                                        haptic.tap()
+                                        showMenu = true
+                                    }
                                 }
-                            }
-                            TextButton(onClick = { showOptions = false; onDeleteForMe() }, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Filled.DeleteOutline, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for me", color = RedAlert)
-                            }
-                            if (isMe) {
-                                TextButton(onClick = { showOptions = false; onDeleteForBoth() }, modifier = Modifier.fillMaxWidth()) {
-                                    Icon(Icons.Filled.DeleteForever, null, tint = RedAlert); Spacer(Modifier.width(12.dp)); Text("Delete for both", color = RedAlert)
-                                }
-                            }
-                            TextButton(onClick = { showOptions = false; onCopy(msg.content) }, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Filled.ContentCopy, null); Spacer(Modifier.width(12.dp)); Text("Copy")
+                            )
+                        }
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    // Quoted message when this is a reply.
+                    if (msg.replyToId != null && !deleted) {
+                        Row(
+                            modifier = Modifier
+                                .padding(bottom = 6.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.Black.copy(alpha = if (isMe) 0.14f else 0.10f))
+                                .height(IntrinsicSize.Min)
+                        ) {
+                            Box(Modifier.width(3.dp).fillMaxHeight().background(if (isMe) Color.White.copy(alpha = 0.85f) else OrangePrimary))
+                            Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                Text(
+                                    if (repliedTo?.senderId == myId) "You" else otherName,
+                                    color = if (isMe) Color.White else OrangePrimary,
+                                    fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1
+                                )
+                                Text(
+                                    when {
+                                        repliedTo == null -> "Original message"
+                                        isDeletedMessage(repliedTo.content) -> "Message deleted"
+                                        else -> repliedTo.content
+                                    },
+                                    color = textColor.copy(alpha = 0.85f),
+                                    fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
-                    },
-                    confirmButton = { TextButton(onClick = { showOptions = false }) { Text("Close") } }
-                )
+                    }
+
+                    if (deleted) {
+                        Text(
+                            "This message was deleted",
+                            color = textColor.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                            fontStyle = FontStyle.Italic
+                        )
+                    } else {
+                        Text(msg.content, color = textColor, fontSize = 15.sp, lineHeight = 21.sp)
+                    }
+                }
+
+                // Long-press menu: quick reactions on top, then actions.
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    modifier = Modifier.background(Surface)
+                ) {
+                    if (!failed && !deleted) {
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            QuickReactions.forEach { emoji ->
+                                val mine = msg.reactions[emoji]?.contains(myId) == true
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(if (mine) OrangePrimary.copy(alpha = 0.2f) else Color.Transparent)
+                                        .clickable { showMenu = false; onReact(emoji) },
+                                    contentAlignment = Alignment.Center
+                                ) { Text(emoji, fontSize = 22.sp) }
+                            }
+                        }
+                        HorizontalDivider(color = Divider.copy(alpha = 0.6f))
+                        DropdownMenuItem(
+                            text = { Text("Reply", color = PrimaryText) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Reply, null, tint = OrangePrimary) },
+                            onClick = { showMenu = false; onReply() }
+                        )
+                    }
+                    if (failed) {
+                        DropdownMenuItem(
+                            text = { Text("Retry", color = PrimaryText) },
+                            leadingIcon = { Icon(Icons.Filled.Refresh, null, tint = OrangePrimary) },
+                            onClick = { showMenu = false; onRetry() }
+                        )
+                    }
+                    if (!deleted) {
+                        DropdownMenuItem(
+                            text = { Text("Copy", color = PrimaryText) },
+                            leadingIcon = { Icon(Icons.Filled.ContentCopy, null, tint = SecondaryText) },
+                            onClick = { showMenu = false; onCopy(msg.content) }
+                        )
+                    }
+                    if (isMe && !failed && !deleted) {
+                        DropdownMenuItem(
+                            text = { Text("Edit", color = PrimaryText) },
+                            leadingIcon = { Icon(Icons.Filled.Edit, null, tint = SecondaryText) },
+                            onClick = { showMenu = false; onEdit() }
+                        )
+                    }
+                    if (failed) {
+                        DropdownMenuItem(
+                            text = { Text("Discard", color = RedAlert) },
+                            leadingIcon = { Icon(Icons.Filled.DeleteOutline, null, tint = RedAlert) },
+                            onClick = { showMenu = false; onDiscard() }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text("Delete for me", color = RedAlert) },
+                            leadingIcon = { Icon(Icons.Filled.DeleteOutline, null, tint = RedAlert) },
+                            onClick = { showMenu = false; onDeleteForMe() }
+                        )
+                        if (isMe && !deleted) {
+                            DropdownMenuItem(
+                                text = { Text("Delete for both", color = RedAlert) },
+                                leadingIcon = { Icon(Icons.Filled.DeleteForever, null, tint = RedAlert) },
+                                onClick = { showMenu = false; onDeleteForBoth() }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Reactions under the bubble. Tapping one toggles my own reaction.
+            if (msg.reactions.isNotEmpty() && !deleted) {
+                Row(Modifier.padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    msg.reactions.forEach { (emoji, users) ->
+                        val mine = users.contains(myId)
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (mine) OrangePrimary.copy(alpha = 0.2f) else SurfaceAlt)
+                                .border(1.dp, if (mine) OrangePrimary.copy(alpha = 0.6f) else Divider, RoundedCornerShape(12.dp))
+                                .clickable { haptic.like(); onReact(emoji) }
+                                .padding(horizontal = 7.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(emoji, fontSize = 13.sp)
+                            if (users.size > 1) {
+                                Spacer(Modifier.width(3.dp))
+                                Text(users.size.toString(), color = SecondaryText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Footer: time + edited + delivery state. Shown at the end of a group, on tap, or while pending/failed.
+            if (isLastInGroup || showMeta || sending || failed) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 4.dp).padding(top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (failed) {
+                        Text("Not sent · tap to retry", color = RedAlert, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    } else {
+                        if (msg.editedAt != null && !deleted) {
+                            Text("edited · ", color = TertiaryText, fontSize = 10.sp)
+                        }
+                        Text(formatMsgTime(msg.createdAt), color = TertiaryText, fontSize = 10.sp)
+                        if (isMe) {
+                            Spacer(Modifier.width(4.dp))
+                            when {
+                                sending -> Icon(Icons.Filled.Schedule, "Sending", tint = TertiaryText, modifier = Modifier.size(12.dp))
+                                msg.isRead -> Icon(Icons.Filled.DoneAll, "Seen", tint = BlueInfo, modifier = Modifier.size(14.dp))
+                                else -> Icon(Icons.Filled.Done, "Sent", tint = TertiaryText, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-private fun formatMsgTime(ts: String): String = try {
-    val dt = java.time.ZonedDateTime.ofInstant(java.time.Instant.parse(ts), java.time.ZoneId.systemDefault())
-    "${dt.hour.toString().padStart(2,'0')}:${dt.minute.toString().padStart(2,'0')}"
-} catch (_: Exception) { "" }
-
-private fun formatMsgDate(ts: String): String = try {
-    val dt   = java.time.ZonedDateTime.ofInstant(java.time.Instant.parse(ts), java.time.ZoneId.systemDefault())
-    val now  = java.time.ZonedDateTime.now()
-    when {
-        dt.toLocalDate() == now.toLocalDate()             -> "Today"
-        dt.toLocalDate() == now.toLocalDate().minusDays(1) -> "Yesterday"
-        else -> "${dt.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)}, ${dt.dayOfMonth} ${dt.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)}"
-    }
-} catch (_: Exception) { "" }
-
-private fun sameDay(ts1: String, ts2: String): Boolean = try {
-    val d1 = java.time.Instant.parse(ts1).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-    val d2 = java.time.Instant.parse(ts2).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-    d1 == d2
-} catch (_: Exception) { false }

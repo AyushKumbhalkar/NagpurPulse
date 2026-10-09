@@ -3,17 +3,16 @@
 
 package com.nagpurpulse.ui.screens.messages
 
-import com.nagpurpulse.ui.navigation.BottomNavBar
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,7 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,11 +39,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.nagpurpulse.data.model.Conversation
+import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.MessageRepository
 import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.ui.components.*
+import com.nagpurpulse.ui.navigation.BottomNavBar
 import com.nagpurpulse.ui.navigation.Screen
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,46 +55,142 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// ── State & events ────────────────────────────────────────────────────────────
+
 data class MessagesUiState(
     val conversations: List<Conversation> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    // "all" | "unread" | "needs_reply"
     val activeFilter: String = "all",
-    val error: String? = null
+    // Only set when the inbox has nothing to show; transient errors go through [MessagesEvent].
+    val loadError: String? = null
 )
+
+/** One-off UI events (snackbars) so they are shown exactly once. */
+sealed interface MessagesEvent {
+    data class Info(val text: String) : MessagesEvent
+    data class DeletedWithUndo(val conversationId: String, val name: String) : MessagesEvent
+}
+
+// ── ViewModel ─────────────────────────────────────────────────────────────────
 
 @HiltViewModel
 class MessagesViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
-    private val presenceRepository: PresenceRepository
+    private val presenceRepository: PresenceRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
     val onlineUserIds: StateFlow<Set<String>> = presenceRepository.onlineUserIds
     private val _uiState = MutableStateFlow(MessagesUiState())
     val uiState: StateFlow<MessagesUiState> = _uiState
 
+    private val _events = MutableSharedFlow<MessagesEvent>(extraBufferCapacity = 8)
+    val events: SharedFlow<MessagesEvent> = _events
+
+    val myUserId: String get() = authRepository.currentUserId ?: ""
+
     init { presenceRepository.start(); load(); subscribeRealtime() }
+
+    // Pinned chats first, then most recent.
+    private fun List<Conversation>.inInboxOrder(): List<Conversation> =
+        sortedWith(compareByDescending<Conversation> { it.isPinned }.thenByDescending { it.lastMessageAt })
 
     fun load(refresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = !refresh, isRefreshing = refresh)
+            _uiState.update {
+                it.copy(
+                    isLoading = !refresh && it.conversations.isEmpty(),
+                    isRefreshing = refresh,
+                    loadError = null
+                )
+            }
             messageRepository.getConversations().fold(
                 onSuccess = { convs ->
-                    _uiState.value = _uiState.value.copy(conversations = convs, isLoading = false, isRefreshing = false)
+                    _uiState.update {
+                        it.copy(
+                            conversations = convs.inInboxOrder(),
+                            isLoading = false,
+                            isRefreshing = false,
+                            loadError = null
+                        )
+                    }
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false, error = e.message)
+                    val hasData = _uiState.value.conversations.isNotEmpty()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            loadError = if (hasData) null else (e.message ?: "Couldn't load your chats")
+                        )
+                    }
+                    if (hasData) _events.tryEmit(MessagesEvent.Info("Couldn't refresh. Check your connection."))
                 }
             )
         }
     }
 
-    fun setFilter(filter: String) { _uiState.value = _uiState.value.copy(activeFilter = filter) }
+    fun setFilter(filter: String) { _uiState.update { it.copy(activeFilter = filter) } }
 
-    fun deleteConversationForMe(conversationId: String) {
+    /** True when the other person spoke last and it has been a while. */
+    fun needsReply(conv: Conversation): Boolean {
+        val sender = conv.lastMessageSender ?: return false
+        if (sender == myUserId || conv.lastMessage.isNullOrBlank()) return false
+        val mins = minutesSince(conv.lastMessageAt) ?: return false
+        return mins >= NEEDS_REPLY_AFTER_MINUTES
+    }
+
+    fun filteredConversations(): List<Conversation> = when (_uiState.value.activeFilter) {
+        "unread" -> _uiState.value.conversations.filter { it.myUnreadCount > 0 }
+        "needs_reply" -> _uiState.value.conversations.filter { needsReply(it) }
+        else -> _uiState.value.conversations
+    }
+
+    // ── Pin / mute (optimistic, reverted on failure) ─────────────────────────
+    private fun updatePrefs(conv: Conversation, muted: Boolean, pinned: Boolean) {
+        val before = _uiState.value.conversations
+        _uiState.update { s ->
+            s.copy(
+                conversations = s.conversations
+                    .map { if (it.id == conv.id) it.copy(isMuted = muted, isPinned = pinned) else it }
+                    .inInboxOrder()
+            )
+        }
         viewModelScope.launch {
-            messageRepository.deleteConversationForMe(conversationId).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(conversations = _uiState.value.conversations.filterNot { it.id == conversationId }) },
-                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+            messageRepository.setConversationPrefs(conv.id, muted, pinned).onFailure {
+                _uiState.update { it.copy(conversations = before) }
+                _events.tryEmit(MessagesEvent.Info("Couldn't update this chat. Try again."))
+            }
+        }
+    }
+
+    fun togglePin(conv: Conversation) = updatePrefs(conv, muted = conv.isMuted, pinned = !conv.isPinned)
+    fun toggleMute(conv: Conversation) = updatePrefs(conv, muted = !conv.isMuted, pinned = conv.isPinned)
+
+    // ── Delete ───────────────────────────────────────────────────────────────
+    /** Removes the chat for me right away and offers Undo (restores it). */
+    fun deleteConversationForMe(conv: Conversation) {
+        val before = _uiState.value.conversations
+        _uiState.update { s -> s.copy(conversations = s.conversations.filterNot { it.id == conv.id }) }
+        viewModelScope.launch {
+            messageRepository.deleteConversationForMe(conv.id).fold(
+                onSuccess = {
+                    _events.tryEmit(MessagesEvent.DeletedWithUndo(conv.id, conv.otherUsername ?: "chat"))
+                },
+                onFailure = {
+                    _uiState.update { it.copy(conversations = before) }
+                    _events.tryEmit(MessagesEvent.Info(it.message ?: "Couldn't delete this chat."))
+                }
+            )
+        }
+    }
+
+    fun undoDelete(conversationId: String) {
+        viewModelScope.launch {
+            messageRepository.restoreConversationForMe(conversationId).fold(
+                onSuccess = { load(refresh = true) },
+                onFailure = { _events.tryEmit(MessagesEvent.Info("Couldn't restore this chat.")) }
             )
         }
     }
@@ -95,8 +198,10 @@ class MessagesViewModel @Inject constructor(
     fun deleteConversationForBoth(conversationId: String) {
         viewModelScope.launch {
             messageRepository.deleteConversationForBoth(conversationId).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(conversations = _uiState.value.conversations.filterNot { it.id == conversationId }) },
-                onFailure = { err -> _uiState.value = _uiState.value.copy(error = err.message) }
+                onSuccess = {
+                    _uiState.update { s -> s.copy(conversations = s.conversations.filterNot { it.id == conversationId }) }
+                },
+                onFailure = { err -> _events.tryEmit(MessagesEvent.Info(err.message ?: "Couldn't delete this chat.")) }
             )
         }
     }
@@ -111,19 +216,25 @@ class MessagesViewModel @Inject constructor(
                     current.removeAll { it.id == updatedConv.id }
                 } else {
                     val idx = current.indexOfFirst { it.id == updatedConv.id }
-                    if (idx >= 0) current[idx] = updatedConv else current.add(0, updatedConv)
+                    if (idx >= 0) {
+                        // Realtime rows don't carry my per-user mute/pin, so keep what we already know.
+                        current[idx] = updatedConv.copy(
+                            isPinned = current[idx].isPinned,
+                            isMuted = current[idx].isMuted
+                        )
+                    } else {
+                        current.add(0, updatedConv)
+                    }
                 }
-                _uiState.value = _uiState.value.copy(conversations = current.sortedByDescending { it.lastMessageAt })
+                _uiState.update { it.copy(conversations = current.inInboxOrder()) }
             }
         }
     }
-
-    fun filteredConversations(): List<Conversation> = when (_uiState.value.activeFilter) {
-        "unread"   -> _uiState.value.conversations.filter { it.myUnreadCount > 0 }
-        else       -> _uiState.value.conversations
-    }
 }
 
+// ── Screen ────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesScreen(
     navController: NavController,
@@ -134,18 +245,38 @@ fun MessagesScreen(
     val onlineUserIds     = viewModel.onlineUserIds.collectAsState().value
     val swipeRefreshState = rememberSwipeRefreshState(uiState.isRefreshing)
     val filtered          = viewModel.filteredConversations()
-    val totalUnread       = uiState.conversations.sumOf { it.myUnreadCount }
+    val myId              = viewModel.myUserId
+    val haptic            = rememberHaptic()
+    // Muted chats shouldn't nag: leave them out of the tab-bar badge.
+    val totalUnread       = uiState.conversations.filterNot { it.isMuted }.sumOf { it.myUnreadCount }
+    val unreadChats       = uiState.conversations.count { it.myUnreadCount > 0 }
+    val needsReplyCount   = uiState.conversations.count { viewModel.needsReply(it) }
     val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(uiState.error) {
-        uiState.error?.takeIf { it.isNotBlank() }?.let { snackbarHostState.showSnackbar(it) }
-    }
     var headerVisible     by remember { mutableStateOf(false) }
-    var showSafetyDialog by remember { mutableStateOf(false) }
+    var showSafetyDialog  by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
 
-    // Only show filters backed by working data. Pinned chats and message
-    // requests are not persisted/implemented yet, so don't expose dead tabs.
-    val filterLabels = listOf("all", "unread")
+    // One-off events: info snackbars and "chat deleted · Undo".
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is MessagesEvent.Info -> snackbarHostState.showSnackbar(event.text)
+                is MessagesEvent.DeletedWithUndo -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Chat with ${event.name} deleted",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Long
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete(event.conversationId)
+                }
+            }
+        }
+    }
+
+    // Everyone currently online that I already chat with.
+    val activeNow = remember(uiState.conversations, onlineUserIds) {
+        uiState.conversations.filter { it.otherUserId != null && it.otherUserId in onlineUserIds }
+    }
 
     if (showSafetyDialog) {
         AlertDialog(
@@ -153,7 +284,7 @@ fun MessagesScreen(
             icon = { Icon(Icons.Filled.Shield, contentDescription = null, tint = GreenSuccess) },
             title = { Text("Private by design") },
             text = {
-                Text("You're in a space designed for private conversations. Your chats are intended for you and the person you're messaging. Still, never share passwords, OTPs, financial details, or anything you wouldn't want the other person to save or screenshot.")
+                Text("You're in a space designed for private conversations. Your chats are intended for you and the person you're messaging. You can mute, block or report anyone from inside a chat. Still, never share passwords, OTPs, financial details, or anything you wouldn't want the other person to save or screenshot.")
             },
             confirmButton = {
                 TextButton(onClick = { showSafetyDialog = false }) { Text("Got it") }
@@ -168,136 +299,152 @@ fun MessagesScreen(
         topBar = {
             AnimatedVisibility(headerVisible, enter = fadeIn(tween(350)) + slideInVertically { -30 }) {
                 Column(modifier = Modifier.background(Brush.verticalGradient(
-                    listOf(Surface, Background),
-                    0f,
-                    260f
+                    listOf(Surface, Background), 0f, 220f
                 )).statusBarsPadding()) {
-                    // Title row
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Messages", color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Filled.TheaterComedy,
-                            contentDescription = null,
-                            tint = OrangePrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(Modifier.weight(1f))
+                    // Slim title row: title + tagline, search, safety info.
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 10.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Messages", color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                         TopBarIcon(Icons.Filled.Search, "Search people") {
                             navController.navigate(Screen.UserSearch.route)
                         }
                         Spacer(Modifier.width(8.dp))
-                        TopBarIcon(Icons.Filled.AddComment, "New message") {
-                            navController.navigate(Screen.UserSearch.route)
-                        }
-                    }
-                    Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 14.dp))
-
-                    // Action cards row
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ActionCard(
-                            Icons.Filled.Add,
-                            "New Chat",
-                            "Start an incognito chat",
-                            OrangePrimary,
-                            Modifier.weight(1f)
-                        ) { navController.navigate(Screen.UserSearch.route) }
-
-                        ActionCard(
-                            Icons.Filled.Shield,
-                            "Private by design",
-                            "Start a chat from a profile",
-                            GreenSuccess,
-                            Modifier.weight(1f)
-                        ) { showSafetyDialog = true }
+                        TopBarIcon(Icons.Filled.Shield, "About private chats") { showSafetyDialog = true }
                     }
 
-                    // Filter tabs
-                    ScrollableTabRow(
-                        selectedTabIndex = filterLabels.indexOf(uiState.activeFilter),
-                        containerColor   = Color.Transparent,
-                        contentColor     = OrangePrimary,
-                        edgePadding      = 16.dp,
-                        indicator = {}, divider = {}
+                    // Filter pills
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        filterLabels.forEach { filter ->
-                            val sel = uiState.activeFilter == filter
-                            val count = when(filter) {
-                                "all"    -> uiState.conversations.size
-                                "unread" -> uiState.conversations.count { it.myUnreadCount > 0 }
-                                else     -> 0
-                            }
-                            val pillColor by animateColorAsState(
-                                targetValue = if (sel) OrangePrimary else SurfaceAlt,
-                                animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                                label = "message_filter_pill"
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(pillColor)
-                                    .clickable(
-                                        indication = null,
-                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                    ) { viewModel.setFilter(filter) }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = filter.replaceFirstChar { it.uppercase() } + if (count > 0) "  $count" else "",
-                                    color = if (sel) Color.White else SecondaryText,
-                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
+                        InboxFilterChip("All", 0, uiState.activeFilter == "all", OrangePrimary) {
+                            haptic.tap(); viewModel.setFilter("all")
+                        }
+                        InboxFilterChip("Unread", unreadChats, uiState.activeFilter == "unread", OrangePrimary) {
+                            haptic.tap(); viewModel.setFilter("unread")
+                        }
+                        // Only offered when it is useful (or already selected).
+                        if (needsReplyCount > 0 || uiState.activeFilter == "needs_reply") {
+                            InboxFilterChip("Needs reply", needsReplyCount, uiState.activeFilter == "needs_reply", BlueInfo) {
+                                haptic.tap(); viewModel.setFilter("needs_reply")
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
                     HorizontalDivider(color = Divider, thickness = 0.5.dp)
                 }
             }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    haptic.tap()
+                    navController.navigate(Screen.UserSearch.route)
+                },
+                containerColor = OrangePrimary,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Filled.AddComment, contentDescription = null) },
+                text = { Text("New chat", fontWeight = FontWeight.SemiBold) }
+            )
         },
         bottomBar = {
             BottomNavBar(navController = navController, onCreatePost = onCreatePost, hasAlertBadge = false, messageCount = totalUnread)
         }
     ) { padding ->
-        SwipeRefresh(state = swipeRefreshState, onRefresh = { viewModel.load(true) }, modifier = Modifier.padding(padding)) {
+        SwipeRefresh(
+            state = swipeRefreshState,
+            onRefresh = { viewModel.load(true) },
+            modifier = Modifier.padding(padding),
+            indicator = { state, trigger ->
+                SwipeRefreshIndicator(
+                    state = state,
+                    refreshTriggerDistance = trigger,
+                    contentColor = OrangePrimary,
+                    backgroundColor = Surface
+                )
+            }
+        ) {
             when {
                 uiState.isLoading -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     items(8) { ShimmerConversationRow() }
                 }
-                filtered.isEmpty() -> Box(Modifier.fillMaxSize()) {
+
+                uiState.loadError != null && uiState.conversations.isEmpty() -> Box(Modifier.fillMaxSize()) {
                     EmptyState(
-                        icon = Icons.Filled.ChatBubbleOutline,
-                        title = "No messages yet",
-                        subtitle = "Search for someone and start a private incognito chat",
-                        ctaLabel = "Find People",
-                        onCta = { navController.navigate(Screen.UserSearch.route) },
+                        icon = Icons.Filled.CloudOff,
+                        title = "Can't load your chats",
+                        subtitle = "Check your connection and try again.",
+                        ctaLabel = "Try again",
+                        onCta = { viewModel.load() },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
-                    itemsIndexed(filtered) { i, conv ->
-                        StaggeredItem(i) {
-                            ConversationRow(
-                                conv = conv,
-                                isOnline = conv.otherUserId in onlineUserIds,
-                                onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) },
-                                onViewProfile = {
-                                    conv.otherUserId?.takeIf { it.isNotBlank() }?.let {
-                                        navController.navigate(Screen.UserProfile.createRoute(it))
-                                    }
-                                },
-                                onDeleteForMe = { viewModel.deleteConversationForMe(conv.id) },
-                                onDeleteForBoth = { viewModel.deleteConversationForBoth(conv.id) }
+
+                uiState.conversations.isEmpty() -> InboxEmptyState(
+                    onFindPeople = { navController.navigate(Screen.UserSearch.route) }
+                )
+
+                filtered.isEmpty() -> Box(Modifier.fillMaxSize()) {
+                    val (icon, title, subtitle) = when (uiState.activeFilter) {
+                        "unread" -> Triple(Icons.Filled.DoneAll, "You're all caught up", "No unread messages. Nicely done.")
+                        else -> Triple(Icons.Filled.DoneAll, "Nobody's waiting on you", "You've replied to everyone. 🎉")
+                    }
+                    EmptyState(
+                        icon = icon,
+                        title = title,
+                        subtitle = subtitle,
+                        ctaLabel = "Show all chats",
+                        onCta = { viewModel.setFilter("all") },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
+                    // "Active now" lives in the list so it scrolls away with the chats.
+                    if (activeNow.isNotEmpty() && uiState.activeFilter == "all") {
+                        item(key = "active_now") {
+                            ActiveNowRow(
+                                items = activeNow,
+                                onClick = { conv -> navController.navigate(Screen.Chat.createRoute(conv.id)) }
                             )
                         }
+                    }
+                    items(filtered, key = { it.id }) { conv ->
+                        SwipeableConversationRow(
+                            conv = conv,
+                            isOnline = conv.otherUserId in onlineUserIds,
+                            isLastFromMe = conv.lastMessageSender != null && conv.lastMessageSender == myId,
+                            needsReply = viewModel.needsReply(conv),
+                            modifier = Modifier.animateItem(),
+                            onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) },
+                            onViewProfile = {
+                                conv.otherUserId?.takeIf { it.isNotBlank() }?.let {
+                                    navController.navigate(Screen.UserProfile.createRoute(it))
+                                }
+                            },
+                            onTogglePin = {
+                                haptic.tap()
+                                viewModel.togglePin(conv)
+                            },
+                            onToggleMute = { viewModel.toggleMute(conv) },
+                            onDeleteForMe = {
+                                haptic.alert()
+                                viewModel.deleteConversationForMe(conv)
+                            },
+                            onDeleteForBoth = { viewModel.deleteConversationForBoth(conv.id) }
+                        )
                     }
                 }
             }
         }
     }
 }
+
+// ── Pieces ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun TopBarIcon(
@@ -310,46 +457,189 @@ private fun TopBarIcon(
             .size(40.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .semantics { this.contentDescription = contentDescription }
             .pressScale(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            icon,
-            contentDescription = contentDescription,
-            tint = SecondaryText,
-            modifier = Modifier.size(20.dp)
+        Icon(icon, contentDescription = null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+    }
+}
+
+@Composable
+private fun InboxFilterChip(
+    label: String,
+    count: Int,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val bg by animateColorAsState(
+        targetValue = if (selected) accent else SurfaceAlt,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "inbox_filter_pill"
+    )
+    Box(
+        modifier = Modifier
+            .heightIn(min = 40.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (count > 0) "$label  $count" else label,
+            color = if (selected) Color.White else SecondaryText,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1
         )
     }
 }
 
 @Composable
-private fun ActionCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String,
-    tint: Color,
-    modifier: Modifier,
-    onClick: () -> Unit
+private fun ActiveNowRow(
+    items: List<Conversation>,
+    onClick: (Conversation) -> Unit
 ) {
-    Column(modifier = modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, tint.copy(0.18f), RoundedCornerShape(16.dp)).pressScale(onClick = onClick).padding(12.dp)) {
-        Box(
-            Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(tint.copy(0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(18.dp)
-            )
+    Column(Modifier.padding(top = 12.dp, bottom = 4.dp)) {
+        Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(GreenSuccess))
+            Spacer(Modifier.width(8.dp))
+            Text("Active now", color = PrimaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(8.dp))
-        Text(title, color = PrimaryText, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-        Spacer(Modifier.height(2.dp))
-        Text(subtitle, color = SecondaryText, fontSize = 10.sp, lineHeight = 14.sp)
+        Spacer(Modifier.height(10.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            items(items, key = { "active_${it.id}" }) { conv ->
+                val seed = conv.otherAvatarSeed ?: conv.otherUserId ?: "anon"
+                Column(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .semantics { contentDescription = "${conv.otherUsername ?: "Someone"} is active now" }
+                        .pressScale { onClick(conv) },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    IncognitoAvatar(seed = seed, size = 54.dp, isOnline = true)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        conv.otherUsername ?: "Incognito",
+                        color = SecondaryText,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        HorizontalDivider(color = Divider.copy(alpha = 0.6f), thickness = 0.5.dp)
+    }
+}
+
+/** Empty inbox is the activation moment: explain how to start, not just "nothing here". */
+@Composable
+private fun InboxEmptyState(onFindPeople: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            Modifier.size(88.dp).clip(CircleShape).background(OrangePrimary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) { Text("🦊", fontSize = 40.sp) }
+        Spacer(Modifier.height(16.dp))
+        Text("Your inbox is waiting", color = PrimaryText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(6.dp))
+        Text("Private, incognito chats with people around Nagpur.", color = SecondaryText, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(18.dp))
+        listOf(
+            "👋  Say hi to someone whose post you liked",
+            "💬  Take a long comment thread to a private chat",
+            "🛡️  Block or report anyone, anytime"
+        ).forEach { tip ->
+            Text(tip, color = SecondaryText, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 3.dp))
+        }
+        Spacer(Modifier.height(22.dp))
+        Button(
+            onClick = onFindPeople,
+            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
+        ) {
+            Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Find people", fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+/** Swipe right to pin / unpin, swipe left to delete (with Undo). The row snaps back either way. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableConversationRow(
+    conv: Conversation,
+    isOnline: Boolean,
+    isLastFromMe: Boolean,
+    needsReply: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onViewProfile: () -> Unit,
+    onTogglePin: () -> Unit,
+    onToggleMute: () -> Unit,
+    onDeleteForMe: () -> Unit,
+    onDeleteForBoth: () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> onTogglePin()
+                SwipeToDismissBoxValue.EndToStart -> onDeleteForMe()
+                else -> Unit
+            }
+            // Never "settle" in the dismissed position: pin keeps the row, delete removes it from the list.
+            false
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val bg = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> OrangePrimary
+                SwipeToDismissBoxValue.EndToStart -> RedAlert
+                else -> Color.Transparent
+            }
+            Box(
+                Modifier.fillMaxSize().background(bg).padding(horizontal = 24.dp),
+                contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+            ) {
+                when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd ->
+                        Icon(Icons.Filled.PushPin, contentDescription = if (conv.isPinned) "Unpin" else "Pin", tint = Color.White)
+                    SwipeToDismissBoxValue.EndToStart ->
+                        Icon(Icons.Filled.DeleteOutline, contentDescription = "Delete", tint = Color.White)
+                    else -> Unit
+                }
+            }
+        }
+    ) {
+        ConversationRow(
+            conv = conv,
+            isOnline = isOnline,
+            isLastFromMe = isLastFromMe,
+            needsReply = needsReply,
+            onClick = onClick,
+            onViewProfile = onViewProfile,
+            onTogglePin = onTogglePin,
+            onToggleMute = onToggleMute,
+            onDeleteForMe = onDeleteForMe,
+            onDeleteForBoth = onDeleteForBoth
+        )
     }
 }
 
@@ -357,67 +647,106 @@ private fun ActionCard(
 fun ConversationRow(
     conv: Conversation,
     isOnline: Boolean = false,
+    isLastFromMe: Boolean = false,
+    needsReply: Boolean = false,
     onClick: () -> Unit,
     onViewProfile: () -> Unit = {},
+    onTogglePin: () -> Unit = {},
+    onToggleMute: () -> Unit = {},
     onDeleteForMe: () -> Unit = {},
     onDeleteForBoth: () -> Unit = {}
 ) {
     val seed = conv.otherAvatarSeed ?: conv.otherUserId ?: "anon"
     val displayName = conv.otherUsername ?: "Incognito"
     val hasUnread = conv.myUnreadCount > 0
-    val avatarColor = incognitoColor(seed)
     var showMenu by remember(conv.id) { mutableStateOf(false) }
     var confirmDeleteBoth by remember(conv.id) { mutableStateOf(false) }
+
     if (confirmDeleteBoth) {
-        AlertDialog(onDismissRequest = { confirmDeleteBoth = false }, containerColor = Color(0xFF171318), titleContentColor = Color(0xFFF7F3F5), textContentColor = Color(0xFFC7C0CA), shape = RoundedCornerShape(28.dp), title = { Text("Delete chat for both?") }, text = { Text("This deletes the shared conversation and its messages for both participants.") }, confirmButton = { TextButton(onClick = { confirmDeleteBoth = false; onDeleteForBoth() }) { Text("Delete for both", color = RedAlert) } }, dismissButton = { TextButton(onClick = { confirmDeleteBoth = false }) { Text("Cancel") } })
+        AlertDialog(
+            onDismissRequest = { confirmDeleteBoth = false },
+            containerColor = Surface,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
+            shape = RoundedCornerShape(28.dp),
+            title = { Text("Delete chat for both?") },
+            text = { Text("This deletes the shared conversation and its messages for both participants. This can't be undone.") },
+            confirmButton = { TextButton(onClick = { confirmDeleteBoth = false; onDeleteForBoth() }) { Text("Delete for both", color = RedAlert) } },
+            dismissButton = { TextButton(onClick = { confirmDeleteBoth = false }) { Text("Cancel", color = SecondaryText) } }
+        )
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    val lastMessage = conv.lastMessage.orEmpty()
+    val previewDeleted = isDeletedMessage(lastMessage)
+    val previewText = when {
+        previewDeleted -> "Message deleted"
+        isLastFromMe -> "You: $lastMessage"
+        else -> lastMessage
+    }
+    val badgeColor = if (conv.isMuted) TertiaryText else OrangePrimary
+
+    Box(modifier = Modifier.fillMaxWidth().background(Background)) {
         Row(
             modifier = Modifier.fillMaxWidth()
-                .background(if (hasUnread) OrangePrimary.copy(0.03f) else Color.Transparent)
+                .background(if (hasUnread && !conv.isMuted) OrangePrimary.copy(0.04f) else Color.Transparent)
                 .pointerInput(conv.id) {
                     detectTapGestures(onTap = { onClick() }, onLongPress = { showMenu = true })
                 }
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(contentAlignment = Alignment.BottomEnd) {
-                Box(
-                    modifier = Modifier.size(52.dp).clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(avatarColor.copy(0.5f), avatarColor.copy(0.2f))))
-                        .border(1.5.dp, avatarColor.copy(0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) { Text(incognitoEmoji(seed), fontSize = 22.sp) }
-                if (isOnline) {
-                    Box(Modifier.size(13.dp).clip(CircleShape).background(Color(0xFF22C55E)).border(2.dp, Background, CircleShape))
-                }
-            }
+            IncognitoAvatar(seed = seed, size = 52.dp, isOnline = isOnline)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(displayName, color = PrimaryText, fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
-                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (conv.isPinned) Icon(Icons.Filled.PushPin, null, tint = OrangePrimary, modifier = Modifier.size(13.dp))
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (conv.isPinned) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(Icons.Filled.PushPin, contentDescription = "Pinned", tint = OrangePrimary, modifier = Modifier.size(13.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
                     Spacer(Modifier.width(6.dp))
-                    Text(formatConvTime(conv.lastMessageAt), color = TertiaryText, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        formatConvTime(conv.lastMessageAt),
+                        color = if (hasUnread && !conv.isMuted) OrangePrimary else TertiaryText,
+                        fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(conv.lastMessage ?: "", color = if (hasUnread) SecondaryText else TertiaryText,
-                        style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(
+                        previewText,
+                        color = if (hasUnread) PrimaryText.copy(alpha = 0.85f) else TertiaryText,
+                        fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal,
+                        fontStyle = if (previewDeleted) FontStyle.Italic else FontStyle.Normal,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
                     Spacer(Modifier.width(8.dp))
-                    if (hasUnread) {
-                        Box(Modifier.size(22.dp).clip(CircleShape).background(OrangePrimary), contentAlignment = Alignment.Center) {
+                    when {
+                        hasUnread -> Box(
+                            Modifier.defaultMinSize(minWidth = 22.dp, minHeight = 22.dp).clip(CircleShape).background(badgeColor).padding(horizontal = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(if (conv.myUnreadCount > 99) "99+" else "${conv.myUnreadCount}", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         }
-                    } else if (conv.isMuted) {
-                        Icon(Icons.Filled.NotificationsOff, null, tint = TertiaryText, modifier = Modifier.size(14.dp))
+                        needsReply -> Text(
+                            "Reply",
+                            color = BlueInfo,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(BlueInfo.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                    if (conv.isMuted) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(Icons.Filled.NotificationsOff, contentDescription = "Muted", tint = TertiaryText, modifier = Modifier.size(14.dp))
                     }
                 }
-            }
-            IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "Conversation options", tint = SecondaryText)
             }
         }
         if (showMenu) {
@@ -431,18 +760,26 @@ fun ConversationRow(
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
                         Text(
-                            text = "Conversation options",
+                            text = displayName,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                         )
                         ConversationOption(icon = Icons.Filled.ChatBubbleOutline, label = "Open chat", onClick = { showMenu = false; onClick() })
                         ConversationOption(icon = Icons.Filled.Person, label = "View profile", enabled = !conv.otherUserId.isNullOrBlank(), onClick = { showMenu = false; onViewProfile() })
+                        ConversationOption(icon = Icons.Filled.PushPin, label = if (conv.isPinned) "Unpin" else "Pin to top", onClick = { showMenu = false; onTogglePin() })
+                        ConversationOption(
+                            icon = if (conv.isMuted) Icons.Filled.Notifications else Icons.Filled.NotificationsOff,
+                            label = if (conv.isMuted) "Unmute" else "Mute",
+                            onClick = { showMenu = false; onToggleMute() }
+                        )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Divider.copy(alpha = 0.65f))
                         ConversationOption(icon = Icons.Filled.DeleteOutline, label = "Delete for me", destructive = true, onClick = { showMenu = false; onDeleteForMe() })
                         ConversationOption(icon = Icons.Filled.DeleteForever, label = "Delete for both", destructive = true, onClick = { showMenu = false; confirmDeleteBoth = true })
-                        TextButton(onClick = { showMenu = false }, modifier = Modifier.align(Alignment.End).padding(top = 4.dp)) { Text("Cancel") }
+                        TextButton(onClick = { showMenu = false }, modifier = Modifier.align(Alignment.End).padding(top = 4.dp)) { Text("Cancel", color = SecondaryText) }
                     }
                 }
             }
@@ -487,17 +824,3 @@ private fun ShimmerConversationRow() {
         }
     }
 }
-
-private fun formatConvTime(ts: String): String = try {
-    val inst = java.time.Instant.parse(ts)
-    val diff = java.time.Duration.between(inst, java.time.Instant.now())
-    when {
-        diff.toMinutes() < 60 -> "${diff.toMinutes()}m"
-        diff.toHours() < 24   -> { val d = java.time.ZonedDateTime.ofInstant(inst, java.time.ZoneId.systemDefault()); "${d.hour}:${d.minute.toString().padStart(2,'0')}" }
-        diff.toDays() < 2     -> "Yesterday"
-        diff.toDays() < 7     -> { val d = java.time.ZonedDateTime.ofInstant(inst, java.time.ZoneId.systemDefault()); d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH) }
-        else -> { val d = java.time.ZonedDateTime.ofInstant(inst, java.time.ZoneId.systemDefault()); "${d.dayOfMonth} ${d.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)}" }
-    }
-} catch (_: Exception) { "" }
-
-

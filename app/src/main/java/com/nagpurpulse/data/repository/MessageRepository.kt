@@ -14,10 +14,17 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.presenceDataFlow
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.serialization.SerialName
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.serialization.json.Json
@@ -33,6 +40,63 @@ private data class HiddenMessageRow(val message_id: String = "")
 
 @Serializable
 private data class HiddenConversationRow(val conversation_id: String = "")
+
+@Serializable
+private data class BlockRow(@SerialName("blocked_id") val blockedId: String = "")
+
+@Serializable
+private data class ConversationPrefRow(
+    @SerialName("conversation_id") val conversationId: String = "",
+    @SerialName("is_muted") val isMuted: Boolean = false,
+    @SerialName("is_pinned") val isPinned: Boolean = false
+)
+
+/** One page of a conversation's messages, oldest first. */
+data class MessagesPage(
+    val messages: List<Message>,
+    /** How many rows the server returned (before per-user hidden filtering); used as the next offset. */
+    val serverCount: Int,
+    val hasMore: Boolean
+)
+
+/** Ephemeral "is typing" payload exchanged over a per-conversation presence channel. */
+@Serializable
+data class TypingPayload(
+    val userId: String = "",
+    val typing: Boolean = false
+)
+
+/**
+ * Handle for the per-conversation typing channel. Uses realtime *presence*, so nothing is
+ * written to the database. Always call [close] when leaving the chat.
+ */
+class TypingSession internal constructor(
+    private val client: SupabaseClient,
+    private val channel: RealtimeChannel,
+    private val myId: String,
+    val othersTyping: StateFlow<Set<String>>
+) {
+    suspend fun setTyping(typing: Boolean) {
+        try {
+            channel.track(
+                buildJsonObject {
+                    put("userId", myId)
+                    put("typing", typing)
+                }
+            )
+        } catch (_: Exception) {
+            // Typing is best-effort; never surface failures to the user.
+        }
+    }
+
+    suspend fun close() {
+        try {
+            channel.untrack()
+            client.realtime.removeChannel(channel)
+        } catch (_: Exception) {
+        }
+    }
+}
 
 @Singleton
 class MessageRepository @Inject constructor(
@@ -129,7 +193,7 @@ class MessageRepository @Inject constructor(
                 filter { eq("id", conversationId) }
                 limit(1)
             }.decodeList<Conversation>().firstOrNull()
-            Result.success(row?.let { enrichConversation(it, myId) })
+            Result.success(row?.let { enrichConversation(it, myId, withPrefs = true) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -152,8 +216,93 @@ class MessageRepository @Inject constructor(
         }
     }
 
+    /**
+     * Newest-first paging: [offset] = how many server rows were already loaded. The returned
+     * messages are in ascending (oldest first) order, ready to prepend to the visible list.
+     */
+    suspend fun getMessagesPage(
+        conversationId: String,
+        offset: Int,
+        limit: Int = 30
+    ): Result<MessagesPage> {
+        val myId = authRepository.currentUserId
+            ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            val hiddenIds = client.postgrest["message_hidden_for_users"].select {
+                filter { eq("user_id", myId) }
+            }.decodeList<HiddenMessageRow>().map { it.message_id }.toSet()
+
+            val rows = client.postgrest["messages"].select {
+                filter { eq("conversation_id", conversationId) }
+                order("created_at", Order.DESCENDING)
+                range(offset.toLong(), (offset + limit - 1).toLong())
+            }.decodeList<Message>()
+
+            Result.success(
+                MessagesPage(
+                    messages = rows.filterNot { it.id in hiddenIds }.reversed(),
+                    serverCount = rows.size,
+                    hasMore = rows.size >= limit
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Send a message ────────────────────────────────────────────────────────
-    suspend fun sendMessage(conversationId: String, content: String): Result<Message> {
+    /**
+     * Sends through the atomic send_message() RPC (one round-trip, race-free unread counts,
+     * block enforcement). Falls back to the legacy three-step path if the migration has not
+     * been applied yet, so the app keeps working during rollout.
+     */
+    suspend fun sendMessage(
+        conversationId: String,
+        content: String,
+        replyToId: String? = null
+    ): Result<Message> {
+        authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        val trimmed = content.trim()
+        if (trimmed.isEmpty()) return Result.failure(IllegalArgumentException("Message is empty"))
+
+        return try {
+            val msg = client.postgrest.rpc(
+                "send_message",
+                buildJsonObject {
+                    put("p_conversation_id", conversationId)
+                    put("p_content", trimmed)
+                    if (replyToId != null) put("p_reply_to", replyToId)
+                }
+            ).decodeAs<Message>()
+            Result.success(enrichMessage(msg))
+        } catch (e: Exception) {
+            when {
+                isMissingRpc(e) -> sendMessageLegacy(conversationId, trimmed)
+                else -> Result.failure(friendlySendError(e))
+            }
+        }
+    }
+
+    private fun isMissingRpc(e: Exception): Boolean {
+        val m = e.message.orEmpty()
+        return m.contains("PGRST202") ||
+            m.contains("Could not find the function", ignoreCase = true) ||
+            m.contains("schema cache", ignoreCase = true)
+    }
+
+    private fun friendlySendError(e: Exception): Exception {
+        val m = e.message.orEmpty()
+        return when {
+            m.contains("message_blocked") ->
+                IllegalStateException("You can't message this person.")
+            m.contains("message_too_long") ->
+                IllegalStateException("That message is too long.")
+            else -> e
+        }
+    }
+
+    /** Pre-migration path: three round-trips. Only used when send_message() isn't deployed yet. */
+    private suspend fun sendMessageLegacy(conversationId: String, content: String): Result<Message> {
         val myId = authRepository.currentUserId
             ?: return Result.failure(Exception("Not logged in"))
         return try {
@@ -187,7 +336,7 @@ class MessageRepository @Inject constructor(
             // Notification rows are created by the database message trigger.
             Result.success(enrichMessage(msg))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(friendlySendError(e))
         }
     }
 
@@ -253,9 +402,152 @@ class MessageRepository @Inject constructor(
     } catch (e: Exception) { Result.failure(e) }
 
     suspend fun editMessage(messageId: String, content: String): Result<Unit> = try {
-        client.postgrest["messages"].update(buildJsonObject { put("content", content) }) { filter { eq("id", messageId) } }
+        try {
+            client.postgrest["messages"].update(
+                buildJsonObject {
+                    put("content", content)
+                    put("edited_at", java.time.Instant.now().toString())
+                }
+            ) { filter { eq("id", messageId) } }
+        } catch (_: Exception) {
+            // Pre-migration databases have no edited_at column; retry with content only.
+            client.postgrest["messages"].update(
+                buildJsonObject { put("content", content) }
+            ) { filter { eq("id", messageId) } }
+        }
         Result.success(Unit)
     } catch (e: Exception) { Result.failure(e) }
+
+    // ── Reactions ─────────────────────────────────────────────────────────────
+    /** Toggles [emoji] on a message (one reaction per user). Realtime updates both people. */
+    suspend fun toggleReaction(messageId: String, emoji: String): Result<Unit> = try {
+        client.postgrest.rpc(
+            "toggle_message_reaction",
+            buildJsonObject {
+                put("p_message_id", messageId)
+                put("p_emoji", emoji)
+            }
+        )
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
+
+    // ── Undo for "delete for me" ──────────────────────────────────────────────
+    suspend fun restoreConversationForMe(conversationId: String): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            client.postgrest["conversation_hidden_for_users"].delete {
+                filter {
+                    eq("conversation_id", conversationId)
+                    eq("user_id", myId)
+                }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    // ── Blocking & reporting ──────────────────────────────────────────────────
+    suspend fun getBlockedUserIds(): Set<String> {
+        val myId = authRepository.currentUserId ?: return emptySet()
+        return try {
+            client.postgrest["user_blocks"].select {
+                filter { eq("blocker_id", myId) }
+            }.decodeList<BlockRow>().map { it.blockedId }.toSet()
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
+    suspend fun blockUser(otherUserId: String): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            client.postgrest["user_blocks"].upsert(
+                buildJsonObject {
+                    put("blocker_id", myId)
+                    put("blocked_id", otherUserId)
+                }
+            )
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun unblockUser(otherUserId: String): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            client.postgrest["user_blocks"].delete {
+                filter {
+                    eq("blocker_id", myId)
+                    eq("blocked_id", otherUserId)
+                }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun reportUser(
+        conversationId: String,
+        reportedUserId: String,
+        reason: String,
+        messageId: String? = null
+    ): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            client.postgrest["message_reports"].insert(
+                buildJsonObject {
+                    put("reporter_id", myId)
+                    put("reported_user_id", reportedUserId)
+                    put("conversation_id", conversationId)
+                    if (messageId != null) put("message_id", messageId)
+                    put("reason", reason)
+                }
+            )
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    // ── Mute / pin ────────────────────────────────────────────────────────────
+    suspend fun setConversationPrefs(
+        conversationId: String,
+        muted: Boolean,
+        pinned: Boolean
+    ): Result<Unit> {
+        val myId = authRepository.currentUserId ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            client.postgrest["conversation_prefs"].upsert(
+                buildJsonObject {
+                    put("conversation_id", conversationId)
+                    put("user_id", myId)
+                    put("is_muted", muted)
+                    put("is_pinned", pinned)
+                }
+            )
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    // ── Typing indicator (presence-based, nothing is stored) ──────────────────
+    suspend fun openTypingSession(
+        scope: CoroutineScope,
+        conversationId: String
+    ): TypingSession? {
+        val myId = authRepository.currentUserId ?: return null
+        return try {
+            val channel = client.channel("typing_$conversationId")
+            val others = MutableStateFlow<Set<String>>(emptySet())
+            val presence = channel.presenceDataFlow<TypingPayload>()
+            scope.launch {
+                presence.collect { payloads ->
+                    others.value = payloads
+                        .filter { it.typing && it.userId.isNotBlank() && it.userId != myId }
+                        .map { it.userId }
+                        .toSet()
+                }
+            }
+            channel.subscribe(blockUntilSubscribed = true)
+            TypingSession(client, channel, myId, others)
+        } catch (_: Exception) {
+            null
+        }
+    }
     // ── Realtime: subscribe to new messages in a conversation ─────────────────
     fun subscribeToMessages(conversationId: String): Flow<Message> = kotlinx.coroutines.flow.flow {
 
@@ -275,26 +567,11 @@ class MessageRepository @Inject constructor(
             filter("conversation_id", FilterOperator.EQ, conversationId)
         }
 
-        android.util.Log.d(
-            "CHAT_RT",
-            "Before subscribe"
-        )
-
         channel.subscribe(
             blockUntilSubscribed = true
         )
 
-        android.util.Log.d(
-            "CHAT_RT",
-            "After subscribe"
-        )
-
         merge(inserts, updates).collect { action ->
-
-            android.util.Log.d(
-                "CHAT_RT",
-                "Realtime received: ${action.record}"
-            )
 
             val msg = action.decodeRecord<Message>()
 
@@ -366,31 +643,64 @@ class MessageRepository @Inject constructor(
             emptyMap()
         }
 
+        // Per-user mute / pin. Missing table (migration not applied yet) just means "no prefs".
+        val prefsById = try {
+            client.postgrest["conversation_prefs"].select {
+                filter {
+                    eq("user_id", myId)
+                    isIn("conversation_id", rows.map { it.id })
+                }
+            }.decodeList<ConversationPrefRow>().associateBy { it.conversationId }
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
         return rows.map { conv ->
             val otherId = if (conv.participantOne == myId) conv.participantTwo else conv.participantOne
             val unread = if (conv.participantOne == myId) conv.unreadCountOne else conv.unreadCountTwo
             val profile = profilesById[otherId]
+            val prefs = prefsById[conv.id]
             conv.copy(
                 otherUsername = profile?.username,
                 otherAvatarSeed = profile?.username ?: otherId,
                 otherUserId = otherId,
-                myUnreadCount = unread
+                myUnreadCount = unread,
+                isPinned = prefs?.isPinned ?: false,
+                isMuted = prefs?.isMuted ?: false
             )
         }
     }
 
-    private suspend fun enrichConversation(conv: Conversation, myId: String): Conversation {
+    private suspend fun enrichConversation(
+        conv: Conversation,
+        myId: String,
+        withPrefs: Boolean = false
+    ): Conversation {
         val otherId = if (conv.participantOne == myId) conv.participantTwo else conv.participantOne
         val unread  = if (conv.participantOne == myId) conv.unreadCountOne else conv.unreadCountTwo
         return try {
             val profile = client.postgrest["profiles"].select {
                 filter { eq("id", otherId) }
             }.decodeList<com.nagpurpulse.data.model.Profile>().firstOrNull()
+            val prefs = if (withPrefs) {
+                try {
+                    client.postgrest["conversation_prefs"].select {
+                        filter {
+                            eq("user_id", myId)
+                            eq("conversation_id", conv.id)
+                        }
+                    }.decodeList<ConversationPrefRow>().firstOrNull()
+                } catch (_: Exception) {
+                    null
+                }
+            } else null
             conv.copy(
                 otherUsername = profile?.username,
                 otherAvatarSeed = profile?.username ?: otherId,
                 otherUserId   = otherId,
-                myUnreadCount = unread
+                myUnreadCount = unread,
+                isPinned = prefs?.isPinned ?: false,
+                isMuted = prefs?.isMuted ?: false
             )
         } catch (_: Exception) {
             conv.copy(otherUserId = otherId, myUnreadCount = unread)
