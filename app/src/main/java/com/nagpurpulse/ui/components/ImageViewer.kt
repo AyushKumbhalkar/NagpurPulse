@@ -1,5 +1,6 @@
 package com.nagpurpulse.ui.components
 
+import androidx.compose.ui.input.pointer.consume
 import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
