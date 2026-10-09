@@ -22,12 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nagpurpulse.R
 import com.nagpurpulse.ui.theme.AuthTokens
 import com.nagpurpulse.ui.theme.authPalette
 
 @Composable
-internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, height: androidx.compose.ui.unit.Dp = 56.dp, elevated: Boolean = false, onClick: () -> Unit) {
+internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean = true, google: Boolean = false, contentColor: Color? = null, height: androidx.compose.ui.unit.Dp = 56.dp, elevated: Boolean = false, badge: String? = null, onClick: () -> Unit) {
     val colors = authPalette()
     val shape = RoundedCornerShape(24.dp)
     val ink = contentColor ?: if (google) colors.ink else AuthTokens.OnGradient
@@ -58,10 +59,29 @@ internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean
         if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = ink, strokeWidth = 2.dp)
         else if (google) Image(painterResource(R.drawable.ic_google), null, Modifier.size(20.dp))
         if (loading || google) Spacer(Modifier.width(8.dp))
-        AuthFitText(text, Modifier.weight(1f, fill = false), color = ink, maxSize = 16, minSize = 11, weight = FontWeight.Bold)
+        // With a badge the label takes the free space (so it stays centred between icon and pill);
+        // without one it hugs its content exactly like before.
+        AuthFitText(text, Modifier.weight(1f, fill = badge != null && !loading), color = ink, maxSize = 16, minSize = 11, weight = FontWeight.Bold)
+        if (badge != null && !loading) {
+            Spacer(Modifier.width(8.dp))
+            AuthStatusPill(badge, if (google) colors.accent.copy(alpha = 0.12f) else ink.copy(alpha = 0.18f), if (google) colors.accent else ink)
+        }
         if (!google && !loading) {
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Filled.ArrowForward, null, Modifier.size(20.dp))
         }
+    }
+}
+
+/** Small tinted pill that sits INSIDE a button (e.g. "Last used"), never over its border. */
+@Composable
+internal fun AuthStatusPill(text: String, background: Color, foreground: Color, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(50)).background(background).padding(horizontal = 8.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(5.dp).clip(androidx.compose.foundation.shape.CircleShape).background(foreground))
+        Spacer(Modifier.width(4.dp))
+        Text(text, color = foreground, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
