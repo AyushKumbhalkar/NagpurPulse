@@ -19,9 +19,11 @@ import com.nagpurpulse.data.model.Comment
 import com.nagpurpulse.data.model.CommentLikeResult
 import com.nagpurpulse.data.model.CommentPage
 import com.nagpurpulse.data.model.ThreadCommentRow
+import com.nagpurpulse.data.model.ComposerInsights
 import com.nagpurpulse.data.model.Post
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.PostgresAction
@@ -433,6 +435,62 @@ class PostRepository @Inject constructor(
      }
 
 
+     /**
+      * Best-effort numbers for the Create Post screen (social proof, reach, trending topics).
+      * Never throws; individual values fall back to null / empty when a query fails.
+      */
+     suspend fun getComposerInsights(areaTag: String?): Result<ComposerInsights> {
+         return try {
+             val startOfDay = java.time.LocalDate.now()
+                 .atStartOfDay(java.time.ZoneId.systemDefault())
+                 .toInstant()
+                 .toString()
+
+             val todayRows = runCatching {
+                 client.postgrest["posts"]
+                     .select(Columns.list("category")) {
+                         filter { gte("created_at", startOfDay) }
+                         limit(200)
+                     }
+                     .decodeList<JsonObject>()
+             }.getOrNull()
+
+             val trending = todayRows
+                 ?.mapNotNull { it["category"]?.jsonPrimitive?.content?.takeIf { c -> c.isNotBlank() } }
+                 ?.groupingBy { it }
+                 ?.eachCount()
+                 ?.entries
+                 ?.sortedByDescending { it.value }
+                 ?.take(3)
+                 ?.map { it.key }
+                 ?: emptyList()
+
+             val reach = runCatching {
+                 client.postgrest["profiles"]
+                     .select(Columns.list("id")) {
+                         filter {
+                             if (!areaTag.isNullOrBlank() && areaTag != "Nagpur") {
+                                 contains("areas", listOf(areaTag))
+                             }
+                         }
+                         limit(1000)
+                     }
+                     .decodeList<JsonObject>()
+                     .size
+             }.getOrNull()
+
+             Result.success(
+                 ComposerInsights(
+                     postsToday = todayRows?.size,
+                     reachCount = reach,
+                     trendingCategories = trending
+                 )
+             )
+         } catch (e: Exception) {
+             Result.failure(e)
+         }
+     }
+
      suspend fun updatePost(
          postId: String,
          title: String,
@@ -443,7 +501,8 @@ class PostRepository @Inject constructor(
          postType: String = "normal",
          isAlert: Boolean = false,
          alertSeverity: String? = null,
-         imageUrl: String? = null
+         imageUrl: String? = null,
+         clearImage: Boolean = false
      ): Result<Unit> {
 
          return try {
@@ -492,9 +551,11 @@ class PostRepository @Inject constructor(
                  put("is_alert", isAlert)
                  put("alert_severity", alertSeverity)
 
-                 // Only replace image when a new image was supplied
+                 // Replace the image when a new one was supplied, or remove it when asked to
                  if (imageUrl != null) {
                      put("image_url", imageUrl)
+                 } else if (clearImage) {
+                     put("image_url", null as String?)
                  }
 
                  put("edited_at", kotlinx.datetime.Clock.System.now().toString())

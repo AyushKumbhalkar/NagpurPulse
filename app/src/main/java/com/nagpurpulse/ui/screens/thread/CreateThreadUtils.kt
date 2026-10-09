@@ -7,7 +7,8 @@ package com.nagpurpulse.ui.screens.thread
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
-import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
@@ -269,6 +270,18 @@ val categoryKeywords = mapOf(
     )
 )
 
+// Whole-word matchers, built once. Plain substring matching used to turn "care" into "car"
+// (traffic) and "brunch" into "run" (sports). Lookarounds (not word-boundary anchors) are used so words with
+// accents ("café") and hyphens ("walk-in") still match at their edges.
+private val categoryMatchers: Map<String, List<Pair<Regex, Int>>> by lazy {
+    categoryKeywords.mapValues { (_, keywords) ->
+        keywords.map { keyword ->
+            val pattern = "(?<![\\p{L}\\p{N}])${Regex.escape(keyword.lowercase())}(?![\\p{L}\\p{N}])"
+            Regex(pattern) to (if (keyword.contains(" ")) 3 else 1)
+        }
+    }
+}
+
 fun suggestCategory(
     title: String,
     body: String
@@ -276,31 +289,23 @@ fun suggestCategory(
 
     val content = "$title $body".lowercase()
 
-    val scores = mutableMapOf<String, Int>()
+    if (content.isBlank()) return "community"
 
-    categoryKeywords.forEach { (category, keywords) ->
+    var bestCategory = "community"
+    var bestScore = 0
 
+    categoryMatchers.forEach { (category, matchers) ->
         var score = 0
-
-        keywords.forEach { keyword ->
-
-            val count = content.split(keyword.lowercase()).size - 1
-
-            score += when {
-                keyword.contains(" ") -> count * 3
-                else -> count
-            }
+        matchers.forEach { (regex, weight) ->
+            score += regex.findAll(content).count() * weight
         }
-
-        scores[category] = score
+        if (score > bestScore) {
+            bestScore = score
+            bestCategory = category
+        }
     }
 
-    val bestMatch = scores.maxByOrNull { it.value }
-
-    return if (bestMatch == null || bestMatch.value <= 0)
-        "community"
-    else
-        bestMatch.key
+    return bestCategory
 }
 
 /*
@@ -338,27 +343,102 @@ val nagpurAreasWithDist = listOf(
  val OrangeSubtleC  = Color(0xFF2A1A00)   // dark orange tint bg
  val PurpleAccent   = Color(0xFF9B59B6)   // AI Assis
 
-// ── Helper: get recent images from MediaStore ─────────────────────────────────
- fun getRecentImages(context: Context): List<Uri> {
-    val images    = mutableListOf<Uri>()
-    val projection = arrayOf(MediaStore.Images.Media._ID)
-    val sortOrder  = "${MediaStore.Images.Media.DATE_ADDED} DESC"
-    context.contentResolver.query(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        projection, null, null, sortOrder
-    )?.use { cursor ->
-        val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        var count = 0
-        while (cursor.moveToNext() && count < 30) {
-            images.add(
-                Uri.withAppendedPath(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    cursor.getLong(idCol).toString()
-                )
-            )
-            count++
+// ── Helper: get recent images from MediaStore (runs on the IO dispatcher) ──────
+suspend fun loadRecentImages(context: Context, limit: Int = 12): List<Uri> =
+    withContext(Dispatchers.IO) {
+        val images = mutableListOf<Uri>()
+        try {
+            val projection = arrayOf(MediaStore.Images.Media._ID)
+            val sortOrder  = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection, null, null, sortOrder
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                while (cursor.moveToNext() && images.size < limit) {
+                    images.add(
+                        Uri.withAppendedPath(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            cursor.getLong(idCol).toString()
+                        )
+                    )
+                }
+            }
+        } catch (_: SecurityException) {
+            // Permission revoked while the screen was open — show nothing.
         }
+        images
     }
-    Log.d("PHOTO_TEST", "Images Found = ${images.size}")
-    return images
+
+// ── Composer content helpers ──────────────────────────────────────────────────
+
+/** Categories shown directly in the chip row; everything else lives behind "More". */
+val topPostCategories = listOf("community", "traffic", "food", "events", "local_news", "safety")
+
+/** One-tap starters shown under the title field while it is empty. */
+data class PostStarter(
+    val label: String,
+    val emoji: String,
+    val category: String,
+    val template: String
+)
+
+val postStarters = listOf(
+    PostStarter("Traffic update", "🚦", "traffic",   "Traffic update: "),
+    PostStarter("Food find",      "🍜", "food",      "Found a great place to eat: "),
+    PostStarter("Ask Nagpur",     "🙋", "community", "Can anyone suggest "),
+    PostStarter("Lost & found",   "🔍", "community", "Lost / found: "),
+    PostStarter("Event nearby",   "🎉", "events",    "Happening near me: ")
+)
+
+/** Time-of-day prompts, optionally personalised with the user's detected area. */
+fun composerPrompts(area: String?, hour: Int): List<String> {
+    val base = when (hour) {
+        in 5..11  -> listOf("Good morning Nagpur", "Any updates from your area?", "What's happening today?")
+        in 12..17 -> listOf("What's happening in Nagpur?", "Any traffic updates?", "Share a local update...")
+        in 18..22 -> listOf("Any events tonight?", "Recommend a place to eat", "What's trending this evening?")
+        else      -> listOf("Late night thoughts?", "Anything happening nearby?", "Share something interesting...")
+    }
+    val common = listOf(
+        "Any road closures today?",
+        "Power cut in your area?",
+        "Any hidden food gems?",
+        "Recommend a good cafe...",
+        "What should Nagpur know?"
+    )
+    val local = area?.takeIf { it.isNotBlank() }?.let {
+        listOf("What's happening in $it?", "Anything new around $it?")
+    } ?: emptyList()
+    return local + base + common
 }
+
+/** 0f..1f — how "complete" the post is. Drives the progress ring on the Post button. */
+fun postQualityProgress(
+    title: String,
+    body: String,
+    hasImage: Boolean,
+    hasArea: Boolean
+): Float {
+    var score = 0f
+    if (title.trim().length >= 10) score += 0.35f else if (title.isNotBlank()) score += 0.2f
+    if (body.trim().length >= 40) score += 0.25f else if (body.isNotBlank()) score += 0.12f
+    if (hasImage) score += 0.25f
+    if (hasArea) score += 0.15f
+    return score.coerceIn(0f, 1f)
+}
+
+/** One short, actionable hint at a time. Returns null when the post is already in good shape. */
+fun postQualityNudge(
+    title: String,
+    body: String,
+    hasImage: Boolean,
+    hasArea: Boolean
+): String? = when {
+    title.isBlank()              -> null
+    title.trim().length < 10     -> "A little more detail helps neighbours understand"
+    body.isBlank()               -> "Add details so people can reply faster"
+    !hasImage                    -> "Posts with a photo get noticed more"
+    !hasArea                     -> "Pick an area so nearby people see it first"
+    else                         -> null
+}
+

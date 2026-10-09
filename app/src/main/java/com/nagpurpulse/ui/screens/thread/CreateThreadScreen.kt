@@ -3,84 +3,126 @@
 
 package com.nagpurpulse.ui.screens.thread
 
-
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.TextStyle
-import com.nagpurpulse.ui.components.pressScale
-import androidx.compose.foundation.shape.RoundedCornerShape
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.location.Location
 import android.net.Uri
+import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.PhotoLibrary
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.nagpurpulse.ui.components.pressScale
+import com.nagpurpulse.ui.components.rememberHaptic
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import java.util.Calendar
 import java.util.Locale
+import kotlin.coroutines.resume
 
-private fun getDynamicPrompt(): String {
-
-    val hour = java.util.Calendar.getInstance().get(
-        java.util.Calendar.HOUR_OF_DAY
-    )
-
-    return when {
-
-        hour in 5..11 -> listOf(
-            "Good morning Nagpur",
-            "Any updates from your area?",
-            "What's happening today?"
-        ).random()
-
-        hour in 12..17 -> listOf(
-            "What's happening in Nagpur?",
-            "Any traffic updates?",
-            "Share a local update..."
-        ).random()
-
-        hour in 18..22 -> listOf(
-            "Any events tonight?",
-            "Recommend a place to eat",
-            "What's trending this evening?"
-        ).random()
-
-        else -> listOf(
-            "Late night thoughts?",
-            "Anything happening nearby?",
-            "Share something interesting..."
-        ).random()
-    }
-}
+private const val MAX_TITLE_CHARS = 120
+private const val MAX_BODY_CHARS = 1500
+private const val CITY = "Nagpur"
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,1114 +135,1076 @@ fun CreateThreadScreen(
     onPostSuccess: () -> Unit,
     viewModel: CreateThreadViewModel = hiltViewModel()
 ) {
-    val uiState  by viewModel.uiState.collectAsState()
-    val context   = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val haptic = rememberHaptic()
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    val isEditing = editingPostId != null
+    val userId = viewModel.currentUserId
+    val draftStore = remember { PostDraftStore(context) }
 
-
-    // ── Permissions ────────────────────────────────────────────────────────
-    val imagePermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(Unit) {
-        imagePermissionLauncher.launch(android.Manifest.permission.READ_MEDIA_IMAGES)
+    // ── Content state ──────────────────────────────────────────────────────
+    var title by rememberSaveable { mutableStateOf("") }
+    var body by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable {
+        mutableStateOf(initialCategory.ifBlank { "community" })
     }
-
-    val recentImages = remember { getRecentImages(context) }
-
-    // ── Location ───────────────────────────────────────────────────────────
-    var currentArea by remember { mutableStateOf<String?>(null) }
-
-    var userLatitude by remember {
-        mutableStateOf<Double?>(null)
-    }
-
-    var userLongitude by remember {
-        mutableStateOf<Double?>(null)
-    }
-
-    var selectedArea by remember {
-        mutableStateOf("Nagpur")
-    }
-
-    LaunchedEffect(Unit) {
-        try {
-            LocationServices.getFusedLocationProviderClient(context)
-                .lastLocation
-                .addOnSuccessListener { location ->
-
-                    android.util.Log.d(
-                        "LOCATION_TEST",
-                        "Lat=${location?.latitude} Lng=${location?.longitude}"
-                    )
-                    if (location != null) {
-
-                        userLatitude = location.latitude
-                        userLongitude = location.longitude
-
-                        try {
-                            val addr = Geocoder(context, Locale.getDefault())
-                                .getFromLocation(location.latitude, location.longitude, 1)
-                                ?.firstOrNull()?.subLocality
-
-                            currentArea = addr
-
-                            android.util.Log.d(
-                                "LOCATION",
-                                "Area=$currentArea Lat=$userLatitude Lng=$userLongitude"
-                            )
-
-                        } catch (_: Exception) {}
-                    }
-                }
-        } catch (_: Exception) {}
-    }
-
-    // ── State ──────────────────────────────────────────────────────────────
-    var title by remember { mutableStateOf("") }
-
-    var dynamicPrompt by remember { mutableStateOf("") }
-    var showCursor by remember { mutableStateOf(true) }
-
-    LaunchedEffect(title.isEmpty()) {
-
-        if (!title.isEmpty()) return@LaunchedEffect
-
-        var currentIndex = dynamicPrompts.indices.random()
-
-        while (title.isEmpty()) {
-
-            val targetText = dynamicPrompts[currentIndex]
-
-            dynamicPrompt = ""
-
-            targetText.forEach { char ->
-
-                if (title.isNotEmpty()) return@LaunchedEffect
-
-                dynamicPrompt += char
-                delay((35..65).random().toLong())
-            }
-
-            delay(1800)
-
-            while (dynamicPrompt.isNotEmpty()) {
-
-                if (title.isNotEmpty()) return@LaunchedEffect
-
-                dynamicPrompt = dynamicPrompt.dropLast(1)
-                delay((15..30).random().toLong())
-            }
-
-            delay(250)
-
-            currentIndex = (0 until dynamicPrompts.size)
-                .filter { it != currentIndex }
-                .random()
-        }
-    }
-
-    LaunchedEffect(title.isEmpty()) {
-
-        if (!title.isEmpty()) return@LaunchedEffect
-
-        while (true) {
-            delay(500)
-            showCursor = !showCursor
-        }
-    }
-
-    val titleFocusRequester = remember { FocusRequester() }
-    var body             by remember { mutableStateOf("") }
-
+    // A category the user picked (or that was passed in) is never overridden by auto-suggest.
+    var categoryManuallyChanged by rememberSaveable { mutableStateOf(initialCategory.isNotBlank()) }
+    var isAnonymous by rememberSaveable { mutableStateOf(false) }
+    var selectedArea by rememberSaveable { mutableStateOf(CITY) }
 
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var existingImageUrl by remember { mutableStateOf<String?>(null) }
+    var removedExistingImage by remember { mutableStateOf(false) }
 
+    // Edit-mode baseline, used to detect unsaved changes
+    var baselineTitle by remember { mutableStateOf("") }
+    var baselineBody by remember { mutableStateOf("") }
 
+    // ── UI state ───────────────────────────────────────────────────────────
+    var titleFocused by remember { mutableStateOf(false) }
+    var bodyFocused by remember { mutableStateOf(false) }
+    var lastFocusedField by remember { mutableStateOf("title") }
+    var showCategorySheet by remember { mutableStateOf(false) }
+    var showAreaSheet by remember { mutableStateOf(false) }
+    var showEmojiRow by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showSuccess by remember { mutableStateOf(false) }
+    var streak by remember { mutableIntStateOf(0) }
 
-    var existingImageUrl by remember {
+    val titleFocus = remember { FocusRequester() }
+    val bodyFocus = remember { FocusRequester() }
 
-        mutableStateOf<String?>(null)
-
-    }
-
+    // ── Edit mode: load the existing post (once) ───────────────────────────
     LaunchedEffect(editingPostId) {
-
         if (editingPostId == null) return@LaunchedEffect
-
         viewModel.getPostById(editingPostId) { post ->
-
             title = post.title
             body = post.body ?: ""
-        }
-
-        viewModel.getPostById(editingPostId) { post ->
-
-            title = post.title
-            body = post.body ?: ""
-
+            baselineTitle = post.title
+            baselineBody = post.body ?: ""
             existingImageUrl = post.imageUrl
+            // Keep the post's current settings instead of silently resetting them
+            if (post.category.isNotBlank()) selectedCategory = post.category
+            post.areaTag?.takeIf { it.isNotBlank() }?.let { selectedArea = it }
+            isAnonymous = post.isAnonymous
+            categoryManuallyChanged = true
         }
-
     }
 
-
-    var selectedCategory by remember {
+    // ── Draft restore / autosave (new posts only) ──────────────────────────
+    var pendingDraft by remember {
         mutableStateOf(
-            if (initialCategory.isNotBlank()) initialCategory else "community"
+            if (!isEditing && title.isBlank() && body.isBlank()) draftStore.load(userId) else null
         )
     }
 
-    var categoryManuallyChanged by remember {
-        mutableStateOf(false)
-    }
-
-    val suggestedCategory = remember(title, body) {
-        suggestCategory(title, body)
-    }
-
-    LaunchedEffect(suggestedCategory) {
-
-        if (categoryManuallyChanged) return@LaunchedEffect
-
+    LaunchedEffect(title, body, selectedCategory, selectedArea, isAnonymous) {
+        if (isEditing || showSuccess) return@LaunchedEffect
+        if (pendingDraft != null) {
+            // Wait for the user's decision; typing something new replaces the old draft.
+            if (title.isBlank() && body.isBlank()) return@LaunchedEffect
+            pendingDraft = null
+        }
         delay(500)
+        draftStore.save(
+            userId,
+            PostDraftStore.Draft(title, body, selectedCategory, selectedArea, isAnonymous)
+        )
+    }
 
-        if (suggestedCategory == suggestCategory(title, body)) {
+    // ── Auto-focus the title so the keyboard is already up ─────────────────
+    LaunchedEffect(Unit) {
+        if (!isEditing) {
+            delay(150)
+            try { titleFocus.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
+    // ── Location (requested only when the user asks for it) ────────────────
+    var locationGranted by remember { mutableStateOf(hasLocationPermission(context)) }
+    var userLat by remember { mutableStateOf<Double?>(null) }
+    var userLng by remember { mutableStateOf<Double?>(null) }
+    var currentArea by remember { mutableStateOf<String?>(null) }
+    var locationTick by remember { mutableIntStateOf(0) }
+
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        locationGranted = result.values.any { it }
+        if (!locationGranted) {
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar("Location permission is off. You can still pick an area manually.")
+            }
+        }
+    }
+
+    LaunchedEffect(locationGranted, locationTick) {
+        if (!locationGranted) return@LaunchedEffect
+        val location = try {
+            lastKnownLocation(context)
+        } catch (_: SecurityException) {
+            null
+        } ?: return@LaunchedEffect
+        userLat = location.latitude
+        userLng = location.longitude
+        currentArea = resolveSubLocality(context, location.latitude, location.longitude)
+    }
+
+    fun useCurrentLocation() {
+        haptic.tap()
+        val area = currentArea
+        when {
+            !locationGranted -> locationLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+            area != null -> selectedArea = area
+            else -> {
+                locationTick++
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar("Finding your area…")
+                }
+            }
+        }
+    }
+
+    val areaPills = remember(userLat, userLng, currentArea, selectedArea) {
+        buildAreaOptions(userLat, userLng, currentArea, selectedArea, limit = 6)
+    }
+    val allAreas = remember(userLat, userLng, currentArea) {
+        buildAreaOptions(userLat, userLng, currentArea, selectedArea = null, limit = null)
+    }
+
+    // ── Photos (permission is asked only when the user wants recent photos) ─
+    var hasMediaPermission by remember { mutableStateOf(hasPermission(context, mediaPermission())) }
+    var recentImages by remember { mutableStateOf<List<Uri>?>(null) }
+
+    val mediaPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> hasMediaPermission = granted }
+
+    LaunchedEffect(hasMediaPermission) {
+        recentImages = if (hasMediaPermission) loadRecentImages(context) else emptyList()
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        // Cancelling the picker must not clear a photo that is already attached.
+        if (uri != null) {
+            selectedImageUri = uri
+            haptic.tap()
+        }
+    }
+
+    fun openPhotoPicker() {
+        photoPickerLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    // ── Insights (social proof, reach, trending) ───────────────────────────
+    LaunchedEffect(selectedArea) { viewModel.loadInsights(selectedArea) }
+
+    // ── Category auto-suggest (debounced) ──────────────────────────────────
+    var suggestedCategory by remember { mutableStateOf("community") }
+    LaunchedEffect(title, body) {
+        delay(400)
+        suggestedCategory = suggestCategory(title, body)
+        if (!categoryManuallyChanged && suggestedCategory != selectedCategory) {
             selectedCategory = suggestedCategory
         }
     }
 
-    var isAnonymous      by remember { mutableStateOf(false) }
-
-    val anonymousIconScale by animateFloatAsState(
-        targetValue = if (isAnonymous) 1.15f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "anonymous_icon_scale"
-    )
-
-    val anonymousIconColor by animateColorAsState(
-        targetValue =
-            if (isAnonymous)
-                OrangeMain
-            else
-                MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "anonymous_icon_color"
-    )
-
-    val maxBodyChars     = 1500
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri -> selectedImageUri = uri }
-
-    var contentVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(300)
-        contentVisible = true
+    // ── Prompts ────────────────────────────────────────────────────────────
+    val prompts = remember(currentArea) {
+        composerPrompts(currentArea, Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
     }
 
-    val canPost =
-        title.isNotBlank() &&
-                !uiState.isLoading
+    // ── Derived ────────────────────────────────────────────────────────────
+    val hasImage = selectedImageUri != null || existingImageUrl != null
+    val progress = postQualityProgress(title, body, hasImage, selectedArea != CITY)
+    val nudge = postQualityNudge(title, body, hasImage, selectedArea != CITY)
 
-    // ── Scaffold ───────────────────────────────────────────────────────────
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+    val postState = when {
+        showSuccess            -> PostButtonState.Success
+        uiState.isLoading      -> PostButtonState.Loading
+        title.isNotBlank()     -> PostButtonState.Ready
+        else                   -> PostButtonState.Disabled
+    }
 
-        // ── TOP BAR ──────────────────────────────────────────────────────
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Close — small circle button
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .pressScale(onClick = onClose),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Close, "Close",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Center title
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "Create Post",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(1.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Share with ",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            "NagpurPulse",
-                            color = OrangeMain,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Icon(
-                            Icons.Filled.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = OrangeMain,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-
-                // POST button — large orange pill
-                val postScale by animateFloatAsState(
-                    if (canPost) 1f else 0.94f,
-                    spring(Spring.DampingRatioMediumBouncy), label = "postscale"
-                )
-                Box(
-                    modifier = Modifier
-                        .scale(postScale)
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(
-                            if (canPost) OrangeGradient
-                            else Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            )
-                        )
-                        .pressScale {
-                            if (canPost) viewModel.createPost(
-                                context = context,
-                                title = title,
-                                body = body,
-                                category = selectedCategory,
-                                areaTag = selectedArea,
-                                isAnonymous = isAnonymous,
-                                imageUri = selectedImageUri,
-                                postType = postType,
-                                editingPostId = editingPostId,
-                                onSuccess = onPostSuccess
-                            )
-                        }
-                        .padding(horizontal = 28.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AnimatedContent(
-                        uiState.isLoading,
-                        transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
-                        label = "postbtn"
-                    ) { loading ->
-                        if (loading)
-                            CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else
-                            Text(
-                                "Post",
-                                color =
-                                    if (canPost)
-                                        MaterialTheme.colorScheme.onPrimary
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                    }
-                }
-            }
-        },
-
-        // ── BOTTOM BAR ───────────────────────────────────────────────────
-        bottomBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Filled.LocationOn, // using shield-like icon
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text("Be kind. Be local. Follow ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                Text(
-                    "Community Guidelines",
-                    color = OrangeMain,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-            }
+    // ── Shake (invalid submit / error) ─────────────────────────────────────
+    val shake = remember { Animatable(0f) }
+    var shakeTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(shakeTick) {
+        if (shakeTick == 0) return@LaunchedEffect
+        repeat(3) {
+            shake.animateTo(12f, tween(45))
+            shake.animateTo(-12f, tween(45))
         }
+        shake.animateTo(0f, tween(45))
+    }
 
-    ) { paddingValues ->
+    // ── Errors → snackbar + haptic + shake ─────────────────────────────────
+    LaunchedEffect(uiState.errorNonce) {
+        val message = uiState.error
+        if (uiState.errorNonce > 0 && message != null) {
+            haptic.error()
+            shakeTick++
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearError()
+        }
+    }
 
-        AnimatedVisibility(
-            contentVisible,
-            enter = fadeIn(tween(350)) + slideInVertically { 30 }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .imePadding()
-                    .padding(horizontal = 16.dp)
-            ) {
+    // ── Success → celebrate briefly, then leave ────────────────────────────
+    LaunchedEffect(showSuccess) {
+        if (showSuccess) {
+            delay(if (isEditing) 700L else 1500L)
+            onPostSuccess()
+        }
+    }
 
-                Spacer(Modifier.height(8.dp))
+    // ── Closing / discarding ───────────────────────────────────────────────
+    fun hasUnsavedChanges(): Boolean =
+        if (isEditing)
+            title != baselineTitle || body != baselineBody ||
+                    selectedImageUri != null || removedExistingImage
+        else
+            title.isNotBlank() || body.isNotBlank() || selectedImageUri != null
 
-                if (
-                    suggestedCategory != "community" &&
-                    selectedCategory != suggestedCategory
-                ) {
+    fun attemptClose() {
+        if (uiState.isLoading || showSuccess) return
+        if (hasUnsavedChanges()) {
+            focusManager.clearFocus()
+            showDiscardDialog = true
+        } else {
+            onClose()
+        }
+    }
 
-                    Text(
-                        text = "Suggested: ${categoryChipLabel(suggestedCategory)}",
-                        color = OrangeMain,
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
+    BackHandler(enabled = !showSuccess) { attemptClose() }
 
-// ── CATEGORY CHIPS ─────────────────────────
-                Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+    // ── Submit ─────────────────────────────────────────────────────────────
+    fun submit() {
+        if (title.isBlank()) {
+            haptic.error()
+            shakeTick++
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar("Add a title to share your post")
+            }
+            return
+        }
+        if (uiState.isLoading || showSuccess) return
+        focusManager.clearFocus()
+        viewModel.createPost(
+            context = context,
+            title = title,
+            body = body,
+            category = selectedCategory,
+            areaTag = selectedArea,
+            isAnonymous = isAnonymous,
+            imageUri = selectedImageUri,
+            postType = postType,
+            editingPostId = editingPostId,
+            clearImage = removedExistingImage && selectedImageUri == null,
+            onSuccess = {
+                haptic.success()
+                streak = if (isEditing) 0 else draftStore.recordPost()
+                draftStore.clear()
+                showSuccess = true
+            }
+        )
+    }
 
-                    postCategories.forEach { cat ->
+    fun insertEmoji(emoji: String) {
+        haptic.tap()
+        if (lastFocusedField == "body") {
+            if (body.length + emoji.length <= MAX_BODY_CHARS) body += emoji
+        } else {
+            if (title.length + emoji.length <= MAX_TITLE_CHARS) title += emoji
+        }
+    }
 
-                        val isSelected = selectedCategory == cat
+    // ═════════════════════════════════════════════════════════════════════════
+    //  UI
+    // ═════════════════════════════════════════════════════════════════════════
+    Box(Modifier.fillMaxSize()) {
 
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(
-                                    if (isSelected)
-                                        OrangeGradient
-                                    else
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                MaterialTheme.colorScheme.surfaceVariant,
-                                                MaterialTheme.colorScheme.surface
-                                            )
-                                        )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) OrangeMain else BorderGray,
-                                    shape = RoundedCornerShape(22.dp)
-                                )
-                                .shadow(
-                                    elevation = if (isSelected) 4.dp else 0.dp,
-                                    shape = RoundedCornerShape(22.dp),
-                                    ambientColor = OrangeMain.copy(alpha = 0.15f),
-                                    spotColor = OrangeMain.copy(alpha = 0.2f)
-                                )
-                                .pressScale {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
 
-                                    categoryManuallyChanged = true
-
-                                    selectedCategory = cat
+            // ── TOP BAR ─────────────────────────────────────────────────────
+            topBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.background)
+                        .statusBarsPadding()
+                        .pointerInput(Unit) {
+                            // Pull down to dismiss, like a sheet
+                            var dragged = 0f
+                            detectVerticalDragGestures(
+                                onDragStart = { dragged = 0f },
+                                onDragCancel = { dragged = 0f },
+                                onDragEnd = { if (dragged > 200f) attemptClose() },
+                                onVerticalDrag = { change, dy ->
+                                    dragged += dy
+                                    change.consume()
                                 }
-                                .padding(horizontal = 18.dp)
-                        ) {
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = categoryChipIcon(cat),
-                                    contentDescription = null,
-                                    tint = if (isSelected)
-                                        MaterialTheme.colorScheme.onPrimary
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(17.dp)
-                                )
-
-                                Spacer(Modifier.width(6.dp))
-
-                                Text(
-                                    text = categoryChipLabel(cat),
-                                    color =
-                                        if (isSelected)
-                                            MaterialTheme.colorScheme.onPrimary
-                                        else
-                                            MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 14.sp,
-                                    fontWeight =
-                                        if (isSelected)
-                                            FontWeight.Bold
-                                        else
-                                            FontWeight.Normal
-                                )
-                            }
-                        }
-
-                    }
-                    }
-
-
-
-
-                Spacer(Modifier.height(8.dp))
-
-                // ── MAIN POST CARD ────────────────────────────────────────
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape    = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    border   = BorderStroke(0.5.dp, BorderGray)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-
-                        // Header row: "✨ What's happening in Nagpur?" + location pill
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            OutlinedTextField(
-                                value = title,
-                                onValueChange = {
-                                    title = it
-                                    categoryManuallyChanged = false
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(105.dp)
-                                    .focusRequester(titleFocusRequester),
-
-                                placeholder = {
-
-                                    if (title.isEmpty()) {
-                                        Text(
-                                            text = dynamicPrompt + if (showCursor) "|" else "",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                },
-
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    cursorColor = OrangeMain,
-                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                textStyle = LocalTextStyle.current.copy(
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-
-
-
-                        }
-
-
-
-                        Spacer(Modifier.height(10.dp))
-
-                        AnimatedVisibility(
-                            visible = title.isNotBlank(),
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                // Orange vertical bar (visible when focused or has text)
-                                Box(
-                                    modifier = Modifier
-                                        .width(2.dp)
-                                        .height(60.dp)
-                                        .clip(RoundedCornerShape(1.dp))
-                                        .background(
-                                            if (body.isNotBlank())
-                                                OrangeMain
-                                            else
-                                                Color.Transparent
-                                        )
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                OutlinedTextField(
-                                    value = body,
-                                    onValueChange = {
-                                        if (it.length <= maxBodyChars) {
-                                            body = it
-                                            categoryManuallyChanged = false
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 60.dp),
-                                    placeholder = {
-                                        Text(
-                                            "Add description..."
-                                        )
-                                    },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color.Transparent,
-                                        unfocusedBorderColor = Color.Transparent,
-                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        cursorColor = OrangeMain,
-                                        focusedContainerColor = Color.Transparent,
-                                        unfocusedContainerColor = Color.Transparent
-                                    ),
-                                    textStyle = MaterialTheme.typography.titleMedium.copy(
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(10.dp))
-                        HorizontalDivider(color = BorderGray, thickness = 0.5.dp)
-                        Spacer(Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            // Add Topic
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50.dp))
-                                    .border(1.dp, BorderGray, RoundedCornerShape(50.dp))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "#",
-                                    color = OrangeMain,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(Modifier.width(5.dp))
-
-                                Text(
-                                    categoryChipLabel(selectedCategory),
-                                    color = if (selectedCategory == "community")
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    else
-                                        OrangeMain,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-
-                            Spacer(Modifier.width(8.dp))
-
-                            // Add Photo
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50.dp))
-                                    .border(1.dp, BorderGray, RoundedCornerShape(50.dp))
-                                    .pressScale {
-                                        photoPickerLauncher.launch(
-                                            PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                                            )
-                                        )
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PhotoLibrary,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-
-                                    Spacer(Modifier.width(6.dp))
-
-                                    Text("Add Photo")
-                                }
-                            }
-
-                            Spacer(Modifier.width(8.dp))
-
-                            // Nagpur Pill
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50.dp))
-                                    .border(1.dp, BorderGray, RoundedCornerShape(50.dp))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Filled.LocationOn,
-                                    contentDescription = null,
-                                    tint = OrangeMain,
-                                    modifier = Modifier.size(14.dp)
-                                )
-
-                                Spacer(Modifier.width(4.dp))
-
-                                Text(
-                                    selectedArea,
-                                    color = TextGray,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-
-                                Spacer(Modifier.width(2.dp))
-
-                                Icon(
-                                    Icons.Filled.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    tint = TextGray,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                        val counterColor by animateColorAsState(
-                            when {
-                                body.length > maxBodyChars * 0.9f -> Color(0xFFFF3B30)
-                                body.length > maxBodyChars * 0.7f -> OrangeMain
-                                else -> TextGray
-                            },
-                            tween(300),
-                            label = "counter"
-                        )
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            Text(
-                                text = "${body.length}/$maxBodyChars",
-                                color = counterColor,
-                                style = MaterialTheme.typography.labelSmall
                             )
                         }
-                }
-                }
-
-                // ── SELECTED IMAGE PREVIEW ────────────────────────────────
-                if (selectedImageUri != null || existingImageUrl != null) {
-                    Spacer(Modifier.height(12.dp))
+                ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                    ) {
-                        AsyncImage(
-                            model = selectedImageUri ?: existingImageUrl,
-                            contentDescription  = "Selected image",
-                            modifier            = Modifier.fillMaxSize()
-                        )
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp)
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(0.65f))
-                                .pressScale {
-                                    selectedImageUri = null
-                                    existingImageUrl = null
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    border = BorderStroke(1.dp, BorderGray),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 6.dp)
+                            .width(36.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
-                        Icon(
-                            imageVector = Icons.Filled.VisibilityOff,
-                            contentDescription = null,
-                            tint = anonymousIconColor,
+                        Box(
                             modifier = Modifier
-                                .size(22.dp)
-                                .scale(anonymousIconScale)
-                        )
-
-                        Spacer(Modifier.width(10.dp))
-
-                        Column(
-                            modifier = Modifier.weight(1f)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .pressScale { attemptClose() },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                "Post Anonymously",
-                                color = anonymousIconColor,
-                                fontWeight = if (isAnonymous)
-                                    FontWeight.Bold
-                                else
-                                    FontWeight.SemiBold
-                            )
-
-                            Text(
-                                "Hide your username from others",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall
+                            Icon(
+                                Icons.Filled.Close, "Close",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
-                        Switch(
-                            checked = isAnonymous,
-                            onCheckedChange = {
-                                isAnonymous = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = OrangeMain,
-                                checkedBorderColor = OrangeMain,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                uncheckedBorderColor = BorderGray
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                if (isEditing) "Edit Post" else "Create Post",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                maxLines = 1
                             )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    if (isEditing) "Editing your post" else "Share with ",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                                if (!isEditing) {
+                                    Text(
+                                        "NagpurPulse",
+                                        color = OrangeMain,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = title.isNotBlank() && !showSuccess,
+                            enter = fadeIn(tween(200)),
+                            exit = fadeOut(tween(150))
+                        ) {
+                            QualityRing(progress, Modifier.padding(end = 10.dp))
+                        }
+
+                        PostButton(
+                            state = postState,
+                            label = if (isEditing) "Save" else "Post",
+                            shakeOffset = shake.value,
+                            onClick = { submit() }
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-// ── RECENT PHOTOS ─────────────────────────────────────
+            },
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+            // ── BOTTOM BAR (pinned above the keyboard) ──────────────────────
+            bottomBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.PhotoLibrary,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    QuickEmojiRow(visible = showEmojiRow) { insertEmoji(it) }
 
-                    Spacer(Modifier.width(8.dp))
-
-                    Text(
-                        text = "Recent Photos",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(recentImages.take(10)) { imageUri ->
-
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(
-                                if (selectedImageUri == imageUri) 2.dp else 1.dp,
-                                if (selectedImageUri == imageUri)
-                                    OrangeMain
-                                else
-                                    BorderGray,
-                                RoundedCornerShape(14.dp)
-                            )
-                            .pressScale {
-                                selectedImageUri = imageUri
-                            }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        AsyncImage(
-                            model = imageUri,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize()
+                        ToolButton(Icons.Filled.Image, "Add photo", hasImage) { openPhotoPicker() }
+                        ToolButton(
+                            Icons.Filled.Tag, "Choose topic",
+                            selectedCategory != "community"
+                        ) { showCategorySheet = true }
+                        ToolButton(
+                            Icons.Filled.LocationOn, "Choose area",
+                            selectedArea != CITY
+                        ) { showAreaSheet = true }
+                        ToolButton(
+                            if (isAnonymous) Icons.Filled.Lock else Icons.Filled.VisibilityOff,
+                            "Post anonymously", isAnonymous
+                        ) {
+                            haptic.tap()
+                            isAnonymous = !isAnonymous
+                        }
+                        ToolButton(
+                            Icons.Filled.EmojiEmotions, "Emoji", showEmojiRow
+                        ) { showEmojiRow = !showEmojiRow }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Shield, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Be kind. Be local. Follow ",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            "Community Guidelines",
+                            color = OrangeMain,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            " ›",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+        ) { paddingValues ->
 
+            val entry = remember { MutableTransitionState(false).apply { targetState = true } }
 
-
-
-                Spacer(Modifier.height(8.dp))
-
-                // ── NEARBY AREAS ──────────────────────────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Navigation/compass icon
-                    Icon(
-                        Icons.Filled.Navigation,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "Nearby Areas",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize   = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        "Use current location",
-                        color      = OrangeMain,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize   = 13.sp
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    // Target circle icon
-                    Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .border(1.5.dp, OrangeMain, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(OrangeMain)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                // Area chips — scrollable row of square cards
-                val displayAreas = buildList<Pair<String, String>> {
-
-                    add("Nagpur" to "Entire City")
-
-                    currentArea?.let {
-                        add(it to "Current Location")
-                    }
-
-                    if (
-                        userLatitude != null &&
-                        userLongitude != null
-                    ) {
-
-                        val nearestAreas = nagpurAreas
-                            .map { area ->
-
-                                area.name to calculateDistanceKm(
-                                    userLatitude!!,
-                                    userLongitude!!,
-                                    area.latitude,
-                                    area.longitude
-                                )
-                            }
-                            .sortedBy {
-                                it.second
-                                    .replace(" km", "")
-                                    .toFloat()
-                            }
-                            .take(8)
-
-                        addAll(nearestAreas)
-                    }
-                }
-
-                Row(
+            AnimatedVisibility(
+                visibleState = entry,
+                enter = fadeIn(tween(250)) + slideInVertically(tween(250)) { 24 }
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
                 ) {
-                    displayAreas.forEach { (area, dist) ->
-                        val isSelected = selectedArea == area
-                        Card(
-                            modifier = Modifier
-                                .width(110.dp)
-                                .height(52.dp)
-                                .pressScale { selectedArea = area },
-                            shape  = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor =
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isSelected) OrangeMain else BorderGray
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // ── Draft restore ──────────────────────────────────────
+                    AnimatedVisibility(
+                        visible = pendingDraft != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        val draft = pendingDraft
+                        Column {
+                            DraftBanner(
+                                preview = draft?.let { it.title.ifBlank { it.body } }.orEmpty(),
+                                onRestore = {
+                                    draft?.let {
+                                        title = it.title
+                                        body = it.body
+                                        selectedCategory = it.category
+                                        selectedArea = it.area
+                                        isAnonymous = it.isAnonymous
+                                        categoryManuallyChanged = true
+                                    }
+                                    pendingDraft = null
+                                    haptic.tap()
+                                },
+                                onDiscard = {
+                                    draftStore.clear()
+                                    pendingDraft = null
+                                }
                             )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    }
+
+                    // ── Social proof + trending ────────────────────────────
+                    if (!isEditing) {
+                        TrendingStrip(
+                            postsToday = uiState.insights.postsToday,
+                            trending = uiState.insights.trendingCategories,
+                            onTrendingClick = { cat ->
+                                selectedCategory = cat
+                                categoryManuallyChanged = true
+                                haptic.tap()
+                            }
+                        )
+                        if (uiState.insights.postsToday != null ||
+                            uiState.insights.trendingCategories.isNotEmpty()
                         ) {
-                            Row(
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    }
+
+                    // ── COMPOSER CARD ──────────────────────────────────────
+                    val cardBorder by animateColorAsState(
+                        if (titleFocused || bodyFocused) OrangeMain.copy(alpha = 0.7f)
+                        else MaterialTheme.colorScheme.outlineVariant,
+                        tween(200), label = "card_border"
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(
+                            if (titleFocused || bodyFocused) 1.5.dp else 0.5.dp,
+                            cardBorder
+                        )
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+
+                            ComposerHeader(
+                                displayName = uiState.displayName,
+                                avatarUrl = uiState.avatarUrl,
+                                isAnonymous = isAnonymous
+                            )
+
+                            Spacer(Modifier.height(14.dp))
+
+                            // Title
+                            BasicTextField(
+                                value = title,
+                                onValueChange = { if (it.length <= MAX_TITLE_CHARS) title = it },
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                                    .fillMaxWidth()
+                                    .focusRequester(titleFocus)
+                                    .onFocusChanged {
+                                        titleFocused = it.isFocused
+                                        if (it.isFocused) lastFocusedField = "title"
+                                    },
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                cursorBrush = SolidColor(OrangeMain),
+                                minLines = 2,
+                                maxLines = 4,
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Sentences,
+                                    imeAction = ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onNext = { bodyFocus.requestFocus() }
+                                ),
+                                decorationBox = { inner ->
+                                    Box(Modifier.fillMaxWidth()) {
+                                        if (title.isEmpty()) {
+                                            TypewriterPlaceholder(
+                                                prompts = prompts,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                showCursor = !titleFocused
+                                            )
+                                        }
+                                        inner()
+                                    }
+                                }
+                            )
 
-                                Icon(
-                                    imageVector = Icons.Filled.LocationCity,
-                                    contentDescription = null,
-                                    tint = if (isSelected)
-                                        OrangeMain
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp)
+                            if (title.length >= MAX_TITLE_CHARS * 0.8f) {
+                                Text(
+                                    "${MAX_TITLE_CHARS - title.length} left",
+                                    color = if (title.length >= MAX_TITLE_CHARS) MaterialTheme.colorScheme.error
+                                    else OrangeMain,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier
+                                        .align(Alignment.End)
+                                        .padding(top = 4.dp)
                                 )
+                            }
 
-                                Spacer(Modifier.width(8.dp))
-
+                            // One-tap starters while the composer is empty
+                            AnimatedVisibility(
+                                visible = title.isEmpty() && body.isEmpty() && !isEditing,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
                                 Column {
+                                    Spacer(Modifier.height(10.dp))
+                                    StarterChips { starter ->
+                                        haptic.tap()
+                                        title = starter.template
+                                        selectedCategory = starter.category
+                                        categoryManuallyChanged = true
+                                        scope.launch {
+                                            delay(50)
+                                            try { titleFocus.requestFocus() } catch (_: Exception) {}
+                                        }
+                                    }
+                                }
+                            }
 
-                                    Text(
-                                        area,
-                                        color =
-                                            if (isSelected)
-                                                MaterialTheme.colorScheme.onPrimaryContainer
-                                            else
-                                                MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1
-                                    )
+                            Spacer(Modifier.height(12.dp))
 
-                                    Text(
-                                        dist,
-                                        color = TextGray,
-                                        fontSize = 8.sp
+                            // Description (always available, so category suggestions work early)
+                            Row(Modifier.height(IntrinsicSize.Min)) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(2.dp)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(1.dp))
+                                        .background(
+                                            if (body.isNotBlank() || bodyFocused) OrangeMain
+                                            else MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                BasicTextField(
+                                    value = body,
+                                    onValueChange = { if (it.length <= MAX_BODY_CHARS) body = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(bodyFocus)
+                                        .onFocusChanged {
+                                            bodyFocused = it.isFocused
+                                            if (it.isFocused) lastFocusedField = "body"
+                                        },
+                                    textStyle = TextStyle(
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 16.sp
+                                    ),
+                                    cursorBrush = SolidColor(OrangeMain),
+                                    minLines = 3,
+                                    keyboardOptions = KeyboardOptions(
+                                        capitalization = KeyboardCapitalization.Sentences
+                                    ),
+                                    decorationBox = { inner ->
+                                        Box(Modifier.fillMaxWidth()) {
+                                            if (body.isEmpty()) {
+                                                Text(
+                                                    "Add more details (optional)",
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontSize = 16.sp
+                                                )
+                                            }
+                                            inner()
+                                        }
+                                    }
+                                )
+                            }
+
+                            if (body.length >= MAX_BODY_CHARS * 0.7f) {
+                                val remaining = MAX_BODY_CHARS - body.length
+                                val counterColor by animateColorAsState(
+                                    if (body.length > MAX_BODY_CHARS * 0.9f)
+                                        MaterialTheme.colorScheme.error
+                                    else OrangeMain,
+                                    tween(300), label = "body_counter"
+                                )
+                                Text(
+                                    "$remaining left",
+                                    color = counterColor,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier
+                                        .align(Alignment.End)
+                                        .padding(top = 4.dp)
+                                )
+                            }
+
+                            // Attached photo
+                            AnimatedVisibility(
+                                visible = hasImage,
+                                enter = fadeIn(tween(250)) + expandVertically(),
+                                exit = fadeOut(tween(150)) + shrinkVertically()
+                            ) {
+                                Column {
+                                    Spacer(Modifier.height(14.dp))
+                                    AttachedImagePreview(
+                                        model = selectedImageUri ?: existingImageUrl ?: "",
+                                        onRemove = {
+                                            haptic.tap()
+                                            if (existingImageUrl != null) removedExistingImage = true
+                                            selectedImageUri = null
+                                            existingImageUrl = null
+                                        },
+                                        onReplace = { openPhotoPicker() }
                                     )
                                 }
                             }
                         }
                     }
-                }
 
-                // ── ANONYMOUS ACTIVE BANNER ───────────────────────────────
+                    // ── Category suggestion + quality nudge ────────────────
+                    Spacer(Modifier.height(10.dp))
 
+                    CategorySuggestion(
+                        suggested = suggestedCategory,
+                        visible = suggestedCategory != "community" &&
+                                suggestedCategory != selectedCategory,
+                        onApply = {
+                            haptic.tap()
+                            selectedCategory = suggestedCategory
+                            categoryManuallyChanged = false
+                        }
+                    )
 
-                // ── ERROR ─────────────────────────────────────────────────
-                AnimatedVisibility(
-                    uiState.error != null,
-                    enter = fadeIn(tween(250)) + expandVertically(),
-                    exit  = fadeOut(tween(200)) + shrinkVertically()
-                ) {
-                    if (uiState.error != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.errorContainer)
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.error.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    AnimatedContent(
+                        targetState = nudge,
+                        transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+                        label = "nudge"
+                    ) { text ->
+                        if (text != null) {
                             Row(
+                                modifier = Modifier.padding(bottom = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Warning,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFF3B30),
-                                    modifier = Modifier.size(20.dp)
+                                    Icons.Filled.Lightbulb, contentDescription = null,
+                                    tint = OrangeMain, modifier = Modifier.size(14.dp)
                                 )
-
-                                Spacer(Modifier.width(8.dp))
-
+                                Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = uiState.error ?: "",
-                                    color = Color(0xFFFF3B30),
-                                    style = MaterialTheme.typography.titleSmall
+                                    text,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp
                                 )
                             }
+                        } else {
+                            Spacer(Modifier.height(0.dp))
                         }
                     }
+
+                    // ── Topic ──────────────────────────────────────────────
+                    SectionLabel("Topic")
+                    Spacer(Modifier.height(8.dp))
+                    CategoryChipRow(
+                        selected = selectedCategory,
+                        onSelect = {
+                            haptic.tap()
+                            selectedCategory = it
+                            categoryManuallyChanged = true
+                        },
+                        onMore = { showCategorySheet = true }
+                    )
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // ── Recent photos ──────────────────────────────────────
+                    RecentPhotosSection(
+                        hasPermission = hasMediaPermission,
+                        images = recentImages,
+                        selectedUri = selectedImageUri,
+                        onRequestPermission = {
+                            mediaPermissionLauncher.launch(mediaPermission())
+                        },
+                        onBrowse = { openPhotoPicker() },
+                        onToggle = { uri ->
+                            haptic.tap()
+                            selectedImageUri = if (selectedImageUri == uri) null else uri
+                        }
+                    )
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // ── Area ───────────────────────────────────────────────
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Navigation, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Nearby areas",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .pressScale { useCurrentLocation() }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Use current location",
+                                color = OrangeMain,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                Icons.Filled.MyLocation, contentDescription = null,
+                                tint = OrangeMain, modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    AreaPills(
+                        options = areaPills,
+                        selected = selectedArea,
+                        onSelect = {
+                            haptic.tap()
+                            selectedArea = it
+                        },
+                        onMore = { showAreaSheet = true }
+                    )
+
+                    // Reach preview
+                    Spacer(Modifier.height(10.dp))
+                    val reach = uiState.insights.reachCount
+                    Text(
+                        text = when {
+                            reach != null && reach >= 10 && selectedArea == CITY ->
+                                "Visible to ~${if (reach >= 1000) "1,000+" else reach.toString()} neighbours across Nagpur"
+                            reach != null && reach >= 10 ->
+                                "Reaches ~${if (reach >= 1000) "1,000+" else reach.toString()} people following $selectedArea"
+                            selectedArea == CITY -> "Posting to all of Nagpur"
+                            else -> "Posting to $selectedArea"
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // ── Anonymous ──────────────────────────────────────────
+                    AnonymousCard(
+                        isAnonymous = isAnonymous,
+                        onToggle = {
+                            haptic.tap()
+                            isAnonymous = it
+                        }
+                    )
+
+                    Spacer(Modifier.height(24.dp))
                 }
-
-                Spacer(Modifier.height(14.dp))
-
-                // ── BOTTOM TOOLBAR — circle icon buttons ──────────────────
-                // Photo | Location | Poll | Anonymous | More
-
             }
+        }
+
+        // ── Success moment ─────────────────────────────────────────────────
+        SuccessOverlay(visible = showSuccess, isEdit = isEditing, streak = streak)
+    }
+
+    // ── Sheets ─────────────────────────────────────────────────────────────
+    if (showCategorySheet) {
+        CategorySheet(
+            selected = selectedCategory,
+            onSelect = {
+                haptic.tap()
+                selectedCategory = it
+                categoryManuallyChanged = true
+                showCategorySheet = false
+            },
+            onDismiss = { showCategorySheet = false }
+        )
+    }
+
+    if (showAreaSheet) {
+        AreaSheet(
+            options = allAreas,
+            selected = selectedArea,
+            onSelect = {
+                haptic.tap()
+                selectedArea = it
+                showAreaSheet = false
+            },
+            onDismiss = { showAreaSheet = false }
+        )
+    }
+
+    // ── Leave / discard confirmation ───────────────────────────────────────
+    if (showDiscardDialog) {
+        if (isEditing) {
+            AlertDialog(
+                onDismissRequest = { showDiscardDialog = false },
+                title = { Text("Discard changes?") },
+                text = { Text("Your edits to this post won't be saved.") },
+                confirmButton = {
+                    TextButton(onClick = { showDiscardDialog = false }) {
+                        Text("Keep editing", color = OrangeMain, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDiscardDialog = false
+                        onClose()
+                    }) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showDiscardDialog = false },
+                title = { Text("Leave this post?") },
+                text = { Text("Save it as a draft to pick up where you left off. Tap outside to keep writing.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        draftStore.save(
+                            userId,
+                            PostDraftStore.Draft(title, body, selectedCategory, selectedArea, isAnonymous)
+                        )
+                        showDiscardDialog = false
+                        onClose()
+                    }) { Text("Save draft", color = OrangeMain, fontWeight = FontWeight.Bold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        draftStore.clear()
+                        showDiscardDialog = false
+                        onClose()
+                    }) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+                }
+            )
         }
     }
 }
 
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+}
 
-private val dynamicPrompts = listOf(
-    "What's happening in Nagpur?",
-    "Any traffic updates today?",
-    "Share something useful...",
-    "What's trending near you?",
-    "Any hidden food gems?",
-    "What's the weather like?",
-    "Any events this evening?",
-    "Power cut in your area?",
-    "Any road closures today?",
-    "Recommend a good cafe...",
-    "What should Nagpur know?",
-    "Any job openings nearby?",
-    "Share a local update...",
-    "What's new around VNIT?",
-    "Anything happening in Sitabuldi?",
-    "Best place to visit today?"
-)
+// ── Permissions & location helpers ────────────────────────────────────────────
+private fun hasPermission(context: Context, permission: String): Boolean =
+    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+private fun hasLocationPermission(context: Context): Boolean =
+    hasPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ||
+            hasPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+
+/** READ_MEDIA_IMAGES only exists on Android 13+; older versions use READ_EXTERNAL_STORAGE. */
+private fun mediaPermission(): String =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        Manifest.permission.READ_MEDIA_IMAGES
+    else
+        Manifest.permission.READ_EXTERNAL_STORAGE
+
+@SuppressLint("MissingPermission")
+private suspend fun lastKnownLocation(context: Context): Location? {
+    val client = LocationServices.getFusedLocationProviderClient(context)
+
+    val last = suspendCancellableCoroutine<Location?> { cont ->
+        client.lastLocation
+            .addOnSuccessListener { if (cont.isActive) cont.resume(it) }
+            .addOnFailureListener { if (cont.isActive) cont.resume(null) }
+    }
+    if (last != null) return last
+
+    return suspendCancellableCoroutine { cont ->
+        val cancellation = CancellationTokenSource()
+        cont.invokeOnCancellation { cancellation.cancel() }
+        client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
+            .addOnSuccessListener { if (cont.isActive) cont.resume(it) }
+            .addOnFailureListener { if (cont.isActive) cont.resume(null) }
+    }
+}
+
+/** Reverse geocoding is blocking I/O — always run it off the main thread. */
+@Suppress("DEPRECATION")
+private suspend fun resolveSubLocality(context: Context, lat: Double, lng: Double): String? =
+    withContext(Dispatchers.IO) {
+        try {
+            Geocoder(context, Locale.getDefault())
+                .getFromLocation(lat, lng, 1)
+                ?.firstOrNull()
+                ?.subLocality
+                ?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+/**
+ * Builds the area options. When [limit] is set (the pill row) only the nearest areas are kept;
+ * when null (the full sheet) every area is listed. [selectedArea] is pinned so a choice made
+ * in the sheet is always visible in the row.
+ */
+private fun buildAreaOptions(
+    lat: Double?,
+    lng: Double?,
+    currentArea: String?,
+    selectedArea: String?,
+    limit: Int?
+): List<AreaOption> {
+    val result = mutableListOf(AreaOption(CITY, "Entire city", isCity = true))
+
+    currentArea?.let {
+        result += AreaOption(it, "Your location", isCurrent = true)
+    }
+
+    val others = nagpurAreas
+        .filter { !it.name.equals(currentArea, ignoreCase = true) }
+        .let { areas ->
+            if (lat != null && lng != null) {
+                areas
+                    .map { it to distanceKm(lat, lng, it.latitude, it.longitude) }
+                    .sortedBy { it.second }
+                    .map { (area, km) -> AreaOption(area.name, formatDistance(km)) }
+            } else {
+                areas.sortedBy { it.name }.map { AreaOption(it.name, "Nagpur") }
+            }
+        }
+
+    result += if (limit != null) others.take(limit) else others
+
+    if (selectedArea != null && result.none { it.name == selectedArea }) {
+        result.add(1.coerceAtMost(result.size), AreaOption(selectedArea, "Selected"))
+    }
+    return result
+}
 
 data class NagpurArea(
     val name: String,
@@ -1238,28 +1242,3 @@ private val nagpurAreas = listOf(
     NagpurArea("Hudkeshwar", 21.1285, 79.1318),
     NagpurArea("Pardi", 21.1498, 79.1443)
 )
-
-private fun calculateDistanceKm(
-    userLat: Double,
-    userLng: Double,
-    areaLat: Double,
-    areaLng: Double
-): String {
-
-    val results = FloatArray(1)
-
-    android.location.Location.distanceBetween(
-        userLat,
-        userLng,
-        areaLat,
-        areaLng,
-        results
-    )
-
-    val distanceKm = results[0] / 1000
-
-    return String.format("%.1f km", distanceKm)
-}
-
-
-

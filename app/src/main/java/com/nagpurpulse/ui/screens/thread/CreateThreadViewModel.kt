@@ -8,12 +8,17 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nagpurpulse.data.model.ComposerInsights
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.PostRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 
@@ -21,7 +26,14 @@ import javax.inject.Inject
 data class CreateThreadUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isSuccess: Boolean = false
+    /** Incremented on every error so the same message can be shown twice in a row. */
+    val errorNonce: Int = 0,
+    val isSuccess: Boolean = false,
+    // Composer header
+    val displayName: String = "",
+    val avatarUrl: String? = null,
+    // Best-effort live numbers (null / empty = hide)
+    val insights: ComposerInsights = ComposerInsights()
 )
 
 @HiltViewModel
@@ -32,6 +44,38 @@ class CreateThreadViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CreateThreadUiState())
     val uiState: StateFlow<CreateThreadUiState> = _uiState
+
+    private var insightsJob: Job? = null
+
+    val currentUserId: String? get() = authRepository.currentUserId
+
+    init {
+        loadProfile()
+    }
+
+    private fun loadProfile() {
+        viewModelScope.launch {
+            authRepository.getCurrentProfile().onSuccess { profile ->
+                _uiState.update {
+                    it.copy(
+                        displayName = profile.displayName?.takeIf { n -> n.isNotBlank() }
+                            ?: profile.username,
+                        avatarUrl = profile.avatarUrl
+                    )
+                }
+            }
+        }
+    }
+
+    /** Refreshes social proof / reach / trending numbers for the chosen area. */
+    fun loadInsights(areaTag: String?) {
+        insightsJob?.cancel()
+        insightsJob = viewModelScope.launch {
+            postRepository.getComposerInsights(areaTag).onSuccess { result ->
+                _uiState.update { it.copy(insights = result) }
+            }
+        }
+    }
 
     fun getPostById(
         postId: String,
@@ -46,6 +90,34 @@ class CreateThreadViewModel @Inject constructor(
         }
     }
 
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+
+    fun showError(message: String) = setError(message)
+
+    private fun setError(message: String) {
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                error = message,
+                errorNonce = it.errorNonce + 1
+            )
+        }
+    }
+
+    private fun friendlyError(e: Throwable, fallback: String): String {
+        val raw = e.message.orEmpty()
+        return when {
+            raw.contains("Unable to resolve host", ignoreCase = true) ||
+                    raw.contains("timeout", ignoreCase = true) ||
+                    raw.contains("timed out", ignoreCase = true) ->
+                "No internet connection. Your draft is saved."
+            raw.isBlank() -> fallback
+            else -> raw
+        }
+    }
+
     fun createPost(
         context: Context,
         title: String,
@@ -56,52 +128,53 @@ class CreateThreadViewModel @Inject constructor(
         imageUri: Uri?,
         postType: String = "normal",
         editingPostId: String? = null,
+        clearImage: Boolean = false,
         onSuccess: () -> Unit
     ) {
+        if (_uiState.value.isLoading) return
+
         val userId = authRepository.currentUserId ?: run {
-            _uiState.value = CreateThreadUiState(
-                error = "You must be logged in to post"
-            )
+            setError("You must be logged in to post")
             return
         }
 
         if (title.isBlank()) {
-            _uiState.value = CreateThreadUiState(
-                error = "Please enter a title"
-            )
+            setError("Please enter a title")
             return
         }
 
         viewModelScope.launch {
 
-            _uiState.value = CreateThreadUiState(isLoading = true)
+            _uiState.update { it.copy(isLoading = true, error = null, isSuccess = false) }
 
             var imageUrl: String? = null
 
             // Upload only when a new image was selected
             if (imageUri != null) {
 
-                val imageBytes = context.contentResolver
-                    .openInputStream(imageUri)
-                    ?.readBytes()
-
-                if (imageBytes != null) {
-
-                    val uploadResult =
-                        postRepository.uploadPostImage(imageBytes)
-
-                    uploadResult.fold(
-                        onSuccess = {
-                            imageUrl = it
-                        },
-                        onFailure = {
-                            _uiState.value = CreateThreadUiState(
-                                error = "Image upload failed"
-                            )
-                            return@launch
-                        }
-                    )
+                // Reading a full-size photo is disk I/O — keep it off the main thread.
+                val imageBytes = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver
+                            .openInputStream(imageUri)
+                            ?.use { it.readBytes() }
+                    }.getOrNull()
                 }
+
+                if (imageBytes == null) {
+                    setError("Couldn't read that photo. Try another one.")
+                    return@launch
+                }
+
+                val uploadResult = postRepository.uploadPostImage(imageBytes)
+
+                uploadResult.fold(
+                    onSuccess = { imageUrl = it },
+                    onFailure = { e ->
+                        setError(friendlyError(e, "Image upload failed"))
+                        return@launch
+                    }
+                )
             }
 
             // ─────────────────────────────────────────────────────────────
@@ -118,18 +191,15 @@ class CreateThreadViewModel @Inject constructor(
                     isAnonymous = isAnonymous,
                     postType = postType,
                     isAlert = postType == "alert",
-                    imageUrl = imageUrl
+                    imageUrl = imageUrl,
+                    clearImage = clearImage && imageUrl == null
                 ).fold(
                     onSuccess = {
-                        _uiState.value = CreateThreadUiState(
-                            isSuccess = true
-                        )
+                        _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                         onSuccess()
                     },
                     onFailure = { e ->
-                        _uiState.value = CreateThreadUiState(
-                            error = e.message ?: "Failed to update post"
-                        )
+                        setError(friendlyError(e, "Failed to update post"))
                     }
                 )
 
@@ -150,15 +220,11 @@ class CreateThreadViewModel @Inject constructor(
                     imageUrl = imageUrl
                 ).fold(
                     onSuccess = {
-                        _uiState.value = CreateThreadUiState(
-                            isSuccess = true
-                        )
+                        _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                         onSuccess()
                     },
                     onFailure = { e ->
-                        _uiState.value = CreateThreadUiState(
-                            error = e.message ?: "Failed to create post"
-                        )
+                        setError(friendlyError(e, "Failed to create post"))
                     }
                 )
             }
