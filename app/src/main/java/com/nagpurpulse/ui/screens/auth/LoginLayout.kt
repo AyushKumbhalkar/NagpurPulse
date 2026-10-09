@@ -55,14 +55,15 @@ private val MaxHeaderHeight = 300.dp
 internal data class LoginDims(
     val headlineSp: Int, val headlineLine: Int,
     val row: Dp, val button: Dp, val google: Dp, val gap: Dp, val forgot: Dp,
-    val showWelcome: Boolean, val footerArt: Dp,
+    val showHeadline: Boolean, val showWelcome: Boolean, val showAlt: Boolean,
+    val footerArt: Dp,
     /** Natural height of everything between the header and the sign-up pill. */
     val estimate: Dp
 )
 
 private fun lerpF(a: Float, b: Float, t: Float) = a + (b - a) * t
 
-internal fun loginDims(screenHeight: Dp): LoginDims {
+internal fun loginDims(screenHeight: Dp, keyboard: Boolean = false): LoginDims {
     val t = ((screenHeight.value - 560f) / (900f - 560f)).coerceIn(0f, 1f)
     val sp = lerpF(26f, 38f, t).roundToInt()
     val line = (sp * 1.16f).roundToInt()
@@ -72,8 +73,11 @@ internal fun loginDims(screenHeight: Dp): LoginDims {
     // headline block + welcome + card + forgot row + login + or + google (+4 slack)
     val estimate = 8f + 16f + 2f * line + (if (welcome) 22f else 0f) + gap + 2f * row + forgot +
         button + gap + 16f + gap + google + 4f
-    return LoginDims(sp, line, row.dp, button.dp, google.dp, gap.dp, forgot.dp, welcome,
-        lerpF(110f, 170f, t).dp, estimate.dp)
+    return LoginDims(
+        sp, line, row.dp, button.dp, google.dp, gap.dp, forgot.dp,
+        showHeadline = !keyboard, showWelcome = welcome, showAlt = !keyboard,
+        footerArt = lerpF(110f, 170f, t).dp, estimate = estimate.dp
+    )
 }
 
 /** Weighted spacer that only exists in the no-scroll layout. */
@@ -123,7 +127,7 @@ internal fun LoginScaffold(
 
     Box(Modifier.fillMaxSize().background(colors.background)) {
         BoxWithConstraints(Modifier.widthIn(max = 520.dp).fillMaxSize().align(Alignment.TopCenter)) {
-            val dims = loginDims(maxHeight)
+            val dims = loginDims(maxHeight, keyboard)
             val topBarHeight = statusDp + 8.dp + 48.dp
             val minHeader = topBarHeight + 44.dp
             val pillBlock = SignupPillHeight + 24.dp
