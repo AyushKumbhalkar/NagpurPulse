@@ -428,7 +428,6 @@ class NotificationsViewModel @Inject constructor(
         viewModelScope.launch {
             postRepository.addComment(
                 postId = postId,
-                userId = uid,
                 body = body,
                 isAnonymous = false,
                 parentId = target.relatedCommentId
