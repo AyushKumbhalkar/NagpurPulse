@@ -49,7 +49,7 @@ class AdminRepository @Inject constructor(
             .toInstant().toString()
 
         val postsToday = safeCount {
-            client.postgrest["posts"]
+            client.postgrest["posts_public"]
                 .select { filter { gte("created_at", todayStart) } }
                 .decodeList<Post>().size
         }
@@ -104,7 +104,7 @@ class AdminRepository @Inject constructor(
             try {
 
 
-                val posts = client.postgrest["posts"].select {
+                val posts = client.postgrest["posts_public"].select {
                     filter {
                         gte("created_at", start)
                         lte("created_at", end)
@@ -163,7 +163,7 @@ class AdminRepository @Inject constructor(
             postReports.groupBy { it.postId }.forEach { (postId, reports) ->
                 if (filter == "urgent" && reports.size < 3) return@forEach
                 try {
-                    val post = client.postgrest["posts"]
+                    val post = client.postgrest["posts_public"]
                         .select {
                             filter { eq("id", postId) }
                         }
@@ -229,7 +229,7 @@ class AdminRepository @Inject constructor(
                         .select { filter { eq("id", commentId) } }
                         .decodeSingle<Comment>()
                     val postTitle = try {
-                        client.postgrest["posts"]
+                        client.postgrest["posts_public"]
                             .select { filter { eq("id", comment.postId) } }
                             .decodeSingle<Post>().title
                     } catch (_: Exception) { "Unknown post" }
@@ -273,7 +273,7 @@ class AdminRepository @Inject constructor(
         date: String? = null
     ): Result<List<AdminPost>> = runCatching {
 
-        val posts = client.postgrest["posts"].select {
+        val posts = client.postgrest["posts_public"].select {
             if (!query.isNullOrBlank()) {
                 filter { ilike("title", "%$query%") }
             }
@@ -404,7 +404,7 @@ class AdminRepository @Inject constructor(
         comments.map { comment ->
             val username = fetchUsernameById(comment.userId)
             val postTitle = try {
-                client.postgrest["posts"]
+                client.postgrest["posts_public"]
                     .select { filter { eq("id", comment.postId) } }
                     .decodeSingle<Post>().title.take(50)
             } catch (_: Exception) { "Unknown post" }
@@ -655,7 +655,7 @@ class AdminRepository @Inject constructor(
 
     suspend fun getUserQuickStats(userId: String): Triple<Int, Int, Int> {
         val postCount = safeCount {
-            client.postgrest["posts"]
+            client.postgrest["posts_public"]
                 .select { filter { eq("user_id", userId) } }
                 .decodeList<Post>().size
         }
@@ -685,7 +685,7 @@ class AdminRepository @Inject constructor(
 
     private suspend fun buildUserDetail(profile: Profile): AdminUserDetail {
         val postCount = safeCount {
-            client.postgrest["posts"]
+            client.postgrest["posts_public"]
                 .select { filter { eq("user_id", profile.id) } }
                 .decodeList<Post>().size
         }
@@ -696,7 +696,7 @@ class AdminRepository @Inject constructor(
         }
         // Count reports on their posts
         val userPostIds = try {
-            client.postgrest["posts"]
+            client.postgrest["posts_public"]
                 .select { filter { eq("user_id", profile.id) } }
                 .decodeList<Post>().map { it.id }
         } catch (_: Exception) { emptyList() }
