@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo shown by the Android 12+ system splash. 288dp canvas, 26% inset each side = ~138dp logo,
+     the same size and position as the logo in the Compose SplashScreen, so the hand-off is seamless. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/nagpurpulse_orange_n_icon"
+    android:insetLeft="26%"
+    android:insetTop="26%"
+    android:insetRight="26%"
+    android:insetBottom="26%" />
