@@ -99,7 +99,7 @@ internal fun LoginContent(
         signupEnabled = !loading, onSignup = onSignup, extraHeight = extra
     ) { d, keyboard, flex ->
         AnimatedVisibility(
-            visible = !keyboard,
+            visible = !keyboard && d.showHeadline,
             enter = if (reduceMotion) EnterTransition.None else fadeIn() + expandVertically(),
             exit = if (reduceMotion) ExitTransition.None else fadeOut() + shrinkVertically()
         ) {
@@ -120,7 +120,7 @@ internal fun LoginContent(
                 Spacer(Modifier.height(d.gap))
             }
         }
-        if (keyboard) Spacer(Modifier.height(8.dp))
+        if (keyboard || !d.showHeadline) Spacer(Modifier.height(8.dp))
         FlexSpacer(flex)
 
         // One joined card: email row, hairline, password row.
@@ -174,13 +174,22 @@ internal fun LoginContent(
                 if (lastMethod == "email" && !loading) LastUsedBadge(Modifier.align(Alignment.TopEnd))
             }
         }
-        Spacer(Modifier.height(d.gap))
-        AuthOr()
-        Spacer(Modifier.height(d.gap))
-        Box {
-            AuthAction(stringResource(R.string.login_continue_google), loading, google = true,
-                height = d.google, elevated = true, onClick = onGoogle)
-            if (lastMethod == "google" && !loading) LastUsedBadge(Modifier.align(Alignment.TopEnd))
+        // "or" + Google fold away while the keyboard is open, so the form never has to scroll.
+        AnimatedVisibility(
+            visible = d.showAlt,
+            enter = if (reduceMotion) EnterTransition.None else fadeIn() + expandVertically(),
+            exit = if (reduceMotion) ExitTransition.None else fadeOut() + shrinkVertically()
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(d.gap))
+                AuthOr()
+                Spacer(Modifier.height(d.gap))
+                Box {
+                    AuthAction(stringResource(R.string.login_continue_google), loading, google = true,
+                        height = d.google, elevated = true, onClick = onGoogle)
+                    if (lastMethod == "google" && !loading) LastUsedBadge(Modifier.align(Alignment.TopEnd))
+                }
+            }
         }
         FlexSpacer(flex)
     }

@@ -41,6 +41,14 @@ android {
             "\"${localProperties.getProperty("SUPABASE_URL", "https://your-project.supabase.co")}\""
         )
 
+        // Flip to true (local.properties: AUTH_HTTPS_LINKS=true) once nagpurpulse.in serves
+        // /.well-known/assetlinks.json and Supabase allows https://nagpurpulse.in/auth.
+        buildConfigField(
+            "boolean",
+            "AUTH_HTTPS_LINKS",
+            localProperties.getProperty("AUTH_HTTPS_LINKS", "false")
+        )
+
         buildConfigField(
             "String",
             "SUPABASE_ANON_KEY",

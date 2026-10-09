@@ -38,6 +38,22 @@ import com.nagpurpulse.ui.locale.AppLocale
 
 private val pendingAuthRecovery = kotlinx.coroutines.flow.MutableStateFlow(false)
 
+/**
+ * https://nagpurpulse.in/auth#access_token=...  ->  nagpurpulse://auth#access_token=...
+ * so one code path (supabase-kt deep-link handling + recovery detection) serves both link styles.
+ */
+private fun Intent.withNormalizedAuthLink(): Intent {
+    val uri = data ?: return this
+    val isHttpsAuth = uri.scheme == "https" && uri.host == "nagpurpulse.in" &&
+        (uri.path ?: "").startsWith("/auth")
+    if (!isHttpsAuth) return this
+    val rebuilt = android.net.Uri.Builder()
+        .scheme("nagpurpulse").authority("auth")
+        .encodedQuery(uri.encodedQuery).encodedFragment(uri.encodedFragment)
+        .build()
+    return Intent(this).setData(rebuilt)
+}
+
 private fun isPasswordRecoveryCallback(intent: Intent?): Boolean {
     val uri = intent?.data ?: return false
     if (uri.scheme != "nagpurpulse" || uri.host != "auth") return false
@@ -85,8 +101,9 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
 
         // Let supabase-kt parse and import auth/OTP callback sessions from deep links.
-        SupabaseClientProvider.client.handleDeeplinks(intent)
-        if (isPasswordRecoveryCallback(intent)) {
+        val authIntent = intent.withNormalizedAuthLink()
+        SupabaseClientProvider.client.handleDeeplinks(authIntent)
+        if (isPasswordRecoveryCallback(authIntent)) {
             pendingAuthRecovery.value = true
         }
 
@@ -225,8 +242,9 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         // Process warm-start auth callbacks as well as notification deep links.
-        SupabaseClientProvider.client.handleDeeplinks(intent)
-        if (isPasswordRecoveryCallback(intent)) {
+        val authIntent = intent.withNormalizedAuthLink()
+        SupabaseClientProvider.client.handleDeeplinks(authIntent)
+        if (isPasswordRecoveryCallback(authIntent)) {
             pendingAuthRecovery.value = true
         }
         intent.getStringExtra("comment_id")?.let {

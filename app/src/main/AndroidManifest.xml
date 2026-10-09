@@ -53,6 +53,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="nagpurpulse" android:host="auth" />
             </intent-filter>
+            <!-- Verified App Link: https://nagpurpulse.in/auth (see AUTH_LINKS_SETUP.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="nagpurpulse.in" android:pathPrefix="/auth" />
+            </intent-filter>
         </activity>
 
         <!-- FCM Service -->

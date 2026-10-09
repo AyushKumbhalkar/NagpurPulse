@@ -4,7 +4,10 @@
     <!-- Default theme (required by Manifest) -->
     <style
         name="Theme.NagpurPulse"
-        parent="Theme.NagpurPulse.Light" />
+        parent="Theme.NagpurPulse.Light">
+        <!-- Android 11 and below: the very first frame is the brand splash, not a blank window. -->
+        <item name="android:windowBackground">@drawable/splash_window_background</item>
+    </style>
 
     <!-- Light Theme -->
     <style

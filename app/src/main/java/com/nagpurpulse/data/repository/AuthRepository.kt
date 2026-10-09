@@ -432,7 +432,7 @@ class AuthRepository @Inject constructor(
         return try {
             client.auth.resetPasswordForEmail(
                 email = normalizedEmail,
-                redirectUrl = "nagpurpulse://auth"
+                redirectUrl = if (BuildConfig.AUTH_HTTPS_LINKS) "https://nagpurpulse.in/auth" else "nagpurpulse://auth"
             )
             Result.success(Unit)
         } catch (e: Exception) {

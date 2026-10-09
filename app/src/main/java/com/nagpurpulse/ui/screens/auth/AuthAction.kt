@@ -2,6 +2,10 @@ package com.nagpurpulse.ui.screens.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.*
@@ -27,14 +31,22 @@ internal fun AuthAction(text: String, loading: Boolean = false, enabled: Boolean
     val colors = authPalette()
     val shape = RoundedCornerShape(24.dp)
     val ink = contentColor ?: if (google) colors.ink else AuthTokens.OnGradient
+    // Tactile feedback: the button dips slightly while pressed and ticks on tap.
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by androidx.compose.animation.core.animateFloatAsState(
+        if (pressed) 0.97f else 1f, androidx.compose.animation.core.tween(90), label = "action-press")
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Button(
-        onClick = onClick, enabled = enabled && !loading, shape = shape,
+        onClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove); onClick() },
+        interactionSource = interaction, enabled = enabled && !loading, shape = shape,
         contentPadding = PaddingValues(horizontal = 16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent, contentColor = ink,
             disabledContainerColor = Color.Transparent, disabledContentColor = ink
         ),
-        modifier = Modifier.fillMaxWidth().height(height).alpha(if (loading || !enabled) 0.65f else 1f)
+        modifier = Modifier.fillMaxWidth().height(height).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .alpha(if (loading || !enabled) 0.65f else 1f)
             .then(if (elevated && !loading && enabled) {
                 // Orange glow under the primary button, soft lift under the Google button.
                 if (google) Modifier.shadow(3.dp, shape, ambientColor = colors.ink.copy(alpha = 0.12f), spotColor = colors.ink.copy(alpha = 0.12f))

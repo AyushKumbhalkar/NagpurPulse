@@ -146,7 +146,9 @@ internal fun SignupContent(
                 val minimal = keyboard && maxHeight < 640.dp
                 // With the keyboard up, keep headline + art if the phone is tall enough (no big empty gap).
                 val roomy = maxHeight >= 700.dp
-                val showArt = (!keyboard || roomy) && !largeText
+                // The flexible art is the only element whose size depends on the keyboard. Keeping it
+                // made every keyboard frame re-measure and re-crop the image (the lag). Hide it instead.
+                val showArt = !keyboard && !largeText
                 val showHeadline = !keyboard || roomy
                 val headlineSp = when (tier) { SignupTier.Compact -> 30; SignupTier.Medium -> 38; SignupTier.Expanded -> 44 }
                 val controlHeight = when (tier) { SignupTier.Compact -> 48.dp; SignupTier.Medium -> 52.dp; SignupTier.Expanded -> 56.dp }

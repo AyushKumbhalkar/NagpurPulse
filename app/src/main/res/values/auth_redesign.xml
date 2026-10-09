@@ -28,4 +28,5 @@
     <string name="verify_paste_code">Paste code</string>
     <string name="verify_paste_none">No 6-digit code found on the clipboard</string>
     <string name="login_last_used">Last used</string>
+    <string name="splash_tagline">Your city. Your community. Your pulse.</string>
 </resources>
