@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.EmailAlreadyUsedException
+import com.nagpurpulse.data.repository.EmailCheck
 import com.nagpurpulse.data.repository.EmailConfirmationRequiredException
 import com.nagpurpulse.ui.theme.OrangePrimary
 import com.nagpurpulse.ui.theme.TextPrimary
@@ -82,6 +83,11 @@ class AuthViewModel @Inject constructor(
 
     fun showError(message: String) {
         _uiState.value = AuthUiState(error = message)
+    }
+
+    /** Step 1 of signup: runs when the user taps Next on the email, before any password is asked. */
+    fun checkEmailBeforeSignup(email: String, onResult: (EmailCheck) -> Unit) {
+        viewModelScope.launch { onResult(authRepository.checkEmailExists(email.trim().lowercase(Locale.ROOT))) }
     }
 
     fun signUp(
