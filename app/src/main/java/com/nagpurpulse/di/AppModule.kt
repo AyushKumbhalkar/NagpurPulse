@@ -57,8 +57,10 @@ object AppModule {
         )
 
     @Provides @Singleton
-    fun provideAlertRepository(client: SupabaseClient): AlertRepository =
-        AlertRepository(client)
+    fun provideAlertRepository(
+        client: SupabaseClient,
+        authRepository: AuthRepository
+    ): AlertRepository = AlertRepository(client, authRepository)
 
     @Provides @Singleton
     fun provideProfileRepository(client: SupabaseClient): ProfileRepository =
