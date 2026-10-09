@@ -26,6 +26,9 @@ import com.nagpurpulse.BuildConfig
 
 enum class UsernameAvailability { AVAILABLE, TAKEN, UNABLE_TO_CHECK }
 
+/** Result of the pre-signup "is this email already registered?" lookup. */
+enum class EmailCheck { AVAILABLE, EXISTS, UNABLE_TO_CHECK }
+
 /** Result of asking the server whether the signed-in user finished profile setup. */
 enum class OnboardingProbe { COMPLETE, INCOMPLETE, UNREACHABLE }
 
@@ -74,6 +77,22 @@ class AuthRepository @Inject constructor(
         } catch (_: Exception) {
             false
         }
+    }
+
+    /**
+     * Asks the server (public.email_exists RPC) whether a CONFIRMED account already uses this email.
+     * Never throws: if the RPC is missing / offline we return UNABLE_TO_CHECK and the caller lets the
+     * user continue, because [signUp] still detects duplicates as a safety net.
+     */
+    suspend fun checkEmailExists(email: String): EmailCheck = try {
+        val exists = client.postgrest.rpc(
+            "email_exists",
+            buildJsonObject { put("p_email", email.trim().lowercase()) }
+        ).decodeAs<Boolean>()
+        if (exists) EmailCheck.EXISTS else EmailCheck.AVAILABLE
+    } catch (e: Exception) {
+        android.util.Log.w(AUTH_LOG_TAG, "EMAIL_CHECK_FAILED: ${e::class.java.simpleName}")
+        EmailCheck.UNABLE_TO_CHECK
     }
 
     suspend fun signUp(
