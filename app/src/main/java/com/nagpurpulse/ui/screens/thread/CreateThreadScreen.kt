@@ -122,7 +122,7 @@ import kotlin.coroutines.resume
 
 private const val MAX_TITLE_CHARS = 120
 private const val MAX_BODY_CHARS = 1500
-private const val CITY = "Nagpur"
+internal const val CITY = "Nagpur"
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
@@ -150,12 +150,22 @@ fun CreateThreadScreen(
     var title by rememberSaveable { mutableStateOf("") }
     var body by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable {
-        mutableStateOf(initialCategory.ifBlank { "community" })
+        // Alert reports start with no type chosen, so the reporter makes a deliberate pick.
+        mutableStateOf(initialCategory.ifBlank { if (postType == "alert") "" else "community" })
     }
     // A category the user picked (or that was passed in) is never overridden by auto-suggest.
-    var categoryManuallyChanged by rememberSaveable { mutableStateOf(initialCategory.isNotBlank()) }
+    var categoryManuallyChanged by rememberSaveable {
+        mutableStateOf(initialCategory.isNotBlank() || postType == "alert")
+    }
     var isAnonymous by rememberSaveable { mutableStateOf(false) }
     var selectedArea by rememberSaveable { mutableStateOf(CITY) }
+
+    // ── Alert mode (Report Alert flow) ─────────────────────────────────────
+    // Editing an existing alert must keep it an alert; the edit route always passes "normal".
+    var editingIsAlert by remember { mutableStateOf(false) }
+    val isAlertMode = postType == "alert" || editingIsAlert
+    var alertSeverity by rememberSaveable { mutableStateOf("medium") }
+    var areaManuallyChosen by rememberSaveable { mutableStateOf(false) }
 
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var existingImageUrl by remember { mutableStateOf<String?>(null) }
@@ -193,18 +203,22 @@ fun CreateThreadScreen(
             post.areaTag?.takeIf { it.isNotBlank() }?.let { selectedArea = it }
             isAnonymous = post.isAnonymous
             categoryManuallyChanged = true
+            editingIsAlert = post.isAlert
+            post.alertSeverity?.let { alertSeverity = it }
+            areaManuallyChosen = true
         }
     }
 
     // ── Draft restore / autosave (new posts only) ──────────────────────────
     var pendingDraft by remember {
         mutableStateOf(
-            if (!isEditing && title.isBlank() && body.isBlank()) draftStore.load(userId) else null
+            if (!isEditing && !isAlertMode && title.isBlank() && body.isBlank()) draftStore.load(userId) else null
         )
     }
 
     LaunchedEffect(title, body, selectedCategory, selectedArea, isAnonymous) {
-        if (isEditing || showSuccess) return@LaunchedEffect
+        // Alerts are quick and time-sensitive, so they never write to (or restore) the post draft.
+        if (isEditing || isAlertMode || showSuccess) return@LaunchedEffect
         if (pendingDraft != null) {
             // Wait for the user's decision; typing something new replaces the old draft.
             if (title.isBlank() && body.isBlank()) return@LaunchedEffect
@@ -254,6 +268,12 @@ fun CreateThreadScreen(
         userLat = location.latitude
         userLng = location.longitude
         currentArea = resolveSubLocality(context, location.latitude, location.longitude)
+    }
+
+    // Alerts are about *where*: fill the area from GPS as soon as it is known.
+    LaunchedEffect(currentArea, isAlertMode) {
+        val area = currentArea
+        if (isAlertMode && !isEditing && !areaManuallyChosen && area != null) selectedArea = area
     }
 
     fun useCurrentLocation() {
@@ -326,8 +346,9 @@ fun CreateThreadScreen(
     }
 
     // ── Prompts ────────────────────────────────────────────────────────────
-    val prompts = remember(currentArea) {
-        composerPrompts(currentArea, Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
+    val prompts = remember(currentArea, isAlertMode) {
+        if (isAlertMode) alertPrompts(currentArea)
+        else composerPrompts(currentArea, Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
     }
 
     // ── Derived ────────────────────────────────────────────────────────────
@@ -335,10 +356,11 @@ fun CreateThreadScreen(
     val progress = postQualityProgress(title, body, hasImage, selectedArea != CITY)
     val nudge = postQualityNudge(title, body, hasImage, selectedArea != CITY)
 
+    val alertReady = !isAlertMode || isEditing || selectedCategory in alertTypeKeys
     val postState = when {
         showSuccess            -> PostButtonState.Success
         uiState.isLoading      -> PostButtonState.Loading
-        title.isNotBlank()     -> PostButtonState.Ready
+        title.isNotBlank() && alertReady -> PostButtonState.Ready
         else                   -> PostButtonState.Disabled
     }
 
@@ -368,7 +390,8 @@ fun CreateThreadScreen(
 
     // ── Success → celebrate briefly, then leave ────────────────────────────
     LaunchedEffect(showSuccess) {
-        if (showSuccess) {
+        // New alerts stay on their success screen until "Done" so the reporter can share them.
+        if (showSuccess && !(isAlertMode && !isEditing)) {
             delay(if (isEditing) 700L else 1500L)
             onPostSuccess()
         }
@@ -405,6 +428,15 @@ fun CreateThreadScreen(
             }
             return
         }
+        if (isAlertMode && !isEditing && selectedCategory !in alertTypeKeys) {
+            haptic.error()
+            shakeTick++
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar("Pick what's happening first")
+            }
+            return
+        }
         if (uiState.isLoading || showSuccess) return
         focusManager.clearFocus()
         viewModel.createPost(
@@ -415,13 +447,14 @@ fun CreateThreadScreen(
             areaTag = selectedArea,
             isAnonymous = isAnonymous,
             imageUri = selectedImageUri,
-            postType = postType,
+            postType = if (isAlertMode) "alert" else postType,
+            alertSeverity = if (isAlertMode) alertSeverity else null,
             editingPostId = editingPostId,
             clearImage = removedExistingImage && selectedImageUri == null,
             onSuccess = {
                 haptic.success()
                 streak = if (isEditing) 0 else draftStore.recordPost()
-                draftStore.clear()
+                if (!isAlertMode) draftStore.clear()
                 showSuccess = true
             }
         )
@@ -503,7 +536,12 @@ fun CreateThreadScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                if (isEditing) "Edit Post" else "Create Post",
+                                when {
+                                    isEditing && isAlertMode -> "Edit Alert"
+                                    isEditing -> "Edit Post"
+                                    isAlertMode -> "Report an Alert"
+                                    else -> "Create Post"
+                                },
                                 color = MaterialTheme.colorScheme.onBackground,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
@@ -511,7 +549,9 @@ fun CreateThreadScreen(
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    if (isEditing) "Editing your post" else "Share with ",
+                                    if (isEditing) "Editing your post"
+                                    else if (isAlertMode) "Goes live instantly on "
+                                    else "Share with ",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 12.sp,
                                     maxLines = 1
@@ -538,7 +578,7 @@ fun CreateThreadScreen(
 
                         PostButton(
                             state = postState,
-                            label = if (isEditing) "Save" else "Post",
+                            label = if (isEditing) "Save" else if (isAlertMode) "Send" else "Post",
                             shakeOffset = shake.value,
                             onClick = { submit() }
                         )
@@ -563,10 +603,12 @@ fun CreateThreadScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ToolButton(Icons.Filled.Image, "Add photo", hasImage) { openPhotoPicker() }
-                        ToolButton(
-                            Icons.Filled.Tag, "Choose topic",
-                            selectedCategory != "community"
-                        ) { showCategorySheet = true }
+                        if (!isAlertMode) {
+                            ToolButton(
+                                Icons.Filled.Tag, "Choose topic",
+                                selectedCategory != "community"
+                            ) { showCategorySheet = true }
+                        }
                         ToolButton(
                             Icons.Filled.LocationOn, "Choose area",
                             selectedArea != CITY
@@ -664,8 +706,35 @@ fun CreateThreadScreen(
                         }
                     }
 
+                    // ── Alert type, severity and place (Report Alert only) ──
+                    if (isAlertMode) {
+                        AlertTypePicker(
+                            selected = selectedCategory,
+                            onSelect = {
+                                haptic.tap()
+                                selectedCategory = it
+                                categoryManuallyChanged = true
+                            }
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        AlertSeverityPicker(
+                            selected = alertSeverity,
+                            onSelect = {
+                                haptic.tap()
+                                alertSeverity = it
+                            }
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        AlertLocationCard(
+                            area = selectedArea,
+                            onChange = { showAreaSheet = true },
+                            onUseLocation = { areaManuallyChosen = false; useCurrentLocation() }
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+
                     // ── Social proof + trending ────────────────────────────
-                    if (!isEditing) {
+                    if (!isEditing && !isAlertMode) {
                         TrendingStrip(
                             postsToday = uiState.insights.postsToday,
                             trending = uiState.insights.trendingCategories,
@@ -770,14 +839,25 @@ fun CreateThreadScreen(
                             ) {
                                 Column {
                                     Spacer(Modifier.height(10.dp))
-                                    StarterChips { starter ->
-                                        haptic.tap()
-                                        title = starter.template
-                                        selectedCategory = starter.category
-                                        categoryManuallyChanged = true
-                                        scope.launch {
-                                            delay(50)
-                                            try { titleFocus.requestFocus() } catch (_: Exception) {}
+                                    if (isAlertMode) {
+                                        AlertTemplateChips(selectedCategory) { template ->
+                                            haptic.tap()
+                                            title = template
+                                            scope.launch {
+                                                delay(50)
+                                                try { titleFocus.requestFocus() } catch (_: Exception) {}
+                                            }
+                                        }
+                                    } else {
+                                        StarterChips { starter ->
+                                            haptic.tap()
+                                            title = starter.template
+                                            selectedCategory = starter.category
+                                            categoryManuallyChanged = true
+                                            scope.launch {
+                                                delay(50)
+                                                try { titleFocus.requestFocus() } catch (_: Exception) {}
+                                            }
                                         }
                                     }
                                 }
@@ -878,7 +958,7 @@ fun CreateThreadScreen(
 
                     CategorySuggestion(
                         suggested = suggestedCategory,
-                        visible = suggestedCategory != "community" &&
+                        visible = !isAlertMode && suggestedCategory != "community" &&
                                 suggestedCategory != selectedCategory,
                         onApply = {
                             haptic.tap()
@@ -913,20 +993,22 @@ fun CreateThreadScreen(
                         }
                     }
 
-                    // ── Topic ──────────────────────────────────────────────
-                    SectionLabel("Topic")
-                    Spacer(Modifier.height(8.dp))
-                    CategoryChipRow(
-                        selected = selectedCategory,
-                        onSelect = {
-                            haptic.tap()
-                            selectedCategory = it
-                            categoryManuallyChanged = true
-                        },
-                        onMore = { showCategorySheet = true }
-                    )
+                    // ── Topic (alerts pick their type at the top instead) ──
+                    if (!isAlertMode) {
+                        SectionLabel("Topic")
+                        Spacer(Modifier.height(8.dp))
+                        CategoryChipRow(
+                            selected = selectedCategory,
+                            onSelect = {
+                                haptic.tap()
+                                selectedCategory = it
+                                categoryManuallyChanged = true
+                            },
+                            onMore = { showCategorySheet = true }
+                        )
 
-                    Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(20.dp))
+                    }
 
                     // ── Recent photos ──────────────────────────────────────
                     RecentPhotosSection(
@@ -992,6 +1074,7 @@ fun CreateThreadScreen(
                         onSelect = {
                             haptic.tap()
                             selectedArea = it
+                            areaManuallyChosen = true
                         },
                         onMore = { showAreaSheet = true }
                     )
@@ -1029,7 +1112,18 @@ fun CreateThreadScreen(
         }
 
         // ── Success moment ─────────────────────────────────────────────────
-        SuccessOverlay(visible = showSuccess, isEdit = isEditing, streak = streak)
+        if (isAlertMode && !isEditing) {
+            AlertSuccessOverlay(
+                visible = showSuccess,
+                typeKey = selectedCategory,
+                title = title,
+                area = selectedArea,
+                reach = uiState.insights.reachCount,
+                onDone = onPostSuccess
+            )
+        } else {
+            SuccessOverlay(visible = showSuccess, isEdit = isEditing, streak = streak)
+        }
     }
 
     // ── Sheets ─────────────────────────────────────────────────────────────
@@ -1053,6 +1147,7 @@ fun CreateThreadScreen(
             onSelect = {
                 haptic.tap()
                 selectedArea = it
+                areaManuallyChosen = true
                 showAreaSheet = false
             },
             onDismiss = { showAreaSheet = false }

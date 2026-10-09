@@ -127,6 +127,7 @@ class CreateThreadViewModel @Inject constructor(
         isAnonymous: Boolean,
         imageUri: Uri?,
         postType: String = "normal",
+        alertSeverity: String? = null,
         editingPostId: String? = null,
         clearImage: Boolean = false,
         onSuccess: () -> Unit
@@ -191,6 +192,7 @@ class CreateThreadViewModel @Inject constructor(
                     isAnonymous = isAnonymous,
                     postType = postType,
                     isAlert = postType == "alert",
+                    alertSeverity = alertSeverity,
                     imageUrl = imageUrl,
                     clearImage = clearImage && imageUrl == null
                 ).fold(
@@ -217,6 +219,7 @@ class CreateThreadViewModel @Inject constructor(
                     isAnonymous = isAnonymous,
                     postType = postType,
                     isAlert = postType == "alert",
+                    alertSeverity = alertSeverity,
                     imageUrl = imageUrl
                 ).fold(
                     onSuccess = {

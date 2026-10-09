@@ -726,6 +726,16 @@ fun NagpurPulseNavGraph(
                     }
                 },
 
+                onNotifications = {
+                    if (authRepository.isLoggedIn()) {
+                        navController.navigate(Screen.Notifications.route)
+                    } else {
+                        showLoginDialog = true
+                    }
+                },
+                isLoggedIn = { authRepository.isLoggedIn() },
+                onLoginRequired = { showLoginDialog = true },
+
                 onCreatePost = {
                     if (authRepository.isLoggedIn()) {
                         navController.navigate(Screen.CreatePost.route)

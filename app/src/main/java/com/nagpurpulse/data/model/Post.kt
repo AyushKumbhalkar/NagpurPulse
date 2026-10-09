@@ -40,6 +40,12 @@ data class Post(
     @SerialName("is_pinned") val isPinned: Boolean = false,
     @SerialName("is_locked") val isLocked: Boolean = false,
 
+    // Alert engagement (see supabase/migrations/20261009120000_alert_engagement.sql).
+    // All optional so older rows / servers without the migration still decode.
+    @SerialName("confirm_count") val confirmCount: Int = 0,
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("resolved_at") val resolvedAt: String? = null,
+
     // Filled client-side by PostRepository.enrichPostsWithUsernames(); never sent to
     // or read from the posts table.
     @Transient val authorAvatarUrl: String? = null
@@ -89,4 +95,37 @@ fun Post.categoryDisplay(): String = when (category) {
     "traffic" -> "Traffic"
     "alerts" -> "Alerts"
     else -> category.replaceFirstChar { it.uppercase() }
+}
+
+
+// ── Alert lifecycle ───────────────────────────────────────────────────────────
+enum class AlertStatus { ACTIVE, RESOLVED, EXPIRED }
+
+private fun parseInstantOrNull(value: String?): java.time.Instant? {
+    if (value.isNullOrBlank()) return null
+    return try {
+        java.time.OffsetDateTime.parse(value).toInstant()
+    } catch (e: Exception) {
+        try { java.time.Instant.parse(value) } catch (e2: Exception) { null }
+    }
+}
+
+/**
+ * ACTIVE until the author resolves it or [Post.expiresAt] passes. Legacy alerts without an
+ * expiry are treated as active for 24 hours so old seeded rows don't stay "live" forever.
+ */
+fun Post.alertStatus(now: java.time.Instant = java.time.Instant.now()): AlertStatus {
+    if (!resolvedAt.isNullOrBlank()) return AlertStatus.RESOLVED
+    val expiry = parseInstantOrNull(expiresAt)
+    if (expiry != null) {
+        return if (now.isAfter(expiry)) AlertStatus.EXPIRED else AlertStatus.ACTIVE
+    }
+    val created = parseInstantOrNull(createdAt) ?: return AlertStatus.ACTIVE
+    return if (java.time.Duration.between(created, now).toHours() >= 24) AlertStatus.EXPIRED
+    else AlertStatus.ACTIVE
+}
+
+fun Post.ageMinutes(now: java.time.Instant = java.time.Instant.now()): Long {
+    val created = parseInstantOrNull(createdAt) ?: return Long.MAX_VALUE
+    return java.time.Duration.between(created, now).toMinutes()
 }
