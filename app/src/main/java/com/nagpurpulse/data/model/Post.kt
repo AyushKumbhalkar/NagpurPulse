@@ -101,7 +101,7 @@ fun Post.categoryDisplay(): String = when (category) {
 // ── Alert lifecycle ───────────────────────────────────────────────────────────
 enum class AlertStatus { ACTIVE, RESOLVED, EXPIRED }
 
-private fun parseInstantOrNull(value: String?): java.time.Instant? {
+private fun parsePostInstantOrNull(value: String?): java.time.Instant? {
     if (value.isNullOrBlank()) return null
     return try {
         java.time.OffsetDateTime.parse(value).toInstant()
@@ -116,16 +116,16 @@ private fun parseInstantOrNull(value: String?): java.time.Instant? {
  */
 fun Post.alertStatus(now: java.time.Instant = java.time.Instant.now()): AlertStatus {
     if (!resolvedAt.isNullOrBlank()) return AlertStatus.RESOLVED
-    val expiry = parseInstantOrNull(expiresAt)
+    val expiry = parsePostInstantOrNull(expiresAt)
     if (expiry != null) {
         return if (now.isAfter(expiry)) AlertStatus.EXPIRED else AlertStatus.ACTIVE
     }
-    val created = parseInstantOrNull(createdAt) ?: return AlertStatus.ACTIVE
+    val created = parsePostInstantOrNull(createdAt) ?: return AlertStatus.ACTIVE
     return if (java.time.Duration.between(created, now).toHours() >= 24) AlertStatus.EXPIRED
     else AlertStatus.ACTIVE
 }
 
 fun Post.ageMinutes(now: java.time.Instant = java.time.Instant.now()): Long {
-    val created = parseInstantOrNull(createdAt) ?: return Long.MAX_VALUE
+    val created = parsePostInstantOrNull(createdAt) ?: return Long.MAX_VALUE
     return java.time.Duration.between(created, now).toMinutes()
 }
