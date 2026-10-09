@@ -11,6 +11,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -37,13 +39,22 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -52,6 +63,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nagpurpulse.data.local.ChatDraftStore
+import com.nagpurpulse.data.local.ConnectivityObserver
 import com.nagpurpulse.data.model.Message
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.MessageRepository
@@ -96,6 +109,7 @@ data class ChatUiState(
     val isMuted: Boolean = false,
     val isPinned: Boolean = false,
     val isBlockedByMe: Boolean = false,
+    val isOffline: Boolean = false,
     // First message that was unread when the chat was opened (for the "New messages" divider).
     val firstUnreadId: String? = null,
     val replyingTo: Message? = null
@@ -106,6 +120,8 @@ class ChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val authRepository: AuthRepository,
     private val presenceRepository: PresenceRepository,
+    private val draftStore: ChatDraftStore,
+    private val connectivity: ConnectivityObserver,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     val conversationId: String = savedStateHandle["conversationId"] ?: ""
@@ -113,6 +129,9 @@ class ChatViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState
+
+    /** Unsent text from the last visit to this chat (shown in the input and as "Draft:" in the inbox). */
+    val initialDraft: String = draftStore.get(authRepository.currentUserId ?: "", conversationId)
 
     // One-off snackbar texts.
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 8)
@@ -135,6 +154,22 @@ class ChatViewModel @Inject constructor(
         loadMessages()
         subscribeRealtime()
         openTyping()
+        observeConnectivity()
+    }
+
+    // ── Connectivity ─────────────────────────────────────────────────────────
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivity.isOnline.collect { online ->
+                _uiState.update { it.copy(isOffline = !online) }
+                // Back online: push out anything that failed while we were away.
+                if (online) {
+                    _uiState.value.messages
+                        .filter { it.sendState == STATE_FAILED }
+                        .forEach { retrySend(it.id) }
+                }
+            }
+        }
     }
 
     private fun loadMessages() {
@@ -251,6 +286,7 @@ class ChatViewModel @Inject constructor(
 
     /** Call on every keystroke; announces "typing" and auto-clears after 3s of silence. */
     fun onInputChanged(text: String) {
+        draftStore.set(myUserId, conversationId, text)
         if (text.isBlank()) { stopTyping(); return }
         typingStopJob?.cancel()
         if (!iAmTyping) {
@@ -288,6 +324,7 @@ class ChatViewModel @Inject constructor(
         )
         // Show it instantly; confirm (or fail) in the background.
         _uiState.update { it.copy(messages = it.messages + pending, replyingTo = null) }
+        draftStore.set(myUserId, conversationId, "")
         stopTyping()
         dispatchSend(localId, text, reply?.id)
     }
@@ -311,7 +348,10 @@ class ChatViewModel @Inject constructor(
                 },
                 onFailure = { e ->
                     updateMessage(localId) { it.copy(sendState = STATE_FAILED) }
-                    _events.tryEmit(e.message?.takeIf { it.length < 80 } ?: "Message not sent. Tap it to retry.")
+                    // While offline the banner already explains it; don't stack a snackbar per message.
+                    if (!_uiState.value.isOffline) {
+                        _events.tryEmit(e.message?.takeIf { it.length < 80 } ?: "Message not sent. Tap it to retry.")
+                    }
                 }
             )
         }
@@ -339,21 +379,12 @@ class ChatViewModel @Inject constructor(
 
     fun cancelReply() { _uiState.update { it.copy(replyingTo = null) } }
 
-    private fun reactLocally(reactions: Map<String, List<String>>, me: String, emoji: String): Map<String, List<String>> {
-        val hadSame = reactions[emoji]?.contains(me) == true
-        // One reaction per person: remove me everywhere, then add back unless I'm toggling it off.
-        val cleaned = reactions
-            .mapValues { (_, users) -> users.filterNot { it == me } }
-            .filterValues { it.isNotEmpty() }
-        return if (hadSame) cleaned else cleaned + (emoji to ((cleaned[emoji] ?: emptyList()) + me))
-    }
-
     fun toggleReaction(messageId: String, emoji: String) {
         val target = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
         if (target.sendState.isNotEmpty() || isDeletedMessage(target.content)) return
         val previous = target.reactions
         val me = myUserId
-        updateMessage(messageId) { it.copy(reactions = reactLocally(it.reactions, me, emoji)) }
+        updateMessage(messageId) { it.copy(reactions = applyReaction(it.reactions, me, emoji)) }
         viewModelScope.launch {
             messageRepository.toggleReaction(messageId, emoji).onFailure {
                 updateMessage(messageId) { m -> m.copy(reactions = previous) }
@@ -477,7 +508,7 @@ fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState      = viewModel.uiState.collectAsState().value
-    var messageText  by remember { mutableStateOf("") }
+    var messageText  by remember { mutableStateOf(viewModel.initialDraft) }
     val listState    = rememberLazyListState()
     val clipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -494,6 +525,8 @@ fun ChatScreen(
     var deletingMessage by remember { mutableStateOf<Message?>(null) }
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
+    var pendingLink by remember { mutableStateOf<String?>(null) }
+    val uriHandler = LocalUriHandler.current
 
     val reversedMessages = remember(uiState.messages) { uiState.messages.asReversed() }
     val messagesById = remember(uiState.messages) { uiState.messages.associateBy { it.id } }
@@ -514,6 +547,8 @@ fun ChatScreen(
             return@LaunchedEffect
         }
         lastSeenNewestId = newest.id
+        // A soft tick when a message lands while you're reading the latest.
+        if (newest.senderId != myId && atBottom) haptic.tap()
         // Follow along for my own messages or when already reading the latest;
         // otherwise don't yank the user away from history, count it instead.
         if (newest.senderId == myId || atBottom) {
@@ -524,6 +559,12 @@ fun ChatScreen(
         }
     }
     LaunchedEffect(atBottom) { if (atBottom) newBelow = 0 }
+
+    // When the keyboard opens, keep the latest message in view (unless reading old history).
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    LaunchedEffect(imeVisible) {
+        if (imeVisible && listState.firstVisibleItemIndex <= 3) listState.animateScrollToItem(0)
+    }
 
     // Load older pages as the user nears the top of the history.
     val nearOldest by remember {
@@ -598,6 +639,40 @@ fun ChatScreen(
             dismissButton = { TextButton(onClick = { showBlockConfirm = false }) { Text("Cancel", color = SecondaryText) } }
         )
     }
+    pendingLink?.let { url ->
+        AlertDialog(
+            onDismissRequest = { pendingLink = null },
+            containerColor = Surface,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
+            shape = RoundedCornerShape(28.dp),
+            icon = { Icon(Icons.Filled.Link, contentDescription = null, tint = OrangePrimary) },
+            title = { Text("Open ${urlHost(url)}?", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            text = {
+                Column {
+                    Text(url, color = PrimaryText, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(10.dp))
+                    Text("Only open links from people you trust. Never enter passwords or OTPs on a site you reached from a message.", fontSize = 13.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingLink = null
+                    runCatching { uriHandler.openUri(url) }
+                }) { Text("Open", color = OrangePrimary, fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        clipboardManager.setText(AnnotatedString(url))
+                        pendingLink = null
+                        scope.launch { snackbarHostState.showSnackbar("Link copied") }
+                    }) { Text("Copy", color = SecondaryText) }
+                    TextButton(onClick = { pendingLink = null }) { Text("Cancel", color = SecondaryText) }
+                }
+            }
+        )
+    }
     if (showReport) {
         ReportDialog(
             username = uiState.otherUsername,
@@ -629,7 +704,10 @@ fun ChatScreen(
                 IncognitoAvatar(
                     seed = uiState.otherAvatarSeed,
                     size = 40.dp,
-                    isOnline = uiState.isOtherOnline
+                    isOnline = uiState.isOtherOnline,
+                    modifier = Modifier.pressScale(onClick = {
+                        uiState.otherUserId.takeIf { it.isNotBlank() }?.let(onOtherProfileClick)
+                    })
                 )
 
                 Spacer(Modifier.width(10.dp))
@@ -724,6 +802,11 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
             ) {
+                OfflineBanner(
+                    visible = uiState.isOffline,
+                    message = "You're offline. Messages will send when you're back."
+                )
+
                 // Reply preview
                 AnimatedVisibility(visible = uiState.replyingTo != null && !uiState.isBlockedByMe) {
                     val target = uiState.replyingTo
@@ -769,6 +852,43 @@ fun ChatScreen(
                         TextButton(onClick = { viewModel.unblockOther() }) { Text("Unblock", color = OrangePrimary, fontWeight = FontWeight.SemiBold) }
                     }
                 } else {
+                    // One-tap answers when the other person spoke last and you haven't started typing.
+                    val lastMsg = uiState.messages.lastOrNull()
+                    val showQuickReplies = messageText.isEmpty() &&
+                        uiState.replyingTo == null &&
+                        lastMsg != null &&
+                        lastMsg.senderId != myId &&
+                        lastMsg.sendState.isEmpty() &&
+                        !isDeletedMessage(lastMsg.content) &&
+                        (minutesSince(lastMsg.createdAt) ?: Long.MAX_VALUE) < 12 * 60
+                    AnimatedVisibility(visible = showQuickReplies) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(start = 12.dp, end = 12.dp, top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            QuickReplies.forEach { reply ->
+                                Text(
+                                    reply,
+                                    color = OrangePrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(OrangePrimary.copy(alpha = 0.12f))
+                                        .border(1.dp, OrangePrimary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            haptic.tap()
+                                            viewModel.sendMessage(reply)
+                                        }
+                                        .padding(horizontal = 14.dp, vertical = 9.dp)
+                                )
+                            }
+                        }
+                    }
+
                     var inputFocused by remember { mutableStateOf(false) }
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -969,7 +1089,8 @@ fun ChatScreen(
                                     scope.launch { snackbarHostState.showSnackbar("Message copied") }
                                 },
                                 onRetry = { viewModel.retrySend(msg.id) },
-                                onDiscard = { viewModel.discardFailed(msg.id) }
+                                onDiscard = { viewModel.discardFailed(msg.id) },
+                                onLinkClick = { url -> pendingLink = url }
                             )
                         }
                     }
@@ -1069,7 +1190,8 @@ private fun MessageRow(
     onDeleteForBoth: () -> Unit,
     onCopy: (String) -> Unit,
     onRetry: () -> Unit,
-    onDiscard: () -> Unit
+    onDiscard: () -> Unit,
+    onLinkClick: (String) -> Unit
 ) {
     val haptic = rememberHaptic()
     val scope = rememberCoroutineScope()
@@ -1087,6 +1209,22 @@ private fun MessageRow(
     else
         Brush.linearGradient(listOf(SurfaceAlt, SurfaceAlt))
     val textColor = if (isMe) Color.White else PrimaryText
+
+    // 1–3 emoji on their own are shown big and bubble-less.
+    val emojiCount = remember(msg.content, deleted) { if (deleted) 0 else emojiOnlyCount(msg.content) }
+    val jumbo = emojiCount in 1..3 && msg.replyToId == null
+
+    val a11yLabel = remember(msg.id, msg.content, msg.createdAt, msg.isRead, msg.sendState, isMe, otherName) {
+        val who = if (isMe) "You" else otherName
+        val body = if (deleted) "Deleted message" else msg.content
+        val status = when {
+            sending -> ", sending"
+            failed -> ", not sent"
+            isMe && msg.isRead -> ", seen"
+            else -> ""
+        }
+        "$who, ${formatMsgTime(msg.createdAt)}: $body$status"
+    }
 
     // Tight corners where bubbles in a group join; the "tail" only on the last bubble.
     val inner = 6.dp
@@ -1143,7 +1281,7 @@ private fun MessageRow(
                         .widthIn(max = maxBubbleWidth)
                         .clip(shape)
                         .alpha(if (sending) 0.7f else 1f)
-                        .background(bubbleBg)
+                        .then(if (jumbo) Modifier else Modifier.background(bubbleBg))
                         .pointerInput(msg.id, msg.sendState, deleted) {
                             detectTapGestures(
                                 onTap = { if (failed) onRetry() else showMeta = !showMeta },
@@ -1161,7 +1299,20 @@ private fun MessageRow(
                                 }
                             )
                         }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = a11yLabel
+                            customActions = buildList<CustomAccessibilityAction> {
+                                if (msg.sendState.isEmpty() && !deleted) {
+                                    add(CustomAccessibilityAction("Reply") { onReply(); true })
+                                    add(CustomAccessibilityAction("React with heart") { onReact("❤️"); true })
+                                }
+                                if (failed) add(CustomAccessibilityAction("Retry sending") { onRetry(); true })
+                            }
+                        }
+                        .padding(
+                            if (jumbo) PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                            else PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        )
                 ) {
                     // Quoted message when this is a reply.
                     if (msg.replyToId != null && !deleted) {
@@ -1199,8 +1350,18 @@ private fun MessageRow(
                             fontSize = 14.sp,
                             fontStyle = FontStyle.Italic
                         )
+                    } else if (jumbo) {
+                        Text(
+                            msg.content,
+                            fontSize = when (emojiCount) { 1 -> 46.sp; 2 -> 40.sp; else -> 34.sp }
+                        )
                     } else {
-                        Text(msg.content, color = textColor, fontSize = 15.sp, lineHeight = 21.sp)
+                        MessageText(
+                            text = msg.content,
+                            color = textColor,
+                            linkColor = if (isMe) Color.White else BlueInfo,
+                            onLinkClick = onLinkClick
+                        )
                     }
                 }
 
@@ -1325,4 +1486,41 @@ private fun MessageRow(
             }
         }
     }
+}
+
+/** Message body with tappable links (opened only after the user confirms in a safety dialog). */
+@Composable
+private fun MessageText(
+    text: String,
+    color: Color,
+    linkColor: Color,
+    onLinkClick: (String) -> Unit
+) {
+    val links = remember(text) { findLinks(text) }
+    if (links.isEmpty()) {
+        Text(text, color = color, fontSize = 15.sp, lineHeight = 21.sp)
+        return
+    }
+    val annotated = remember(text, linkColor, onLinkClick) {
+        buildAnnotatedString {
+            var cursor = 0
+            links.forEach { link ->
+                append(text.substring(cursor, link.start))
+                withLink(
+                    LinkAnnotation.Clickable(
+                        tag = link.url,
+                        styles = TextLinkStyles(
+                            style = SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline)
+                        ),
+                        linkInteractionListener = { onLinkClick(link.url) }
+                    )
+                ) {
+                    append(text.substring(link.start, link.end))
+                }
+                cursor = link.end
+            }
+            append(text.substring(cursor))
+        }
+    }
+    Text(annotated, color = color, fontSize = 15.sp, lineHeight = 21.sp)
 }

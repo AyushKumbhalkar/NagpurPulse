@@ -9,6 +9,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,11 +26,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +52,8 @@ import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.nagpurpulse.data.local.ChatDraftStore
+import com.nagpurpulse.data.local.ConnectivityObserver
 import com.nagpurpulse.data.model.Conversation
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.MessageRepository
@@ -64,7 +77,12 @@ data class MessagesUiState(
     // "all" | "unread" | "needs_reply"
     val activeFilter: String = "all",
     // Only set when the inbox has nothing to show; transient errors go through [MessagesEvent].
-    val loadError: String? = null
+    val loadError: String? = null,
+    // Local search over my chats (name + last message).
+    val searchQuery: String = "",
+    // conversationId -> unsent draft text
+    val drafts: Map<String, String> = emptyMap(),
+    val isOffline: Boolean = false
 )
 
 /** One-off UI events (snackbars) so they are shown exactly once. */
@@ -79,7 +97,9 @@ sealed interface MessagesEvent {
 class MessagesViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val presenceRepository: PresenceRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val draftStore: ChatDraftStore,
+    private val connectivity: ConnectivityObserver
 ) : ViewModel() {
     val onlineUserIds: StateFlow<Set<String>> = presenceRepository.onlineUserIds
     private val _uiState = MutableStateFlow(MessagesUiState())
@@ -90,7 +110,29 @@ class MessagesViewModel @Inject constructor(
 
     val myUserId: String get() = authRepository.currentUserId ?: ""
 
-    init { presenceRepository.start(); load(); subscribeRealtime() }
+    init {
+        presenceRepository.start()
+        load()
+        subscribeRealtime()
+        observeDraftsAndConnectivity()
+    }
+
+    private fun observeDraftsAndConnectivity() {
+        viewModelScope.launch {
+            draftStore.draftsFor(authRepository.currentUserId ?: "").collect { drafts ->
+                _uiState.update { it.copy(drafts = drafts) }
+            }
+        }
+        viewModelScope.launch {
+            var wasOffline = false
+            connectivity.isOnline.collect { online ->
+                _uiState.update { it.copy(isOffline = !online) }
+                // Coming back online: refresh so the inbox isn't stale.
+                if (online && wasOffline) load(refresh = true)
+                wasOffline = !online
+            }
+        }
+    }
 
     // Pinned chats first, then most recent.
     private fun List<Conversation>.inInboxOrder(): List<Conversation> =
@@ -133,6 +175,19 @@ class MessagesViewModel @Inject constructor(
 
     fun setFilter(filter: String) { _uiState.update { it.copy(activeFilter = filter) } }
 
+    fun setSearchQuery(query: String) { _uiState.update { it.copy(searchQuery = query) } }
+
+    /** Marks every unread chat as read (optimistically) – instant relief from the badge. */
+    fun markAllRead() {
+        val unread = _uiState.value.conversations.filter { it.myUnreadCount > 0 }
+        if (unread.isEmpty()) return
+        _uiState.update { s -> s.copy(conversations = s.conversations.map { it.copy(myUnreadCount = 0) }) }
+        viewModelScope.launch {
+            unread.forEach { messageRepository.markConversationRead(it.id) }
+            _events.tryEmit(MessagesEvent.Info("All caught up"))
+        }
+    }
+
     /** True when the other person spoke last and it has been a while. */
     fun needsReply(conv: Conversation): Boolean {
         val sender = conv.lastMessageSender ?: return false
@@ -141,10 +196,19 @@ class MessagesViewModel @Inject constructor(
         return mins >= NEEDS_REPLY_AFTER_MINUTES
     }
 
-    fun filteredConversations(): List<Conversation> = when (_uiState.value.activeFilter) {
-        "unread" -> _uiState.value.conversations.filter { it.myUnreadCount > 0 }
-        "needs_reply" -> _uiState.value.conversations.filter { needsReply(it) }
-        else -> _uiState.value.conversations
+    fun filteredConversations(): List<Conversation> {
+        val state = _uiState.value
+        val byFilter = when (state.activeFilter) {
+            "unread" -> state.conversations.filter { it.myUnreadCount > 0 }
+            "needs_reply" -> state.conversations.filter { needsReply(it) }
+            else -> state.conversations
+        }
+        val q = state.searchQuery.trim()
+        if (q.isEmpty()) return byFilter
+        return byFilter.filter {
+            (it.otherUsername ?: "").contains(q, ignoreCase = true) ||
+                (it.lastMessage ?: "").contains(q, ignoreCase = true)
+        }
     }
 
     // ── Pin / mute (optimistic, reverted on failure) ─────────────────────────
@@ -254,7 +318,21 @@ fun MessagesScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var headerVisible     by remember { mutableStateOf(false) }
     var showSafetyDialog  by remember { mutableStateOf(false) }
+    var searchActive      by remember { mutableStateOf(false) }
+    val searchFocus       = remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
+
+    // Back closes the search first instead of leaving the screen.
+    BackHandler(enabled = searchActive) {
+        searchActive = false
+        viewModel.setSearchQuery("")
+    }
+    LaunchedEffect(searchActive) {
+        if (searchActive) {
+            delay(80)
+            runCatching { searchFocus.requestFocus() }
+        }
+    }
 
     // One-off events: info snackbars and "chat deleted · Undo".
     LaunchedEffect(Unit) {
@@ -301,26 +379,92 @@ fun MessagesScreen(
                 Column(modifier = Modifier.background(Brush.verticalGradient(
                     listOf(Surface, Background), 0f, 220f
                 )).statusBarsPadding()) {
-                    // Slim title row: title + tagline, search, safety info.
-                    Row(
-                        Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 10.dp, bottom = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Messages", color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (searchActive) {
+                        // Local search over my chats (name + last message).
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 44.dp)
+                                    .clip(RoundedCornerShape(24.dp))
+                                    .background(SurfaceAlt)
+                                    .padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.Search, contentDescription = null, tint = SecondaryText, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Box(Modifier.weight(1f)) {
+                                    BasicTextField(
+                                        value = uiState.searchQuery,
+                                        onValueChange = { viewModel.setSearchQuery(it) },
+                                        singleLine = true,
+                                        textStyle = TextStyle(color = PrimaryText, fontSize = 16.sp),
+                                        cursorBrush = SolidColor(OrangePrimary),
+                                        modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
+                                        decorationBox = { inner ->
+                                            Box {
+                                                if (uiState.searchQuery.isEmpty()) {
+                                                    Text("Search chats", color = TertiaryText, fontSize = 16.sp)
+                                                }
+                                                inner()
+                                            }
+                                        }
+                                    )
+                                }
+                                if (uiState.searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Clear search", tint = SecondaryText, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                            TextButton(onClick = {
+                                searchActive = false
+                                viewModel.setSearchQuery("")
+                            }) { Text("Cancel", color = OrangePrimary, fontWeight = FontWeight.SemiBold) }
                         }
-                        TopBarIcon(Icons.Filled.Search, "Search people") {
-                            navController.navigate(Screen.UserSearch.route)
+                    } else {
+                        // Slim title row: title + unread count + tagline, search, safety info.
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 10.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Messages", color = PrimaryText, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (totalUnread > 0) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            if (totalUnread > 99) "99+" else "$totalUnread",
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(OrangePrimary)
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text("Incognito chats, real connections", color = SecondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            TopBarIcon(Icons.Filled.Search, "Search chats") { searchActive = true }
+                            Spacer(Modifier.width(8.dp))
+                            TopBarIcon(Icons.Filled.Shield, "About private chats") { showSafetyDialog = true }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        TopBarIcon(Icons.Filled.Shield, "About private chats") { showSafetyDialog = true }
                     }
 
                     // Filter pills
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp)
+                            .padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         InboxFilterChip("All", 0, uiState.activeFilter == "all", OrangePrimary) {
                             haptic.tap(); viewModel.setFilter("all")
@@ -334,8 +478,20 @@ fun MessagesScreen(
                                 haptic.tap(); viewModel.setFilter("needs_reply")
                             }
                         }
+                        // Instant relief from the badge.
+                        if (unreadChats > 0) {
+                            TextButton(onClick = { haptic.tap(); viewModel.markAllRead() }) {
+                                Icon(Icons.Filled.DoneAll, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Mark all read", color = OrangePrimary, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                     }
                     HorizontalDivider(color = Divider, thickness = 0.5.dp)
+                    OfflineBanner(
+                        visible = uiState.isOffline,
+                        message = "You're offline. Chats may be out of date."
+                    )
                 }
             }
         },
@@ -388,6 +544,17 @@ fun MessagesScreen(
                     onFindPeople = { navController.navigate(Screen.UserSearch.route) }
                 )
 
+                uiState.searchQuery.isNotBlank() && filtered.isEmpty() -> Box(Modifier.fillMaxSize()) {
+                    EmptyState(
+                        icon = Icons.Filled.Search,
+                        title = "No chats match \"${uiState.searchQuery.trim()}\"",
+                        subtitle = "Try a different name, or find someone new.",
+                        ctaLabel = "Find people",
+                        onCta = { navController.navigate(Screen.UserSearch.route) },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
                 filtered.isEmpty() -> Box(Modifier.fillMaxSize()) {
                     val (icon, title, subtitle) = when (uiState.activeFilter) {
                         "unread" -> Triple(Icons.Filled.DoneAll, "You're all caught up", "No unread messages. Nicely done.")
@@ -403,45 +570,92 @@ fun MessagesScreen(
                     )
                 }
 
-                else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
-                    // "Active now" lives in the list so it scrolls away with the chats.
-                    if (activeNow.isNotEmpty() && uiState.activeFilter == "all") {
-                        item(key = "active_now") {
-                            ActiveNowRow(
-                                items = activeNow,
-                                onClick = { conv -> navController.navigate(Screen.Chat.createRoute(conv.id)) }
-                            )
+                else -> {
+                    // Pinned chats get their own labelled section once there is something to separate.
+                    val entries = remember(filtered, uiState.searchQuery) {
+                        val pinned = filtered.filter { it.isPinned }
+                        val others = filtered.filterNot { it.isPinned }
+                        val sections = pinned.isNotEmpty() && others.isNotEmpty() && uiState.searchQuery.isBlank()
+                        buildList<InboxEntry> {
+                            if (sections) add(InboxEntry.Label("Pinned"))
+                            pinned.forEach { add(InboxEntry.Chat(it)) }
+                            if (sections) add(InboxEntry.Label("Chats"))
+                            others.forEach { add(InboxEntry.Chat(it)) }
                         }
                     }
-                    items(filtered, key = { it.id }) { conv ->
-                        SwipeableConversationRow(
-                            conv = conv,
-                            isOnline = conv.otherUserId in onlineUserIds,
-                            isLastFromMe = conv.lastMessageSender != null && conv.lastMessageSender == myId,
-                            needsReply = viewModel.needsReply(conv),
-                            modifier = Modifier.animateItem(),
-                            onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) },
-                            onViewProfile = {
-                                conv.otherUserId?.takeIf { it.isNotBlank() }?.let {
-                                    navController.navigate(Screen.UserProfile.createRoute(it))
+
+                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
+                        // "Active now" lives in the list so it scrolls away with the chats.
+                        if (activeNow.isNotEmpty() && uiState.activeFilter == "all" && uiState.searchQuery.isBlank()) {
+                            item(key = "active_now") {
+                                ActiveNowRow(
+                                    items = activeNow,
+                                    onClick = { conv -> navController.navigate(Screen.Chat.createRoute(conv.id)) }
+                                )
+                            }
+                        }
+                        items(entries, key = { it.key }) { entry ->
+                            when (entry) {
+                                is InboxEntry.Label -> SectionLabel(entry.text, Modifier.animateItem())
+                                is InboxEntry.Chat -> {
+                                    val conv = entry.conv
+                                    SwipeableConversationRow(
+                                        conv = conv,
+                                        isOnline = conv.otherUserId in onlineUserIds,
+                                        isLastFromMe = conv.lastMessageSender != null && conv.lastMessageSender == myId,
+                                        needsReply = viewModel.needsReply(conv),
+                                        draft = uiState.drafts[conv.id],
+                                        modifier = Modifier.animateItem(),
+                                        onClick = { navController.navigate(Screen.Chat.createRoute(conv.id)) },
+                                        onViewProfile = {
+                                            conv.otherUserId?.takeIf { it.isNotBlank() }?.let {
+                                                navController.navigate(Screen.UserProfile.createRoute(it))
+                                            }
+                                        },
+                                        onTogglePin = {
+                                            haptic.tap()
+                                            viewModel.togglePin(conv)
+                                        },
+                                        onToggleMute = { viewModel.toggleMute(conv) },
+                                        onDeleteForMe = {
+                                            haptic.alert()
+                                            viewModel.deleteConversationForMe(conv)
+                                        },
+                                        onDeleteForBoth = { viewModel.deleteConversationForBoth(conv.id) }
+                                    )
                                 }
-                            },
-                            onTogglePin = {
-                                haptic.tap()
-                                viewModel.togglePin(conv)
-                            },
-                            onToggleMute = { viewModel.toggleMute(conv) },
-                            onDeleteForMe = {
-                                haptic.alert()
-                                viewModel.deleteConversationForMe(conv)
-                            },
-                            onDeleteForBoth = { viewModel.deleteConversationForBoth(conv.id) }
-                        )
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/** Rows of the inbox list: a section label or a conversation. */
+private sealed interface InboxEntry {
+    val key: String
+
+    data class Label(val text: String) : InboxEntry {
+        override val key: String get() = "label_$text"
+    }
+
+    data class Chat(val conv: Conversation) : InboxEntry {
+        override val key: String get() = conv.id
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text.uppercase(),
+        color = TertiaryText,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.sp,
+        modifier = modifier.fillMaxWidth().padding(start = 18.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+    )
 }
 
 // ── Pieces ────────────────────────────────────────────────────────────────────
@@ -584,6 +798,7 @@ private fun SwipeableConversationRow(
     isOnline: Boolean,
     isLastFromMe: Boolean,
     needsReply: Boolean,
+    draft: String?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onViewProfile: () -> Unit,
@@ -633,6 +848,7 @@ private fun SwipeableConversationRow(
             isOnline = isOnline,
             isLastFromMe = isLastFromMe,
             needsReply = needsReply,
+            draft = draft,
             onClick = onClick,
             onViewProfile = onViewProfile,
             onTogglePin = onTogglePin,
@@ -649,6 +865,7 @@ fun ConversationRow(
     isOnline: Boolean = false,
     isLastFromMe: Boolean = false,
     needsReply: Boolean = false,
+    draft: String? = null,
     onClick: () -> Unit,
     onViewProfile: () -> Unit = {},
     onTogglePin: () -> Unit = {},
@@ -716,7 +933,20 @@ fun ConversationRow(
                 }
                 Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
+                    if (!draft.isNullOrBlank()) {
+                        // Unfinished business stands out: "Draft: …" in orange.
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.SemiBold)) { append("Draft: ") }
+                                append(draft)
+                            },
+                            color = TertiaryText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else Text(
                         previewText,
                         color = if (hasUnread) PrimaryText.copy(alpha = 0.85f) else TertiaryText,
                         fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal,

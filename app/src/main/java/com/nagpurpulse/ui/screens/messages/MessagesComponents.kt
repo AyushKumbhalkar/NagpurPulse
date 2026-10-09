@@ -4,6 +4,11 @@
 
 package com.nagpurpulse.ui.screens.messages
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -15,6 +20,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -171,4 +178,31 @@ internal fun ReportDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = SecondaryText) } }
     )
+}
+
+/** Slim "you're offline" strip that slides in/out. Shared by the inbox and the chat. */
+@Composable
+internal fun OfflineBanner(
+    visible: Boolean,
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(RedAlert.copy(alpha = 0.14f))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Filled.CloudOff, contentDescription = null, tint = RedAlert, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(message, color = PrimaryText, fontSize = 12.sp, maxLines = 2)
+        }
+    }
 }
