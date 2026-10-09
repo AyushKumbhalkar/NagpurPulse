@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nagpurpulse.R
+import com.nagpurpulse.data.repository.EmailCheck
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -75,6 +76,8 @@ fun SignupScreen(
     // U2/U3: true from the moment Create Account is tapped until loading ends.
     var googleBusy by remember { mutableStateOf(false) }
     var submitInFlight by remember { mutableStateOf(false) }
+    // True while "Next" is asking the server whether this email is already registered.
+    var checkingEmail by remember { mutableStateOf(false) }
     // U5: after the entrance animation has played once (also survives rotation) skip it.
     var entrancePlayed by rememberSaveable { mutableStateOf(false) }
     // U4: auto-focus for the email field.
@@ -225,7 +228,8 @@ fun SignupScreen(
     }
     SignupContent(
         email = email, password = password, confirmPassword = confirmPassword,
-        passwordStep = passwordStep, loading = uiState.isLoading || submitInFlight || googleBusy,
+        passwordStep = passwordStep, loading = uiState.isLoading || submitInFlight || googleBusy || checkingEmail,
+        checkingEmail = checkingEmail,
         online = isOnline, entrancePlayed = entrancePlayed,
         emailError = emailError, passwordError = passwordError, confirmError = confirmError,
         error = uiState.error, info = uiState.infoMessage,
@@ -237,13 +241,26 @@ fun SignupScreen(
         onContinue = {
             if (passwordStep) submitSignup() else {
                 emailTouched = true
-                if (emailLooksValid) {
+                if (emailLooksValid && !checkingEmail) {
                     // The repository only supports Email + password signup. Do not call
                     // resendSignupEmailOtp as a passwordless account-creation substitute.
                     check(!PASSWORDLESS_SIGNUP)
-                    passwordStep = true
                     focusManager.clearFocus()
                     keyboardController?.hide()
+                    // Ask the server NOW (before any password is typed) if the email is taken.
+                    checkingEmail = true
+                    viewModel.checkEmailBeforeSignup(email) { result ->
+                        checkingEmail = false
+                        when (result) {
+                            EmailCheck.EXISTS -> {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                AuthAnalytics.log(context, "signup_email_exists")
+                                showEmailAlreadyUsedDialog = true
+                            }
+                            // Unable to check (offline / RPC not deployed): continue; signUp() re-checks.
+                            else -> passwordStep = true
+                        }
+                    }
                 }
             }
         },
@@ -307,6 +324,7 @@ fun SignupScreen(
 
     if (showEmailAlreadyUsedDialog) {
         SignupEmailAlreadyUsedDialog(
+            email = email,
             onGoToLogin = {
                 showEmailAlreadyUsedDialog = false
                 onNavigateToLogin()
