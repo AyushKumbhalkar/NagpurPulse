@@ -3,6 +3,12 @@
 package com.nagpurpulse.ui.screens.profile
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.content.Intent
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.nagpurpulse.ui.screens.settings.GlowIcon
 import kotlinx.coroutines.delay
 import com.nagpurpulse.data.model.memberSince
 import androidx.compose.animation.*
@@ -71,29 +77,37 @@ class PublicProfileViewModel @Inject constructor(
         presenceRepository.start()
     }
 
+    private var lastUserId: String? = null
+
     fun load(userId: String) {
+        lastUserId = userId
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
             profileRepository.getProfile(userId).fold(
                 onSuccess = { profile ->
+                    // A private / posts-hidden profile never needs its threads fetched.
+                    if (profile.hideProfile || profile.hidePosts) {
+                        _uiState.value = PublicProfileUiState(profile = profile, isLoading = false)
+                        return@fold
+                    }
                     postRepository.getPostsByUser(userId).fold(
                         onSuccess = { posts ->
-                            _uiState.value = PublicProfileUiState(
-                                profile   = profile,
-                                posts     = posts,
-                                isLoading = false
-                            )
+                            _uiState.value = PublicProfileUiState(profile = profile, posts = posts, isLoading = false)
                         },
                         onFailure = {
-                            _uiState.value = _uiState.value.copy(isLoading = false)
+                            // Keep the profile on screen even if the thread list failed.
+                            _uiState.value = PublicProfileUiState(profile = profile, isLoading = false)
                         }
                     )
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+                    _uiState.value = PublicProfileUiState(isLoading = false, error = e.message ?: "Couldn't load this profile")
                 }
             )
         }
     }
+
+    fun retry() { lastUserId?.let(::load) }
 }
 
 @Composable
@@ -103,553 +117,487 @@ fun PublicProfileScreen(
     onPostClick: (String) -> Unit,
     viewModel: PublicProfileViewModel = hiltViewModel()
 ) {
-    val uiState     by viewModel.uiState.collectAsState()
-    val displayName = uiState.profile?.username ?: "User"
+    val uiState by viewModel.uiState.collectAsState()
     val onlineUserIds by viewModel.onlineUserIds.collectAsState()
+    val context = LocalContext.current
+
+    val profile = uiState.profile
+    val handle = profile?.username?.takeIf { it.isNotBlank() } ?: "User"
     // Respect the target user's visibility preference at the point of display too.
-    // Presence events may already be in the shared flow from an earlier subscription.
-    val isProfileOnline = userId in onlineUserIds && uiState.profile?.showOnlineStatus == true
-    val avatarUrl = uiState.profile?.avatarUrl
-    var avatarVisible by remember {
-        mutableStateOf(false)
-    }
-
-    var infoVisible by remember {
-        mutableStateOf(false)
-    }
-
-    var statsVisible by remember {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(Unit) {
-
-        delay(80)
-        avatarVisible = true
-
-        delay(120)
-        infoVisible = true
-
-        delay(100)
-        statsVisible = true
-    }
+    val isOnline = userId in onlineUserIds && profile?.showOnlineStatus == true
+    val canShare = profile != null && !profile.hideProfile
 
     LaunchedEffect(userId) { viewModel.load(userId) }
 
     Scaffold(
         containerColor = Background,
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Surface, Background),
-                            0f,
-                            130f
-                        )
-                    )
-                    .statusBarsPadding()
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = PrimaryText)
-                }
-                Spacer(Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("u/$displayName", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (isProfileOnline) {
-                        Text("Online", color = Color(0xFF22C55E), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            PublicProfileTopBar(
+                handle = handle,
+                isOnline = isOnline,
+                canShare = canShare,
+                onBack = onBack,
+                onShare = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "Check out u/$handle on NagpurPulse")
                     }
+                    context.startActivity(Intent.createChooser(send, "Share profile"))
                 }
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = {}) {
-                    Icon(Icons.Filled.Share, null, tint = SecondaryText)
+            )
+        }
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when {
+                uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    CircularProgressIndicator(color = OrangePrimary)
                 }
-            }
-        }
-    ) { paddingValues ->
-        if (uiState.isLoading) {
-
-
-            Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
-                CircularProgressIndicator(color = OrangePrimary)
-            }
-            return@Scaffold
-        }
-
-        val profile = uiState.profile
-
-        if (
-            profile != null &&
-            profile.hideProfile
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(260.dp)
-                        .align(Alignment.TopCenter)
-                        .offset(y = 40.dp)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    OrangePrimary.copy(alpha = 0.18f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        )
+                profile == null -> ProfileLoadError(onRetry = viewModel::retry)
+                profile.hideProfile -> PrivateProfileView(profile = profile, onBack = onBack)
+                else -> PublicProfileContent(
+                    profile = profile,
+                    posts = uiState.posts,
+                    isOnline = isOnline,
+                    onPostClick = onPostClick
                 )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 24.dp,
-                            bottom = 12.dp
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top
-                ) {
-
-
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .size(90.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(
-                                            OrangePrimary.copy(0.20f),
-                                            OrangePrimary.copy(0.05f)
-                                        )
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(42.dp)
-                            )
-                        }
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Text(
-                            text = profile.username,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryText
-                        )
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = OrangePrimary.copy(alpha = 0.12f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(
-                                    horizontal = 14.dp,
-                                    vertical = 8.dp
-                                ),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = null,
-                                    tint = OrangePrimary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-
-                                Spacer(Modifier.width(6.dp))
-
-                                Text(
-                                    "Private Profile",
-                                    color = OrangePrimary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-
-
-
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(28.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Surface
-                            )
-                        ) {
-
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-
-                                Icon(
-                                    Icons.Default.Security,
-                                    contentDescription = null,
-                                    tint = OrangePrimary,
-                                    modifier = Modifier.size(48.dp)
-                                )
-
-                                Spacer(Modifier.height(16.dp))
-
-                                Text(
-                                    "This profile is private",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PrimaryText
-                                )
-
-                                Spacer(Modifier.height(12.dp))
-
-                                Text(
-                                    text = "${profile.username} has chosen to keep their profile and activity private.",
-                                    textAlign = TextAlign.Center,
-                                    color = SecondaryText
-                                )
-
-                                Spacer(Modifier.height(20.dp))
-
-                                HorizontalDivider(color = Divider)
-
-                                Spacer(Modifier.height(20.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
-                                ) {
-
-                                    PrivacyInfoItem(
-                                        icon = Icons.Default.VisibilityOff,
-                                        title = "Content",
-                                        subtitle = "Hidden"
-                                    )
-
-                                    PrivacyInfoItem(
-                                        icon = Icons.Default.NotificationsOff,
-                                        title = "Activity",
-                                        subtitle = "Hidden"
-                                    )
-
-                                    PrivacyInfoItem(
-                                        icon = Icons.Default.PersonOff,
-                                        title = "Info",
-                                        subtitle = "Hidden"
-                                    )
-                                }
-
-                        }
-
-                            Spacer(Modifier.height(20.dp))
-
-
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Surface
-                            )
-                        ) {
-
-                            Row(
-                                modifier = Modifier.padding(18.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Icon(
-                                    Icons.Default.FavoriteBorder,
-                                    contentDescription = null,
-                                    tint = OrangePrimary
-                                )
-
-                                Spacer(Modifier.width(14.dp))
-
-                                Column {
-
-                                    Text(
-                                        "Respect Privacy",
-                                        color = PrimaryText,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(Modifier.height(4.dp))
-
-                                    Text(
-                                        "This user has chosen to keep their profile private.",
-                                        color = SecondaryText,
-                                        fontSize = 13.sp
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
-
-            return@Scaffold
         }
-
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            // Profile header card
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Surface, Background),
-                                0f,
-                                480f
-                            )
-                        )
-                ) {
-                    Box(
-                        modifier = Modifier.size(180.dp)
-                            .background(Brush.radialGradient(listOf(OrangePrimary.copy(0.07f), Color.Transparent)))
-                            .align(Alignment.TopCenter)
-                    )
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Avatar
-                        AnimatedVisibility(
-                            visible = avatarVisible,
-                            enter = fadeIn(tween(400)) +
-                                    scaleIn(initialScale = 0.7f)
-                        ) {
-
-                            Box(contentAlignment = Alignment.Center) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(132.dp)
-                                        .clip(CircleShape)
-                                        .background(OrangePrimary.copy(0.12f))
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(122.dp)
-                                        .border(
-                                            2.5.dp,
-                                            Brush.sweepGradient(
-                                                listOf(
-                                                    OrangePrimary,
-                                                    OrangeLight,
-                                                    OrangePrimary.copy(0.3f),
-                                                    OrangePrimary
-                                                )
-                                            ),
-                                            CircleShape
-                                        )
-                                )
-
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(avatarUrl)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(108.dp)
-                                        .clip(CircleShape)
-                                        .background(SurfaceAlt),
-                                    contentScale = ContentScale.Crop
-                                )
-
+    }
 }
-                        }
-                        Spacer(Modifier.height(14.dp))
 
-                        AnimatedVisibility(
-                            visible = infoVisible,
-                            enter = fadeIn(tween(400))
-                        ) {
+// ── Top bar ─────────────────────────────────────────────────────────────────
 
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                        val profileScreenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
-                        Text(
-                            displayName,
-                            color = PrimaryText,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = if (profileScreenWidth < 360) 23.sp else if (profileScreenWidth < 400) 26.sp else 28.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                        )
+@Composable
+private fun PublicProfileTopBar(
+    handle: String,
+    isOnline: Boolean,
+    canShare: Boolean,
+    onBack: () -> Unit,
+    onShare: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 130f))
+            .statusBarsPadding()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
+        }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("u/$handle", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            AnimatedVisibility(visible = isOnline, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                Text("Online now", color = GreenSuccess, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+        // Keeps the title optically centred whether or not the share button is shown.
+        if (canShare) {
+            IconButton(onClick = onShare) {
+                Icon(Icons.Filled.Share, contentDescription = "Share profile", tint = SecondaryText)
+            }
+        } else {
+            Spacer(Modifier.size(48.dp))
+        }
+    }
+}
 
-                        Text(
-                            "u/$displayName",
-                            color = SecondaryText,
-                            fontSize = 14.sp
-                        )
-                        if (!uiState.profile?.tagline.isNullOrBlank()) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(uiState.profile!!.tagline!!, color = SecondaryText, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
+// ── Reveal helper: calm, staggered entrance ───────────────────────────────────
 
-                            Icon(
-                                Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(14.dp)
-                            )
+@Composable
+private fun Reveal(shown: Boolean, delayMs: Int, content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(tween(450, delayMillis = delayMs)) +
+                slideInVertically(tween(450, delayMillis = delayMs, easing = FastOutSlowInEasing)) { it / 8 }
+    ) { content() }
+}
 
-                            Spacer(Modifier.width(4.dp))
+// ── Private (locked) profile ─────────────────────────────────────────────────
 
-                            Text(
-                                buildString {
+@Composable
+private fun PrivateProfileView(profile: Profile, onBack: () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
 
-                                    append(
-                                        uiState.profile?.areas?.firstOrNull()
-                                            ?: "Nagpur"
-                                    )
+    Box(Modifier.fillMaxSize()) {
+        // Soft ambient glow behind the hero
+        Box(
+            Modifier
+                .size(300.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 10.dp)
+                .background(Brush.radialGradient(listOf(OrangePrimary.copy(alpha = 0.16f), Color.Transparent)), CircleShape)
+        )
 
-                                    append(" • ")
-
-                                    append(
-                                        uiState.profile?.memberSince()
-                                            ?.replace(
-                                                "Member since ",
-                                                "Joined "
-                                            )
-                                            ?: "Joined 2026"
-                                    )
-                                },
-                                color = SecondaryText,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        Spacer(Modifier.height(18.dp))}}
-                        // Follow + Message buttons
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-
-                            Button(
-                                onClick = { },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(54.dp),
-                                shape = RoundedCornerShape(25.dp)
-                            ) {
-
-                                Icon(
-                                    Icons.Default.PersonAdd,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-
-                                Spacer(Modifier.width(8.dp))
-
-                                Text(
-                                    "Follow User",
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(20.dp))
-                        // Stats
-                        AnimatedVisibility(
-                            visible = statsVisible,
-                            enter = fadeIn(tween(400)) +
-                                    slideInVertically { 30 }
-                        ) {
-
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-
-                                PublicStatBox(
-                                    formatCount(uiState.profile?.karma ?: 0),
-                                    "Karma",
-                                    OrangePrimary,
-                                    Modifier.weight(1f)
-                                )
-
-                                PublicStatBox(
-                                    formatCount(uiState.posts.size),
-                                    "Threads",
-                                    BlueInfo,
-                                    Modifier.weight(1f)
-                                )
-
-                                PublicStatBox(
-                                    "0",
-                                    "Comments",
-                                    GreenSuccess,
-                                    Modifier.weight(1f)
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        HorizontalDivider(color = Divider, thickness = 0.5.dp)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Reveal(shown, 0) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    // We deliberately do not show the real photo: private means private.
+                    UserAvatar(name = profile.username, imageUrl = null, size = 104.dp)
+                    Box(
+                        Modifier
+                            .offset(x = 4.dp, y = 4.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Background)
+                            .padding(3.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(OrangeLight, OrangePrimary))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
 
-            // Posts header
-            item {
+            Spacer(Modifier.height(18.dp))
+
+            Reveal(shown, 90) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        profile.displayName?.takeIf { it.isNotBlank() } ?: profile.username,
+                        color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 26.sp,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center
+                    )
+                    Text("u/${profile.username}", color = SecondaryText, fontSize = 14.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(OrangePrimary.copy(alpha = 0.12f))
+                            .border(1.dp, OrangePrimary.copy(alpha = 0.3f), RoundedCornerShape(50))
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Lock, null, tint = OrangePrimary, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Private profile", color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            Reveal(shown, 180) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Surface)
+                        .border(1.dp, OrangePrimary.copy(alpha = 0.14f), RoundedCornerShape(24.dp))
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    GlowIcon(Icons.Filled.Shield, OrangePrimary, active = true, size = 48.dp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("Keeping things to themselves", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 19.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "u/${profile.username} prefers to keep their profile and activity private. That's their call, and it's a good thing the app lets everyone make it.",
+                        color = SecondaryText, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    HorizontalDivider(color = Divider, thickness = 0.5.dp)
+                    Spacer(Modifier.height(18.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        PrivacyInfoItem(Icons.Filled.VisibilityOff, "Threads", "Private")
+                        PrivacyInfoItem(Icons.Filled.NotificationsOff, "Activity", "Private")
+                        PrivacyInfoItem(Icons.Filled.PersonOff, "Details", "Private")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            Reveal(shown, 270) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Surface)
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Threads (${uiState.posts.size})", color = OrangePrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp)
-            }
-
-            if (uiState.posts.isEmpty()) {
-                item {
-                    EmptyState(
-                        icon = Icons.Filled.ChatBubbleOutline,
-                        title = "No posts yet",
-                        subtitle = "This user hasn't posted anything yet.",
-                        modifier = Modifier.padding(40.dp)
-                    )
-                }
-            } else {
-                itemsIndexed(uiState.posts) { i, post ->
-                    StaggeredItem(i) {
-                        PostCard(
-                            post     = post,
-                            onClick  = { onPostClick(post.id) },
-                            modifier = Modifier.padding(horizontal = 14.dp).padding(top = 10.dp)
-                        )
+                    Box(
+                        Modifier.size(38.dp).clip(CircleShape).background(PinkEvents.copy(alpha = 0.12f)),
+                        Alignment.Center
+                    ) { Icon(Icons.Filled.FavoriteBorder, null, tint = PinkEvents, modifier = Modifier.size(19.dp)) }
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text("Good communities respect boundaries", color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text("If you know them, they can always share their profile with you directly.", color = SecondaryText, fontSize = 12.sp, lineHeight = 17.sp)
                     }
                 }
             }
-            item { Spacer(Modifier.height(24.dp)) }
+
+            Spacer(Modifier.height(22.dp))
+
+            Reveal(shown, 360) {
+                OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(25.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, OrangePrimary.copy(alpha = 0.5f))
+                ) {
+                    Text("Back to the community", color = OrangePrimary, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
         }
+    }
+}
+
+@Composable
+private fun PrivacyInfoItem(icon: ImageVector, title: String, subtitle: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(52.dp).clip(CircleShape).background(OrangePrimary.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) { Icon(icon, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(22.dp)) }
+        Spacer(Modifier.height(8.dp))
+        Text(title, color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        Text(subtitle, color = SecondaryText, fontSize = 12.sp)
+    }
+}
+
+// ── Error ────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ProfileLoadError(onRetry: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        GlowIcon(Icons.Filled.CloudOff, SecondaryText, active = false, size = 56.dp)
+        Spacer(Modifier.height(8.dp))
+        Text("We couldn't open this profile", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "It may have been removed, or your connection dropped. Nothing is wrong on your end.",
+            color = SecondaryText, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = onRetry,
+            shape = RoundedCornerShape(25.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
+        ) { Text("Try again", fontWeight = FontWeight.SemiBold) }
+    }
+}
+
+// ── Public profile ───────────────────────────────────────────────────────────
+
+@Composable
+private fun PublicProfileContent(
+    profile: Profile,
+    posts: List<Post>,
+    isOnline: Boolean,
+    onPostClick: (String) -> Unit
+) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+
+    val screenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+    val nameSize = if (screenWidth < 360) 23.sp else if (screenWidth < 400) 26.sp else 28.sp
+    val name = profile.displayName?.takeIf { it.isNotBlank() } ?: profile.username
+
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 480f))
+            ) {
+                Box(
+                    Modifier
+                        .size(200.dp)
+                        .align(Alignment.TopCenter)
+                        .background(Brush.radialGradient(listOf(OrangePrimary.copy(0.09f), Color.Transparent)))
+                )
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Reveal(shown, 0) { ProfileAvatar(profile.avatarUrl, profile.username, isOnline) }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Reveal(shown, 90) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                Text(
+                                    name, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = nameSize,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                if (profile.isVerified) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Filled.Verified, contentDescription = "Verified", tint = BlueInfo, modifier = Modifier.size(22.dp))
+                                }
+                            }
+                            Text("u/${profile.username}", color = SecondaryText, fontSize = 14.sp)
+                            if (!profile.tagline.isNullOrBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    profile.tagline, color = PrimaryText.copy(alpha = 0.85f), fontSize = 14.sp,
+                                    textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                InfoChip(Icons.Filled.LocationOn, profile.areas.firstOrNull() ?: "Nagpur")
+                                InfoChip(Icons.Filled.CalendarMonth, profile.memberSince().replace("Member since ", "Joined "))
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    Reveal(shown, 170) {
+                        Button(
+                            onClick = { },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(26.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
+                        ) {
+                            Icon(Icons.Filled.PersonAdd, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Follow", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Reveal(shown, 250) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PublicStatBox(formatCount(profile.karma), "Karma", OrangePrimary, Modifier.weight(1f))
+                            PublicStatBox(
+                                if (profile.hidePosts) "Hidden" else formatCount(posts.size),
+                                "Threads", BlueInfo, Modifier.weight(1f)
+                            )
+                            PublicStatBox(
+                                if (profile.hideComments) "Hidden" else "—",
+                                "Comments", GreenSuccess, Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(color = Divider, thickness = 0.5.dp)
+        }
+
+        item {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.width(3.dp).height(14.dp).clip(RoundedCornerShape(50)).background(OrangePrimary))
+                Spacer(Modifier.width(8.dp))
+                Text("Threads", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (!profile.hidePosts) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "${posts.size}", color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(OrangePrimary.copy(alpha = 0.12f))
+                            .padding(horizontal = 9.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        when {
+            profile.hidePosts -> item {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 36.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    GlowIcon(Icons.Filled.VisibilityOff, OrangePrimary, active = false, size = 52.dp)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Threads are private", color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "u/${profile.username} has chosen not to show their threads.",
+                        color = SecondaryText, fontSize = 13.sp, textAlign = TextAlign.Center
+                    )
+                }
+            }
+            posts.isEmpty() -> item {
+                EmptyState(
+                    icon = Icons.Filled.ChatBubbleOutline,
+                    title = "Nothing here yet",
+                    subtitle = "When u/${profile.username} posts, their threads will show up here.",
+                    modifier = Modifier.padding(40.dp)
+                )
+            }
+            else -> itemsIndexed(posts) { i, post ->
+                StaggeredItem(i) {
+                    PostCard(
+                        post = post,
+                        onClick = { onPostClick(post.id) },
+                        modifier = Modifier.padding(horizontal = 14.dp).padding(top = 10.dp)
+                    )
+                }
+            }
+        }
+        item { Spacer(Modifier.height(28.dp)) }
+    }
+}
+
+@Composable
+private fun ProfileAvatar(avatarUrl: String?, username: String, isOnline: Boolean) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(132.dp)) {
+        Box(Modifier.fillMaxSize().clip(CircleShape).background(OrangePrimary.copy(0.10f)))
+        Box(
+            Modifier
+                .size(122.dp)
+                .border(
+                    2.5.dp,
+                    Brush.sweepGradient(listOf(OrangePrimary, OrangeLight, OrangePrimary.copy(0.3f), OrangePrimary)),
+                    CircleShape
+                )
+        )
+        UserAvatar(name = username, imageUrl = avatarUrl, size = 108.dp)
+        if (isOnline) {
+            Box(+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = (-10).dp, y = (-10).dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(Background)
+                    .padding(3.dp)
+                    .clip(CircleShape)
+                    .background(GreenSuccess)
+                    .semantics { contentDescription = "Online" }
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoChip(icon: ImageVector, text: String) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(SurfaceAlt)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = OrangePrimary, modifier = Modifier.size(13.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(text, color = SecondaryText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -657,56 +605,16 @@ fun PublicProfileScreen(
 private fun PublicStatBox(value: String, label: String, accentColor: Color, modifier: Modifier) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(Surface)
-            .border(1.dp, accentColor.copy(0.15f), RoundedCornerShape(16.dp))
-            .padding(vertical = 16.dp),
+            .border(1.dp, accentColor.copy(0.18f), RoundedCornerShape(16.dp))
+            .padding(vertical = 14.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, color = accentColor, fontWeight = FontWeight.Bold, fontSize = 26.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(value, color = accentColor, fontWeight = FontWeight.Bold, fontSize = if (value.length > 5) 16.sp else 24.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))
-            Text(label, color = SecondaryText, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(label, color = SecondaryText, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-    }
-}
-@Composable
-private fun PrivacyInfoItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Box(
-            modifier = Modifier
-                .size(54.dp)
-                .clip(CircleShape)
-                .background(OrangePrimary.copy(0.10f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = OrangePrimary
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            title,
-            color = PrimaryText,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp
-        )
-
-        Text(
-            subtitle,
-            color = SecondaryText,
-            fontSize = 12.sp
-        )
     }
 }
