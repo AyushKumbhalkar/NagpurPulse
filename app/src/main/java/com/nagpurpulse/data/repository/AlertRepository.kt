@@ -33,7 +33,7 @@ class AlertRepository @Inject constructor(
      */
     suspend fun getAlerts(category: String? = null): Result<List<Post>> {
         return try {
-            val posts = client.postgrest["posts"].select {
+            val posts = client.postgrest["posts_public"].select {
                 filter {
                     eq("is_alert", true)
                     if (category != null && category != "all") {
@@ -105,17 +105,17 @@ class AlertRepository @Inject constructor(
             val changes = channel.postgresChangeFlow<PostgresAction.Insert>(
                 schema = "public"
             ) {
-                table = "posts"
+                table = "alert_events"
             }
 
             channel.subscribe()
 
             changes.collect { action ->
                 try {
-                    val post = Json { ignoreUnknownKeys = true }.decodeFromJsonElement(
-                        Post.serializer(),
-                        action.record
-                    )
+                    val postId = action.record["post_id"]?.jsonPrimitive?.content ?: return@collect
+                    val post = client.postgrest["posts_public"]
+                        .select { filter { eq("id", postId) } }
+                        .decodeSingle<Post>()
                     if (post.isAlert) {
                         emit(enrichWithAuthors(listOf(post)).first())
                     }
