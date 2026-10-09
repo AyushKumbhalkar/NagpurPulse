@@ -139,7 +139,17 @@ fun PublicProfileScreen(
             PublicProfileTopBar(
                 handle = handle,
                 isOnline = isOnline,
-                onBack = onBack
+                canShare = canShare,
+                onBack = onBack,
+                onShare = {
+                    profile?.let { targetProfile ->
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, "Check out u/${targetProfile.username} on NagpurPulse")
+                        }
+                        context.startActivity(Intent.createChooser(send, "Share profile"))
+                    }
+                }
             )
         }
     ) { padding ->
@@ -188,8 +198,13 @@ private fun PublicProfileTopBar(
                 Text("Online now", color = GreenSuccess, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
         }
-        // Balances the back button so the title stays optically centred.
-        Spacer(Modifier.size(48.dp))
+        if (canShare) {
+            IconButton(onClick = onShare) {
+                Icon(Icons.Filled.Share, contentDescription = "Share profile", tint = OrangePrimary)
+            }
+        } else {
+            Spacer(Modifier.size(48.dp))
+        }
     }
 }
 
@@ -395,6 +410,10 @@ private fun PublicProfileContent(
     onPostClick: (String) -> Unit
 ) {
     var shown by remember { mutableStateOf(false) }
+    var sortTop by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val sortedPosts = if (sortTop) posts.sortedByDescending { it.upvotes } else posts
     LaunchedEffect(Unit) { shown = true }
 
     val screenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
@@ -490,8 +509,6 @@ private fun PublicProfileContent(
 
                     Spacer(Modifier.height(16.dp))
 
-                    Reveal(shown, 230) { CommunityLevelCard(progress) }
-
                     Spacer(Modifier.height(18.dp))
 
                     Reveal(shown, 300) {
@@ -563,7 +580,7 @@ private fun PublicProfileContent(
                     modifier = Modifier.padding(40.dp)
                 )
             }
-            else -> itemsIndexed(posts) { i, post ->
+            else -> itemsIndexed(sortedPosts) { i, post ->
                 StaggeredItem(i) {
                     PostCard(
                         post = post,
@@ -592,7 +609,8 @@ private fun ProfileAvatar(avatarUrl: String?, username: String, isOnline: Boolea
         )
         UserAvatar(name = username, imageUrl = avatarUrl, size = 108.dp)
         if (isOnline) {
-            Box(+                Modifier
+            Box(
+                Modifier
                     .align(Alignment.BottomEnd)
                     .offset(x = (-10).dp, y = (-10).dp)
                     .size(22.dp)
@@ -636,68 +654,6 @@ private fun PublicStatBox(value: String, label: String, accentColor: Color, modi
             Text(value, color = accentColor, fontWeight = FontWeight.Bold, fontSize = if (value.length > 5) 16.sp else 24.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))
             Text(label, color = SecondaryText, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-
-@Composable
-private fun CommunityLevelCard(progress: LevelProgress) {
-    val start = Color(progress.level.colorStart)
-    val end = Color(progress.level.colorEnd)
-    val animated by animateFloatAsState(
-        targetValue = progress.fraction,
-        animationSpec = tween(900, delayMillis = 350, easing = FastOutSlowInEasing),
-        label = "level_progress"
-    )
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Surface)
-            .border(1.dp, start.copy(alpha = 0.30f), RoundedCornerShape(18.dp))
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(start, end))),
-            contentAlignment = Alignment.Center
-        ) { Text(progress.level.emoji, fontSize = 22.sp) }
-
-        Spacer(Modifier.width(14.dp))
-
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(progress.level.title, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "Level ${progress.level.number}", color = start, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(start.copy(alpha = 0.14f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Box(
-                Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(start.copy(alpha = 0.15f))
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth(animated.coerceIn(0.04f, 1f))
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(50))
-                        .background(Brush.horizontalGradient(listOf(start, end)))
-                )
-            }
-            Spacer(Modifier.height(5.dp))
-            Text(
-                if (progress.next != null) "${progress.remaining} karma to ${progress.next.emoji} ${progress.next.title}"
-                else "Top level reached — a true city legend",
-                color = SecondaryText, fontSize = 11.sp
-            )
         }
     }
 }
