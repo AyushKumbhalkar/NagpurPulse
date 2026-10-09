@@ -87,7 +87,7 @@ private enum class SignupTier { Compact, Medium, Expanded }
 internal fun SignupContent(
     email: String = "", password: String = "", confirmPassword: String = "",
     passwordStep: Boolean = false, loading: Boolean = false, online: Boolean = true,
-    entrancePlayed: Boolean = false, emailError: String? = null,
+    checkingEmail: Boolean = false, entrancePlayed: Boolean = false, emailError: String? = null,
     passwordError: String? = null, confirmError: String? = null,
     error: String? = null, info: String? = null, keyboardPreview: Boolean = false,
     emailFocusRequester: FocusRequester? = null,
@@ -273,7 +273,8 @@ internal fun SignupContent(
                         AuthEntrance(3, entrancePlayed) {
                             WelcomeButton(
                                 stringResource(
-                                    if (loading) R.string.signup_creating_account
+                                    if (checkingEmail) R.string.signup_checking_email
+                                    else if (loading) R.string.signup_creating_account
                                     else if (passwordStep) R.string.signup_create_account else R.string.auth_continue_email
                                 ),
                                 controlHeight, font, { tap(); onContinue() }, loading
