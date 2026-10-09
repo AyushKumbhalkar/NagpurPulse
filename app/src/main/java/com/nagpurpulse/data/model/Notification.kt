@@ -34,6 +34,39 @@ fun Notification.timeAgo(): String {
     } catch (_: Exception) { "recently" }
 }
 
+/**
+ * Compact label for the notifications inbox: "now", "5m", "3h", "Yesterday, 6:40 PM",
+ * "3d", then "12 Oct". Returns an empty string when the timestamp cannot be parsed.
+ */
+fun Notification.timeLabel(): String {
+    return try {
+        val created = try {
+            java.time.Instant.parse(createdAt)
+        } catch (_: Exception) {
+            java.time.OffsetDateTime.parse(createdAt).toInstant()
+        }
+        val zone = java.time.ZoneId.systemDefault()
+        val diff = java.time.Duration.between(created, java.time.Instant.now())
+        val createdDate = created.atZone(zone).toLocalDate()
+        val today = java.time.LocalDate.now(zone)
+        when {
+            diff.toMinutes() < 1 -> "now"
+            diff.toMinutes() < 60 -> "${diff.toMinutes()}m"
+            diff.toHours() < 24 -> "${diff.toHours()}h"
+            createdDate == today.minusDays(1) -> {
+                val time = java.time.format.DateTimeFormatter
+                    .ofPattern("h:mm a", java.util.Locale.getDefault())
+                    .format(created.atZone(zone))
+                "Yesterday, $time"
+            }
+            diff.toDays() < 7 -> "${diff.toDays()}d"
+            else -> java.time.format.DateTimeFormatter
+                .ofPattern("d MMM", java.util.Locale.getDefault())
+                .format(created.atZone(zone))
+        }
+    } catch (_: Exception) { "" }
+}
+
 // ── Type metadata ─────────────────────────────────────────────────────────────
 
 fun Notification.emoji(): String = when (type) {
@@ -44,6 +77,8 @@ fun Notification.emoji(): String = when (type) {
     "alert", "emergency"          -> "🚨"
     "badge"                       -> "🏆"
     "trending"                    -> "🔥"
+    "milestone"                   -> "🎉"
+    "streak"                      -> "🔥"
     "community"                   -> "🌆"
     "digest"                      -> "📰"
     "admin_warning"               -> "⚠️"

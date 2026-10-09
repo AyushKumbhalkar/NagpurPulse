@@ -75,11 +75,11 @@ class NotificationRepository @Inject constructor(
 
     // ── Read notifications ────────────────────────────────────────────────────
 
-    suspend fun getNotifications(userId: String): Result<List<Notification>> = runCatching {
+    suspend fun getNotifications(userId: String, limit: Int = 60): Result<List<Notification>> = runCatching {
         client.postgrest["notifications"].select {
             filter { eq("user_id", userId) }
             order("created_at", Order.DESCENDING)
-            limit(60)
+            limit(limit.toLong())
         }.decodeList()
     }
 
@@ -102,6 +102,28 @@ class NotificationRepository @Inject constructor(
             filter {
                 eq("user_id", userId)
                 eq("id", notificationId)
+            }
+        }
+    }
+
+    /** Batch read/unread update — one request for a whole grouped notification. */
+    suspend fun setManyRead(userId: String, ids: List<String>, read: Boolean): Result<Unit> = runCatching {
+        if (ids.isEmpty()) return@runCatching
+        client.postgrest["notifications"].update(mapOf("is_read" to read)) {
+            filter {
+                eq("user_id", userId)
+                isIn("id", ids)
+            }
+        }
+    }
+
+    /** Batch delete used by swipe-to-delete (committed after the undo window). */
+    suspend fun deleteMany(userId: String, ids: List<String>): Result<Unit> = runCatching {
+        if (ids.isEmpty()) return@runCatching
+        client.postgrest["notifications"].delete {
+            filter {
+                eq("user_id", userId)
+                isIn("id", ids)
             }
         }
     }

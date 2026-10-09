@@ -38,6 +38,24 @@ object NotifPrefsHelper {
     fun isAlertsSummaryEnabled(ctx: Context) = prefs(ctx).getBoolean("notif_alerts_summary",  true)
     fun isBannerDismissed(ctx: Context)      = prefs(ctx).getBoolean("notif_banner_dismissed", false)
 
+    /** Local timestamp of the last banner dismissal (enables one gentle re-show). */
+    fun markBannerDismissedNow(ctx: Context) {
+        prefs(ctx).edit().putLong("notif_banner_dismissed_at", System.currentTimeMillis()).apply()
+    }
+
+    /**
+     * True when the push banner should be visible. A banner dismissed once is shown
+     * exactly one more time after 7 days; legacy dismissals without a timestamp stay hidden.
+     */
+    fun consumeBannerVisibility(ctx: Context): Boolean {
+        if (!isBannerDismissed(ctx)) return true
+        val dismissedAt = prefs(ctx).getLong("notif_banner_dismissed_at", 0L)
+        if (dismissedAt <= 0L || prefs(ctx).getBoolean("notif_banner_reshown", false)) return false
+        if (System.currentTimeMillis() - dismissedAt < 7L * 24 * 60 * 60 * 1000) return false
+        prefs(ctx).edit().putBoolean("notif_banner_reshown", true).apply()
+        return true
+    }
+
     fun shouldShowType(ctx: Context, type: String): Boolean {
         if (!isPushEnabled(ctx)) return false
         return when (type) {
