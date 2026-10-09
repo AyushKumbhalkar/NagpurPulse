@@ -27,3 +27,5 @@ hs_err_pid*.log
 # OS files
 .DS_Store
 Thumbs.db
+# AI helper bundles
+ai-pack-*.txt
