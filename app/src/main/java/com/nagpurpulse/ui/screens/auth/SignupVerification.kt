@@ -92,6 +92,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -223,13 +225,7 @@ internal fun SignupEmailVerificationDialog(
     var otpShake by remember { mutableStateOf(0) }
     val otpShakeOffset = remember { Animatable(0f) }
 
-    // Submit by itself as soon as the 6th digit is in (typed or pasted).
-    LaunchedEffect(code) {
-        if (code.length == 6 && !isLoading) {
-            delay(180L)
-            onVerify()
-        }
-    }
+    // Auto-submit on the 6th digit is handled once, in SignupScreen (single source of truth).
 
     // Open the keyboard automatically (and again after a failed attempt).
     LaunchedEffect(isLoading) {
@@ -257,18 +253,6 @@ internal fun SignupEmailVerificationDialog(
         otpShakeOffset.animateTo(0f, tween(45))
     }
 
-    // Gentle floating envelope.
-    val floatTransition = rememberInfiniteTransition(label = "verify-float")
-    val floatY by floatTransition.animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "envelope-float"
-    )
-
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
         properties = androidx.compose.ui.window.DialogProperties(
@@ -284,9 +268,7 @@ internal fun SignupEmailVerificationDialog(
             val cardShape = RoundedCornerShape(32.dp)
             val cardWidth = minOf(maxWidth * 0.92f, 400.dp)
             val compactWidth = cardWidth < 330.dp
-            val compactHeight = maxHeight < 700.dp
             val hPad = if (compactWidth) 18.dp else 24.dp
-            val illustration = if (compactHeight) 84.dp else 100.dp
             val otpGap = if (compactWidth) 6.dp else 9.dp
             val canVerify = code.length == 6 && !isLoading
             val hasError = !error.isNullOrBlank()
@@ -299,90 +281,20 @@ internal fun SignupEmailVerificationDialog(
                     .clip(cardShape)
                     .background(vc.card)
             ) {
-                // ── Decorative layer: never affects layout ──
-                Box(modifier = Modifier.matchParentSize()) {
-                    androidx.compose.foundation.Canvas(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(96.dp)
-                            .align(Alignment.TopCenter)
-                    ) {
-                        val fill = Path().apply {
-                            moveTo(size.width * 0.48f, 0f)
-                            cubicTo(
-                                size.width * 0.66f, size.height * 0.08f,
-                                size.width * 0.80f, size.height * 0.04f,
-                                size.width, size.height * 0.30f
-                            )
-                            lineTo(size.width, 0f)
-                            close()
-                        }
-                        drawPath(fill, brush = SolidColor(vc.artFill))
-
-                        val line = Path().apply {
-                            moveTo(size.width * 0.60f, 0f)
-                            cubicTo(
-                                size.width * 0.74f, size.height * 0.13f,
-                                size.width * 0.87f, size.height * 0.08f,
-                                size.width, size.height * 0.36f
-                            )
-                        }
-                        drawPath(
-                            line,
-                            brush = SolidColor(vc.artStroke),
-                            style = Stroke(width = 1.2.dp.toPx())
-                        )
-                    }
-
-                    // Only the bottom 84dp of the wave artwork is shown (cropped, not stretched).
-                    Image(
-                        painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        alignment = Alignment.BottomCenter,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(84.dp)
-                            .align(Alignment.BottomCenter)
-                            .alpha(0.85f)
-                    )
-                }
+                // Brand accent strip: the only decoration (no images).
+                Box(
+                    Modifier.fillMaxWidth().height(5.dp).align(Alignment.TopCenter)
+                        .background(Brush.horizontalGradient(listOf(vc.gradientStart, vc.gradientEnd)))
+                )
 
                 // ── Foreground content ──
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(start = hPad, end = hPad, top = 30.dp, bottom = 26.dp),
+                        .padding(start = hPad, end = hPad, top = 40.dp, bottom = 26.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Illustration with soft glow
-                    Box(
-                        modifier = Modifier.size(illustration + 40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(vc.artGlow, vc.artGlow.copy(alpha = 0f))
-                                    ),
-                                    CircleShape
-                                )
-                        )
-                        Image(
-                            painter = painterResource(R.drawable.verify_email),
-                            contentDescription = stringResource(R.string.verify_cd_icon),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .size(illustration)
-                                .offset(y = floatY.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.height(4.dp))
-
                     Text(
                         text = buildAnnotatedString {
                             withStyle(SpanStyle(color = vc.ink, fontWeight = FontWeight.ExtraBold)) {
@@ -934,7 +846,8 @@ private fun NagpurPulseLoadingOverlay(
 internal fun SignupEmailAlreadyUsedDialog(
     onGoToLogin: () -> Unit,
     onTryDifferentEmail: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    email: String = ""
 ) {
     val vc = rememberVerifyPalette()
     androidx.compose.ui.window.Dialog(
