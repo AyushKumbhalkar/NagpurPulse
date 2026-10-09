@@ -28,8 +28,14 @@ class ChatDraftStore @Inject constructor(
     private fun key(userId: String, conversationId: String) = "$PREFIX$userId:$conversationId"
 
     private fun load(): Map<String, String> =
-        prefs.all.mapNotNull { (k, v) ->
-            if (k.startsWith(PREFIX) && v is String && v.isNotBlank()) k to v else null
+        prefs.all.entries.mapNotNull { entry ->
+            val key = entry.key
+            val value = entry.value
+            if (key.startsWith(PREFIX) && value is String && value.isNotBlank()) {
+                key to value
+            } else {
+                null
+            }
         }.toMap()
 
     fun get(userId: String, conversationId: String): String =
