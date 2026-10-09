@@ -858,361 +858,114 @@ internal fun SignupEmailAlreadyUsedDialog(
             dismissOnClickOutside = true
         )
     ) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            // Keep the same modal frame family as the Verify Email dialog.
-            // The foreground is a real Column layout: no child is vertically
-            // positioned with offsets, so text can never be covered by a button.
-            val popupWidth = maxWidth * 0.86f
-            val popupHeight = maxHeight * 0.74f
-            val horizontalPadding = minOf(popupWidth * 0.062f, 26.dp)
-            val illustrationSize = minOf(
-                popupWidth * 0.42f,
-                popupHeight * 0.23f
-            )
-            val compactWidth = popupWidth < 330.dp
-            val compactHeight = popupHeight < 620.dp
-            val titleSize = when {
-                compactWidth -> 28.sp
-                compactHeight -> 29.sp
-                else -> 31.sp
-            }
-            val bodySize = if (compactWidth || compactHeight) 15.sp else 16.sp
-            val bodyLineHeight = if (compactWidth || compactHeight) 21.sp else 22.sp
-            val contentGap = if (compactHeight) 12.dp else 16.dp
-            val actionGap = if (compactHeight) 20.dp else 24.dp
+        BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val cardShape = RoundedCornerShape(32.dp)
+            val cardWidth = minOf(maxWidth * 0.92f, 400.dp)
+            val compactWidth = cardWidth < 330.dp
+            val hPad = if (compactWidth) 18.dp else 24.dp
 
             Box(
-                modifier = Modifier
-                    .width(popupWidth)
-                    .height(popupHeight)
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(vc.card)
+                Modifier.width(cardWidth).heightIn(max = maxHeight * 0.92f)
+                    .clip(cardShape).background(vc.card)
             ) {
-                // BACKGROUND LAYER: these decorations never participate in the
-                // foreground Column's measurement or push its content.
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(popupHeight * 0.19f)
-                        .align(Alignment.TopCenter)
-                ) {
-                    val fill = Path().apply {
-                        moveTo(size.width * 0.48f, 0f)
-                        cubicTo(
-                            size.width * 0.66f, size.height * 0.08f,
-                            size.width * 0.80f, size.height * 0.04f,
-                            size.width, size.height * 0.30f
-                        )
-                        lineTo(size.width, 0f)
-                        close()
-                    }
-                    drawPath(
-                        fill,
-                        brush = SolidColor(vc.artFill)
-                    )
-
-                    val line = Path().apply {
-                        moveTo(size.width * 0.60f, 0f)
-                        cubicTo(
-                            size.width * 0.74f, size.height * 0.13f,
-                            size.width * 0.87f, size.height * 0.08f,
-                            size.width, size.height * 0.36f
-                        )
-                    }
-                    drawPath(
-                        line,
-                        brush = SolidColor(vc.artStroke),
-                        style = Stroke(
-                            width = (popupWidth * 0.0027f).toPx()
-                        )
-                    )
-                }
-
-                Image(
-                    painter = painterResource(R.drawable.transparent_peach_wave_footer_overlay),
-                    contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(2048f / 682f)
-                        .align(Alignment.BottomCenter)
+                Box(
+                    Modifier.fillMaxWidth().height(5.dp).align(Alignment.TopCenter)
+                        .background(Brush.horizontalGradient(listOf(vc.gradientStart, vc.gradientEnd)))
                 )
-
-                // FOREGROUND LAYER.
-                // Scroll is only an overflow safety net for large font/display
-                // scaling. On normal screens the complete content fits without
-                // scrolling.
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(
-                            start = horizontalPadding,
-                            end = horizontalPadding,
-                            top = 42.dp,
-                            bottom = 18.dp
-                        ),
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                        .padding(start = hPad, end = hPad, top = 44.dp, bottom = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.email_alert),
-                        contentDescription = stringResource(R.string.used_cd_icon),
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(illustrationSize)
-                    )
-
-                    Spacer(Modifier.height(contentGap))
-
                     Text(
                         text = buildAnnotatedString {
-                            withStyle(
-                                SpanStyle(
-                                    color = vc.ink,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            ) {
+                            withStyle(SpanStyle(color = vc.ink, fontWeight = FontWeight.ExtraBold)) {
                                 append(stringResource(R.string.used_title_ink) + " ")
                             }
-                            withStyle(
-                                SpanStyle(
-                                    color = vc.orange,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            ) {
+                            withStyle(SpanStyle(color = vc.orange, fontWeight = FontWeight.ExtraBold)) {
                                 append(stringResource(R.string.used_title_accent))
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = titleSize,
-                        lineHeight = if (compactWidth) 33.sp else 36.sp,
+                        modifier = Modifier.fillMaxWidth().semantics { heading() },
+                        fontSize = if (compactWidth) 26.sp else 29.sp,
+                        lineHeight = 34.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 2
                     )
-
-                    Spacer(Modifier.height(contentGap))
-
-                    Text(
-                        text = stringResource(R.string.used_body),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = vc.muted,
-                        fontSize = bodySize,
-                        lineHeight = bodyLineHeight,
-                        textAlign = TextAlign.Center
-                    )
-
-                    // The description is a normal Column child. This fixed
-                    // spacing guarantees it is completely measured before the
-                    // primary action can begin.
-                    Spacer(Modifier.height(actionGap))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(60.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFFFF941F), Color(0xFFFF3D1F))
-                                )
-                            )
-                            .clickable(
-                                role = Role.Button,
-                                onClick = onGoToLogin
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    if (email.isNotBlank()) {
+                        Spacer(Modifier.height(14.dp))
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                            Modifier.clip(RoundedCornerShape(50)).background(vc.orangeSoft)
+                                .border(1.dp, vc.pillBorder, RoundedCornerShape(50))
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.foundation.Canvas(
-                                modifier = Modifier.size(30.dp)
-                            ) {
-                                val w = size.width
-                                val h = size.height
-                                val stroke = (w * 0.11f).coerceAtLeast(1.5f)
-
-                                drawRoundRect(
-                                    color = Color.White,
-                                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.52f, h * 0.10f),
-                                    size = androidx.compose.ui.geometry.Size(w * 0.38f, h * 0.80f),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.05f),
-                                    style = Stroke(
-                                        width = stroke
-                                    )
-                                )
-                                drawLine(
-                                    color = Color.White,
-                                    start = androidx.compose.ui.geometry.Offset(w * 0.08f, h * 0.50f),
-                                    end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
-                                    strokeWidth = stroke,
-                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                )
-                                drawLine(
-                                    color = Color.White,
-                                    start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.33f),
-                                    end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
-                                    strokeWidth = stroke,
-                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                )
-                                drawLine(
-                                    color = Color.White,
-                                    start = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.67f),
-                                    end = androidx.compose.ui.geometry.Offset(w * 0.64f, h * 0.50f),
-                                    strokeWidth = stroke,
-                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
-                                )
-                            }
-
-                            Spacer(Modifier.width(10.dp))
-
+                            Icon(Icons.Filled.Email, null, tint = vc.orange, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                stringResource(R.string.used_go_login),
-                                color = Color.White,
-                                fontSize = if (compactWidth) 19.sp else 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(Modifier.width(10.dp))
-
-                            Icon(
-                                Icons.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
+                                email, Modifier.weight(1f, fill = false), color = vc.ink, fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        stringResource(R.string.used_body),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = vc.muted, fontSize = 15.sp, lineHeight = 22.sp, textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(24.dp))
 
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(60.dp))
-                            .background(vc.fieldIdle)
-                            .border(
-                                width = 1.dp,
-                                color = vc.orangeLine,
-                                shape = RoundedCornerShape(60.dp)
+                        Modifier.fillMaxWidth().height(56.dp)
+                            .shadow(10.dp, RoundedCornerShape(50), ambientColor = Color(0x66FF5A1F), spotColor = Color(0x99FF5A1F))
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.horizontalGradient(listOf(vc.gradientStart, vc.gradientEnd)))
+                            .pressScale(onClick = onGoToLogin)
+                            .semantics { role = Role.Button },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            Text(
+                                stringResource(R.string.used_go_login), color = Color.White,
+                                fontSize = if (compactWidth) 18.sp else 20.sp, fontWeight = FontWeight.Bold
                             )
-                            .clickable(
-                                role = Role.Button,
-                                onClick = onTryDifferentEmail
-                            ),
+                            Spacer(Modifier.width(10.dp))
+                            Icon(Icons.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Box(
+                        Modifier.fillMaxWidth().height(52.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(vc.fieldIdle)
+                            .border(1.dp, vc.orangeLine, RoundedCornerShape(50))
+                            .pressScale(onClick = onTryDifferentEmail)
+                            .semantics { role = Role.Button },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            stringResource(R.string.used_try_different),
-                            color = vc.ink,
-                            fontSize = if (compactWidth) 18.sp else 19.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1
+                            stringResource(R.string.used_try_different), color = vc.ink,
+                            fontSize = if (compactWidth) 16.sp else 17.sp, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center, maxLines = 1
                         )
                     }
                 }
 
-                // 44–48dp accessible touch target; the X itself stays visually
-                // compact and is kept above the artwork/content.
+                // 48dp touch target, 34dp visual.
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 10.dp, end = 10.dp)
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(vc.closeBg)
-                        .clickable(onClick = onDismiss),
+                    Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 8.dp).size(48.dp)
+                        .clip(CircleShape).pressScale(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.cd_close),
-                        tint = vc.iconNeutral,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  HEADLINE + SMALL HELPERS (unchanged)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** U6: scrim + circle that pops in, then a tick that draws itself. */
-@Composable
-internal fun SignupSuccessOverlay() {
-    val vc = rememberVerifyPalette()
-    val reducedMotion = rememberReduceMotion()
-    val pop = remember { Animatable(if (reducedMotion) 1f else 0.6f) }
-    val tick = remember { Animatable(if (reducedMotion) 1f else 0f) }
-    LaunchedEffect(Unit) {
-        if (reducedMotion) pop.snapTo(1f)
-        else pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 400f))
-    }
-    LaunchedEffect(Unit) {
-        if (reducedMotion) tick.snapTo(1f) else {
-            delay(160L)
-            tick.animateTo(1f, tween(420, easing = FastOutSlowInEasing))
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(vc.scrim)
-            // swallow touches so nothing underneath can be tapped during the moment
-            .pointerInput(Unit) { detectTapGestures { } },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .graphicsLayer {
-                        scaleX = pop.value
-                        scaleY = pop.value
-                    }
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(vc.gradientStart, vc.gradientEnd))),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.foundation.Canvas(modifier = Modifier.size(52.dp)) {
-                    val w = size.width
-                    val h = size.height
-                    val a = Offset(w * 0.10f, h * 0.55f)
-                    val b = Offset(w * 0.38f, h * 0.82f)
-                    val c = Offset(w * 0.92f, h * 0.22f)
-                    val t = tick.value
-                    val stroke = 5.dp.toPx()
-                    // first leg 0..0.4, second leg 0.4..1
-                    val first = (t / 0.4f).coerceIn(0f, 1f)
-                    val second = ((t - 0.4f) / 0.6f).coerceIn(0f, 1f)
-                    drawLine(
-                        Color.White, a, Offset(a.x + (b.x - a.x) * first, a.y + (b.y - a.y) * first),
-                        strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round
-                    )
-                    if (second > 0f) {
-                        drawLine(
-                            Color.White, b, Offset(b.x + (c.x - b.x) * second, b.y + (c.y - b.y) * second),
-                            strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(vc.orangeSoft), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Filled.Close, stringResource(R.string.cd_close),
+                            tint = vc.iconNeutral, modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.signup_success_title),
-                color = vc.ink,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-            )
         }
-    }
-}
