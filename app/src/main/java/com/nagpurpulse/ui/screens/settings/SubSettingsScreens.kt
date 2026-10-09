@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Fingerprint
@@ -91,18 +93,35 @@ fun IncognitoSettingsScreen(
             ) {
                 item {
                     Column(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Surface).padding(18.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Brush.verticalGradient(listOf(PurpleNight.copy(alpha = 0.14f), Surface)))
+                            .border(1.dp, PurpleNight.copy(alpha = 0.28f), RoundedCornerShape(20.dp))
+                            .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        GlowIcon(Icons.Filled.VisibilityOff, PurpleNight, active = state.incognitoMode, size = 52.dp)
-                        Spacer(Modifier.height(4.dp))
+                        GlowIcon(Icons.Filled.VisibilityOff, PurpleNight, active = state.incognitoMode, size = 56.dp)
+                        Spacer(Modifier.height(2.dp))
                         StatusPill(if (state.incognitoMode) "Incognito is on" else "Incognito is off", if (state.incognitoMode) PurpleNight else TertiaryText)
-                        Spacer(Modifier.height(8.dp))
-                        Text("What Incognito means", color = PrimaryText, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(12.dp))
+                        Text("Browse with a lighter footprint", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Spacer(Modifier.height(6.dp))
                         Text(
-                            "Incognito currently saves your preference. It does not automatically anonymize posts or comments, hide your identity from moderators, or guarantee invisibility. Use Privacy & Safety for the individual visibility controls.",
-                            color = SecondaryText, fontSize = 13.sp
+                            "Incognito saves your preference to your account. It's a comfort setting, not a guarantee of invisibility.",
+                            color = SecondaryText, fontSize = 13.sp, lineHeight = 19.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                    }
+                }
+                item { SectionHeader("GOOD TO KNOW") }
+                item {
+                    SettingsGroup {
+                        IncognitoFact(Icons.Filled.Check, GreenSuccess, "What it does", "Saves your incognito preference so it follows you across devices.")
+                        SettingsDivider()
+                        IncognitoFact(Icons.Filled.Close, RedAlert, "What it doesn't do", "It doesn't anonymize posts or comments, or hide you from moderators.")
+                        SettingsDivider()
+                        IncognitoFact(Icons.Filled.Security, BlueInfo, "Want more control?", "Use Privacy & Safety for individual visibility controls.")
                     }
                 }
                 item { SectionHeader("INCOGNITO STATUS") }
@@ -221,7 +240,8 @@ fun SecuritySettingsScreen(
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { if (!state.isSendingReset) showPasswordDialog = false },
-            title = { Text("Reset password", color = PrimaryText) },
+            icon = { Icon(Icons.Filled.Email, null, tint = BlueInfo) },
+            title = { Text("Reset password", color = PrimaryText, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("We'll send password-reset instructions to your email address.", color = SecondaryText)
@@ -270,13 +290,15 @@ fun SecuritySettingsScreen(
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { if (!state.isChangingPassword) showCurrentPasswordDialog = false },
-            title = { Text("Change password", color = PrimaryText) },
+            icon = { Icon(Icons.Filled.Lock, null, tint = OrangePrimary) },
+            title = { Text("Change password", color = PrimaryText, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Confirm your current password, then choose a new one.", color = SecondaryText)
-                    OutlinedTextField(currentPassword, { currentPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = PrimaryText, unfocusedTextColor = PrimaryText, cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Background, unfocusedContainerColor = Background), label = { Text("Current password") }, singleLine = true, visualTransformation = if (showCurrentPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showCurrentPassword = !showCurrentPassword }) { Icon(if (showCurrentPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
-                    OutlinedTextField(newPassword, { newPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = PrimaryText, unfocusedTextColor = PrimaryText, cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Background, unfocusedContainerColor = Background), label = { Text("New password (8+ characters)") }, singleLine = true, visualTransformation = if (showNewPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showNewPassword = !showNewPassword }) { Icon(if (showNewPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
-                    OutlinedTextField(confirmPassword, { confirmPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = PrimaryText, unfocusedTextColor = PrimaryText, cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Background, unfocusedContainerColor = Background), label = { Text("Confirm new password") }, singleLine = true, visualTransformation = if (showConfirmPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) { Icon(if (showConfirmPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
+                    PasswordField(currentPassword, { currentPassword = it }, "Current password", showCurrentPassword) { showCurrentPassword = !showCurrentPassword }
+                    PasswordField(newPassword, { newPassword = it }, "New password (8+ characters)", showNewPassword) { showNewPassword = !showNewPassword }
+                    PasswordStrengthMeter(newPassword)
+                    PasswordField(confirmPassword, { confirmPassword = it }, "Confirm new password", showConfirmPassword, isError = confirmPassword.isNotEmpty() && confirmPassword != newPassword) { showConfirmPassword = !showConfirmPassword }
                 }
             },
             confirmButton = { TextButton(enabled = !state.isChangingPassword, onClick = { vm.changePassword(currentPassword, newPassword, confirmPassword); showCurrentPasswordDialog = false; currentPassword = ""; newPassword = ""; confirmPassword = "" }) { Text(if (state.isChangingPassword) "Updating…" else "Change password", color = OrangePrimary) } },
@@ -294,7 +316,8 @@ fun SecuritySettingsScreen(
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { if (!state.isSigningOutEverywhere) showSignOutEverywhereDialog = false },
-            title = { Text("Sign out everywhere?", color = PrimaryText) },
+            icon = { Icon(Icons.Filled.Logout, null, tint = RedAlert) },
+            title = { Text("Sign out everywhere?", color = PrimaryText, fontWeight = FontWeight.Bold) },
             text = { Text("This revokes your sign-in sessions on other devices too. You may need to sign in again on this device.", color = SecondaryText) },
             confirmButton = { TextButton(enabled = !state.isSigningOutEverywhere, onClick = { vm.signOutEverywhere { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Login.route) { popUpTo(navController.graph.id) { inclusive = true } } }; showSignOutEverywhereDialog = false }) { Text(if (state.isSigningOutEverywhere) "Signing out…" else "Sign out everywhere", color = RedAlert) } },
             dismissButton = { TextButton(onClick = { showSignOutEverywhereDialog = false }) { Text("Cancel", color = SecondaryText) } },
@@ -456,6 +479,97 @@ private fun SecurityCheckupCard(lockOn: Boolean, lockAvailable: Boolean) {
                 color = TertiaryText,
                 fontSize = 11.sp
             )
+        }
+    }
+}
+
+
+// ── Shared pieces for the sub-settings screens ─────────────────────────────────────
+
+@Composable
+private fun settingsFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = OrangePrimary,
+    unfocusedBorderColor = Divider,
+    errorBorderColor = RedAlert,
+    focusedTextColor = PrimaryText,
+    unfocusedTextColor = PrimaryText,
+    cursorColor = OrangePrimary,
+    focusedLabelColor = OrangePrimary,
+    unfocusedLabelColor = SecondaryText,
+    errorLabelColor = RedAlert,
+    focusedContainerColor = Background,
+    unfocusedContainerColor = Background,
+    errorContainerColor = Background
+)
+
+@Composable
+private fun PasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    visible: Boolean,
+    isError: Boolean = false,
+    onToggleVisible: () -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = settingsFieldColors(),
+        isError = isError,
+        label = { Text(label) },
+        singleLine = true,
+        visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None
+        else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = onToggleVisible) {
+                Icon(
+                    if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = if (visible) "Hide password" else "Show password",
+                    tint = SecondaryText
+                )
+            }
+        }
+    )
+}
+
+/** Gentle, non-judgmental strength guide: nothing shows until the person starts typing. */
+@Composable
+private fun PasswordStrengthMeter(password: String) {
+    if (password.isEmpty()) return
+    val score = listOf(
+        password.length >= 8,
+        password.length >= 12,
+        password.any { it.isDigit() } && password.any { it.isLetter() },
+        password.any { !it.isLetterOrDigit() } || (password.any { it.isUpperCase() } && password.any { it.isLowerCase() })
+    ).count { it }
+    val (label, color) = when (score) {
+        0, 1 -> "Keep going" to RedAlert
+        2 -> "Getting there" to YellowWarn
+        3 -> "Strong" to GreenSuccess
+        else -> "Excellent" to GreenSuccess
+    }
+    Column {
+        SegmentMeter(filled = score.coerceAtLeast(1), total = 4, color = color)
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun IncognitoFact(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, title: String, body: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(tint.copy(alpha = 0.12f)), Alignment.Center) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = PrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(body, color = SecondaryText, fontSize = 12.sp, lineHeight = 17.sp)
         }
     }
 }
