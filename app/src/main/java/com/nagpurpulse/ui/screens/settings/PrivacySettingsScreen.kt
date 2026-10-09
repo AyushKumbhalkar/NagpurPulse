@@ -1,6 +1,7 @@
 package com.nagpurpulse.ui.screens.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nagpurpulse.ui.components.pressScale
+import com.nagpurpulse.ui.components.rememberHaptic
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -112,6 +115,28 @@ class PrivacySettingsViewModel @Inject constructor(
         persistLatest()
     }
 
+    /** One-tap visibility presets. Incognito is left exactly as the user set it. */
+    fun applyPreset(preset: String) {
+        val cur = _state.value
+        val updated = when (preset) {
+            "open" -> cur.copy(
+                showProfile = true, showOnlineStatus = true, allowDms = true,
+                hideComments = false, hidePosts = false, hideFromSearch = false, errorMessage = null
+            )
+            "balanced" -> cur.copy(
+                showProfile = true, showOnlineStatus = false, allowDms = true,
+                hideComments = false, hidePosts = false, hideFromSearch = true, errorMessage = null
+            )
+            "private" -> cur.copy(
+                showProfile = true, showOnlineStatus = false, allowDms = false,
+                hideComments = true, hidePosts = true, hideFromSearch = true, errorMessage = null
+            )
+            else -> return
+        }
+        _state.value = updated
+        persistLatest()
+    }
+
     private fun persistLatest() {
         val userId = authRepository.currentUserId ?: run {
             _state.value = _state.value.copy(errorMessage = "Please sign in again to save privacy settings.")
@@ -163,6 +188,7 @@ fun PrivacySettingsScreen(
     vm: PrivacySettingsViewModel = hiltViewModel()
 ) {
     val s by vm.state.collectAsState()
+    val haptic = rememberHaptic()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(s.errorMessage) {
         s.errorMessage?.let {
@@ -175,28 +201,17 @@ fun PrivacySettingsScreen(
         containerColor = Background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            Column(
-                modifier = Modifier
-                    .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 120f))
-                    .statusBarsPadding()
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text("Privacy & Safety", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Control what others can see", color = SecondaryText, fontSize = 12.sp)
-                    }
+            SettingsTopBar(
+                title = "Privacy & Safety",
+                subtitle = "Control what others can see",
+                onBack = { navController.popBackStack() },
+                trailing = {
                     if (s.isSaving) {
                         CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = OrangePrimary)
+                        Spacer(Modifier.width(12.dp))
                     }
                 }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp)
-            }
+            )
         }
     ) { padding ->
         when {
@@ -227,17 +242,9 @@ fun PrivacySettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                            .background(Surface).padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.PrivacyTip, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(32.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Your privacy, your choice", color = PrimaryText, fontWeight = FontWeight.SemiBold)
-                            Text("Only options backed by your account profile are shown here.", color = SecondaryText, fontSize = 12.sp)
-                        }
+                    PrivacyMeterCard(s) { preset ->
+                        haptic.selection()
+                        vm.applyPreset(preset)
                     }
                 }
                 item { SectionHeader("PROFILE VISIBILITY") }
@@ -281,5 +288,85 @@ fun PrivacySettingsScreen(
                 }
             }
         }
+    }
+}
+
+
+// ── Visibility meter + presets ───────────────────────────────────────────────
+
+private fun restrictiveCount(s: PrivacyUiState): Int = listOf(
+    !s.showProfile, !s.showOnlineStatus, !s.allowDms, s.hideFromSearch, s.hidePosts, s.hideComments
+).count { it }
+
+@Composable
+private fun PrivacyMeterCard(s: PrivacyUiState, onPreset: (String) -> Unit) {
+    val count = restrictiveCount(s)
+    val band = when {
+        count <= 1 -> "open"
+        count <= 3 -> "balanced"
+        else -> "private"
+    }
+    val color = when (band) {
+        "open" -> BlueInfo
+        "balanced" -> GreenSuccess
+        else -> PurpleNight
+    }
+    val blurb = when (band) {
+        "open" -> "You're easy to find and talk to. Great for meeting your neighbours."
+        "balanced" -> "A healthy mix of being visible and staying in control."
+        else -> "You're keeping a low profile. You decide what gets shared."
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Surface)
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(18.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GlowIcon(Icons.Filled.PrivacyTip, color, size = 44.dp)
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Your visibility", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Spacer(Modifier.width(8.dp))
+                    StatusPill(band.replaceFirstChar { it.uppercase() }, color)
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(blurb, color = SecondaryText, fontSize = 12.sp)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        SegmentMeter(filled = count, total = 6, color = color)
+        Spacer(Modifier.height(14.dp))
+        Text("QUICK PRESETS", color = TertiaryText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PresetChip("Open", band == "open", Modifier.weight(1f)) { onPreset("open") }
+            PresetChip("Balanced", band == "balanced", Modifier.weight(1f)) { onPreset("balanced") }
+            PresetChip("Private", band == "private", Modifier.weight(1f)) { onPreset("private") }
+        }
+    }
+}
+
+@Composable
+private fun PresetChip(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) OrangePrimary.copy(0.16f) else SurfaceAlt)
+            .border(1.dp, if (selected) OrangePrimary.copy(0.6f) else Divider, RoundedCornerShape(50))
+            .pressScale(0.96f, onClick)
+            .padding(vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = if (selected) OrangePrimary else PrimaryText,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
     }
 }

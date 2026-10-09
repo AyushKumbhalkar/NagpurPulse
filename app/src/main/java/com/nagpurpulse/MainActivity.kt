@@ -26,6 +26,7 @@ import com.nagpurpulse.ui.preferences.PreferenceManager
 import com.nagpurpulse.ui.screens.settings.utilis.LockScreen
 import com.nagpurpulse.ui.theme.NagpurPulseTheme
 import com.nagpurpulse.ui.theme.ThemeManager
+import com.nagpurpulse.ui.preferences.WellbeingManager
 import com.nagpurpulse.ui.theme.ThemeTransitionOverlay
 import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.flow.collect
@@ -87,10 +88,13 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        val amoledMode = getSharedPreferences(
-            "theme_prefs",
-            MODE_PRIVATE
-        ).getBoolean("amoled_mode", false)
+        val themePrefs = getSharedPreferences("theme_prefs", MODE_PRIVATE)
+        val followSystemTheme = themePrefs.getBoolean("follow_system", false)
+        val systemIsDark = (resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val amoledMode =
+            if (followSystemTheme) systemIsDark else themePrefs.getBoolean("amoled_mode", false)
 
         if (amoledMode) {
             setTheme(R.style.Theme_NagpurPulse_Dark)
@@ -111,7 +115,8 @@ class MainActivity : FragmentActivity() {
 
         // Load saved theme BEFORE Compose starts
         val savedTheme = userPreferencesRepository.getSavedTheme(this)
-        ThemeManager.isLightTheme = !savedTheme
+        ThemeManager.followSystem = followSystemTheme
+        ThemeManager.isLightTheme = if (followSystemTheme) !systemIsDark else !savedTheme
 
         android.util.Log.d(
             "THEME_STARTUP",
@@ -151,7 +156,12 @@ class MainActivity : FragmentActivity() {
             }
             var authenticated by remember { mutableStateOf(!biometricEnabled) }
 
-            NagpurPulseTheme(darkTheme = !ThemeManager.isLightTheme) {
+            NagpurPulseTheme(
+                darkTheme = if (ThemeManager.followSystem)
+                    androidx.compose.foundation.isSystemInDarkTheme()
+                else
+                    !ThemeManager.isLightTheme
+            ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         if (!authenticated) {
@@ -230,9 +240,11 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         presenceRepository.start()
+        WellbeingManager.start(this)
     }
 
     override fun onStop() {
+        WellbeingManager.stop()
         presenceRepository.stop()
         super.onStop()
     }

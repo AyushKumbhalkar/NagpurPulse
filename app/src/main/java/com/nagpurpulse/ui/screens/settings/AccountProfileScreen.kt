@@ -5,6 +5,9 @@ package com.nagpurpulse.ui.screens.settings
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.nagpurpulse.ui.screens.profile.RandomImages
+import com.nagpurpulse.ui.screens.profile.Completeness
+import com.nagpurpulse.ui.screens.profile.CompletenessStep
+import com.nagpurpulse.ui.screens.profile.ProfileLevels
 import com.nagpurpulse.ui.preferences.DensityManager
 import androidx.compose.material.icons.automirrored.filled.Message
 import android.net.Uri
@@ -436,6 +439,7 @@ fun AccountProfileScreen(
 ) {
     val s       = vm.state.collectAsState().value
     val context = LocalContext.current
+    val haptic  = rememberHaptic()
     var avatarUri by remember { mutableStateOf<Uri?>(null) }
     var pendingAvatarUrl by remember {
         mutableStateOf<String?>(null)
@@ -654,7 +658,7 @@ fun AccountProfileScreen(
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text("Incognito User", color = SecondaryText, fontSize = 12.sp)
+                            Text("u/${s.profile?.username.orEmpty()}", color = SecondaryText, fontSize = 12.sp)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.LocationOn, null, tint = OrangePrimary, modifier = Modifier.size(12.dp))
                                 Text(
@@ -667,13 +671,16 @@ fun AccountProfileScreen(
                                 )
                             }
                             Spacer(Modifier.height(6.dp))
+                            val heroLevel = ProfileLevels.forKarma(s.profile?.karma ?: 0)
                             Box(Modifier.clip(RoundedCornerShape(12.dp)).background(OrangePrimary.copy(0.15f)).padding(horizontal = 9.dp, vertical = 3.dp)) {
-                                Text("Pulse Member", color = OrangePrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                Text("${heroLevel.emoji} ${heroLevel.title}", color = OrangePrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
                 }
             }
+
+            item { ProfileStrengthCard(s) }
 
             // PROFILE INFORMATION section
             item { SectionHeader("PROFILE INFORMATION") }
@@ -693,10 +700,17 @@ fun AccountProfileScreen(
 
                     SettingsRow(
                         "Username",
-                        "u/${s.profile?.username ?: ""}",
+                        "u/${s.profile?.username ?: ""} · tap to copy",
                         Icons.Filled.AlternateEmail,
                         BlueInfo
-                    ) {}
+                    ) {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(
+                            android.content.ClipData.newPlainText("username", s.profile?.username ?: "")
+                        )
+                        haptic.success()
+                        android.widget.Toast.makeText(context, "Username copied", android.widget.Toast.LENGTH_SHORT).show()
+                    }
 
                     SettingsDivider()
 
@@ -1662,5 +1676,50 @@ private fun AvatarManagementCard(
                 }
             }
         }
+    }
+}
+
+
+// ── Profile strength ─────────────────────────────────────────────────────────
+
+@Composable
+private fun ProfileStrengthCard(s: AccountProfileUiState) {
+    val strength = Completeness(
+        listOf(
+            CompletenessStep("avatar", "Add a profile photo", !s.avatarUrl.isNullOrBlank()),
+            CompletenessStep("name", "Add your display name", s.displayName.isNotBlank()),
+            CompletenessStep("bio", "Write a one-line bio", s.bio.isNotBlank()),
+            CompletenessStep("location", "Set your location", s.location.isNotBlank()),
+            CompletenessStep("areas", "Pick your Nagpur areas", !s.profile?.areas.isNullOrEmpty())
+        )
+    )
+    val color = if (strength.isComplete) GreenSuccess else OrangePrimary
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Surface)
+            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Profile strength",
+                color = PrimaryText,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Text("${strength.percent}%", color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+        Spacer(Modifier.height(10.dp))
+        SegmentMeter(filled = strength.doneCount, total = strength.total, color = color)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            strength.next?.let { "Next step: ${it.label.replaceFirstChar { c -> c.lowercase() }}" }
+                ?: "Profile complete 🎉 You're easy to recognise around Nagpur.",
+            color = SecondaryText,
+            fontSize = 12.sp
+        )
     }
 }

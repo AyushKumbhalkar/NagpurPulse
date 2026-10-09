@@ -73,6 +73,8 @@ fun sendLocalNotification(
         },
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
+    // Respect "Pause notifications" and "Quiet hours" for every scheduled update.
+    if (NotifPrefsHelper.isSilencedNow(context)) return
     val notification = NotificationCompat.Builder(context, channelId)
         .setSmallIcon(safeNotifIcon())
         .setContentTitle(title)
@@ -178,10 +180,11 @@ object ScheduledPushManager {
         createNotificationChannels(context)
         if (!NotifPrefsHelper.isPushEnabled(context)) return
         val wm = WorkManager.getInstance(context)
-        enqueue<MorningDigestWorker>(wm,        "morning_digest",  8,  0)
-        enqueue<AfternoonTrendingWorker>(wm,     "afternoon_trend", 13, 0)
-        enqueue<EveningCommunityWorker>(wm,      "evening_comm",    18, 0)
-        enqueue<NightAlertsSummaryWorker>(wm,    "night_summary",   22, 0)
+        fun hm(slot: String) = NotifPrefsHelper.scheduledMinutes(context, slot).let { it / 60 to it % 60 }
+        enqueue<MorningDigestWorker>(wm,        "morning_digest",  hm(NotifPrefsHelper.SLOT_MORNING).first,  hm(NotifPrefsHelper.SLOT_MORNING).second)
+        enqueue<AfternoonTrendingWorker>(wm,     "afternoon_trend", hm(NotifPrefsHelper.SLOT_TRENDING).first, hm(NotifPrefsHelper.SLOT_TRENDING).second)
+        enqueue<EveningCommunityWorker>(wm,      "evening_comm",    hm(NotifPrefsHelper.SLOT_EVENING).first,  hm(NotifPrefsHelper.SLOT_EVENING).second)
+        enqueue<NightAlertsSummaryWorker>(wm,    "night_summary",   hm(NotifPrefsHelper.SLOT_NIGHT).first,    hm(NotifPrefsHelper.SLOT_NIGHT).second)
     }
 
     fun cancelAll(context: Context) {

@@ -41,6 +41,7 @@ import com.nagpurpulse.data.repository.UserPreferencesRepository
 import com.nagpurpulse.data.repository.NotificationRepository
 import com.nagpurpulse.notifications.NotifPrefsHelper
 import com.nagpurpulse.notifications.ScheduledPushManager
+import com.nagpurpulse.ui.components.rememberHaptic
 import com.nagpurpulse.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -62,6 +63,15 @@ data class NotifSettingsState(
     val notifTrending:  Boolean = true,
     val notifCommunity: Boolean = true,
     val notifAlerts:    Boolean = true,
+    // Device-local extras: delivery times, pause and quiet hours (minutes after midnight)
+    val morningMin:     Int     = 8 * 60,
+    val trendingMin:    Int     = 13 * 60,
+    val eveningMin:     Int     = 18 * 60,
+    val nightMin:       Int     = 22 * 60,
+    val pausedUntil:    Long    = 0L,
+    val quietEnabled:   Boolean = false,
+    val quietStart:     Int     = 23 * 60,
+    val quietEnd:       Int     = 7 * 60,
     val isLoading:      Boolean = true,
     val errorMessage:   String? = null
 )
@@ -118,8 +128,9 @@ class NotifSettingsViewModel @Inject constructor(
                     isLoading = false
                 )
             }
-            _state.value = loaded
-            lastPersistedState = loaded
+            val withLocal = loaded.withLocalPrefs(appContext)
+            _state.value = withLocal
+            lastPersistedState = withLocal
         }
     }
 
@@ -203,6 +214,25 @@ class NotifSettingsViewModel @Inject constructor(
         }
     }
 
+    // ── Device-local controls (no backend round-trip) ──────────────────────────
+
+    fun setScheduledTime(slot: String, minutes: Int) {
+        NotifPrefsHelper.setScheduledMinutes(appContext, slot, minutes)
+        _state.value = _state.value.withLocalPrefs(appContext)
+        ScheduledPushManager.reschedule(appContext)
+    }
+
+    /** hours = 0 resumes notifications. */
+    fun pauseFor(hours: Int) {
+        NotifPrefsHelper.pauseFor(appContext, hours)
+        _state.value = _state.value.withLocalPrefs(appContext)
+    }
+
+    fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
+        NotifPrefsHelper.setQuietHours(appContext, enabled, startMinutes, endMinutes)
+        _state.value = _state.value.withLocalPrefs(appContext)
+    }
+
     private companion object {
         val SCHEDULED_FIELDS = setOf(
             "notif_push", "notif_digest", "notif_trending", "notif_community", "notif_alerts_summary"
@@ -247,27 +277,11 @@ fun NotifSettingsScreen(
         containerColor = Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Column(
-                Modifier
-                    .background(Brush.verticalGradient(listOf(Surface, Background), 0f, 120f))
-                    .statusBarsPadding()
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = PrimaryText)
-                    }
-                    Text(
-                        "Notifications",
-                        color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp)
-            }
+            SettingsTopBar(
+                title = "Notifications",
+                subtitle = "Stay in the loop, on your terms",
+                onBack = { navController.popBackStack() }
+            )
         }
     ) { pad ->
 
@@ -301,6 +315,8 @@ fun NotifSettingsScreen(
                     )
                 }
             }
+
+            item { NotifSummaryCard(state, hasPermission.value) }
 
             // ── Master push toggle ────────────────────────────────────────────
             item { SectionHeader("PUSH NOTIFICATIONS") }
@@ -343,18 +359,159 @@ fun NotifSettingsScreen(
             item { SectionHeader("SCHEDULED UPDATES") }
             item {
                 SettingsGroup {
-                    NotifToggleRow("Morning Digest",    "Top posts from Nagpur at 8:00 AM",         Icons.Filled.WbSunny,            YellowWarn,   state.notifDigest,    state.pushEnabled && hasPermission.value) { vm.toggle("notif_digest",          it) }
+                    NotifToggleRow("Morning Digest",    "Top posts from Nagpur at ${formatClock(state.morningMin)}",         Icons.Filled.WbSunny,            YellowWarn,   state.notifDigest,    state.pushEnabled && hasPermission.value) { vm.toggle("notif_digest",          it) }
                     SettingsDivider()
-                    NotifToggleRow("Trending Alert",    "What's hot in Nagpur at 1:00 PM",          Icons.Filled.Whatshot,           OrangePrimary, state.notifTrending, state.pushEnabled && hasPermission.value) { vm.toggle("notif_trending",        it) }
+                    NotifToggleRow("Trending Alert",    "What's hot in Nagpur at ${formatClock(state.trendingMin)}",          Icons.Filled.Whatshot,           OrangePrimary, state.notifTrending, state.pushEnabled && hasPermission.value) { vm.toggle("notif_trending",        it) }
                     SettingsDivider()
-                    NotifToggleRow("Evening Community", "City update at 6:00 PM",                   Icons.Filled.NightsStay,         PurpleNight,  state.notifCommunity, state.pushEnabled && hasPermission.value) { vm.toggle("notif_community",       it) }
+                    NotifToggleRow("Evening Community", "City update at ${formatClock(state.eveningMin)}",                   Icons.Filled.NightsStay,         PurpleNight,  state.notifCommunity, state.pushEnabled && hasPermission.value) { vm.toggle("notif_community",       it) }
                     SettingsDivider()
-                    NotifToggleRow("Night Alert Summary","Active alert summary at 10:00 PM",        Icons.Filled.NotificationsActive, RedAlert,    state.notifAlerts,    state.pushEnabled && hasPermission.value) { vm.toggle("notif_alerts_summary",  it) }
+                    NotifToggleRow("Night Alert Summary","Active alert summary at ${formatClock(state.nightMin)}",        Icons.Filled.NotificationsActive, RedAlert,    state.notifAlerts,    state.pushEnabled && hasPermission.value) { vm.toggle("notif_alerts_summary",  it) }
+                }
+            }
+
+            // ── Pause & quiet hours ───────────────────────────────────────────
+            item { SectionHeader("PAUSE & QUIET HOURS") }
+            item {
+                SettingsGroup {
+                    PauseRow(state.pausedUntil) { hours -> vm.pauseFor(hours) }
+                    SettingsDivider()
+                    NotifToggleRow(
+                        label   = "Quiet hours",
+                        sub     = if (state.quietEnabled)
+                            "Silent from ${formatClock(state.quietStart)} to ${formatClock(state.quietEnd)}"
+                        else "Mute pushes overnight so your sleep stays yours",
+                        icon    = Icons.Filled.Bedtime,
+                        color   = PurpleNight,
+                        checked = state.quietEnabled
+                    ) { on -> vm.setQuietHours(on, state.quietStart, state.quietEnd) }
+                    if (state.quietEnabled) {
+                        SettingsDivider()
+                        SettingsRowAction("Starts at", "Quiet hours begin", Icons.Filled.Schedule, PurpleNight, badge = formatClock(state.quietStart)) {
+                            pickTime(ctx, state.quietStart) { vm.setQuietHours(true, it, state.quietEnd) }
+                        }
+                        SettingsDivider()
+                        SettingsRowAction("Ends at", "Notifications resume", Icons.Filled.Schedule, PurpleNight, badge = formatClock(state.quietEnd)) {
+                            pickTime(ctx, state.quietEnd) { vm.setQuietHours(true, state.quietStart, it) }
+                        }
+                    }
+                }
+            }
+
+            // ── Delivery times ────────────────────────────────────────────────
+            item { SectionHeader("DELIVERY TIMES") }
+            item {
+                SettingsGroup {
+                    SettingsRowAction("Morning Digest", "Tap to choose when it arrives", Icons.Filled.WbSunny, YellowWarn, badge = formatClock(state.morningMin)) {
+                        pickTime(ctx, state.morningMin) { vm.setScheduledTime(NotifPrefsHelper.SLOT_MORNING, it) }
+                    }
+                    SettingsDivider()
+                    SettingsRowAction("Trending Alert", "Tap to choose when it arrives", Icons.Filled.Whatshot, OrangePrimary, badge = formatClock(state.trendingMin)) {
+                        pickTime(ctx, state.trendingMin) { vm.setScheduledTime(NotifPrefsHelper.SLOT_TRENDING, it) }
+                    }
+                    SettingsDivider()
+                    SettingsRowAction("Evening Community", "Tap to choose when it arrives", Icons.Filled.NightsStay, PurpleNight, badge = formatClock(state.eveningMin)) {
+                        pickTime(ctx, state.eveningMin) { vm.setScheduledTime(NotifPrefsHelper.SLOT_EVENING, it) }
+                    }
+                    SettingsDivider()
+                    SettingsRowAction("Night Alert Summary", "Tap to choose when it arrives", Icons.Filled.NotificationsActive, RedAlert, badge = formatClock(state.nightMin)) {
+                        pickTime(ctx, state.nightMin) { vm.setScheduledTime(NotifPrefsHelper.SLOT_NIGHT, it) }
+                    }
                 }
             }
 
             item { Spacer(Modifier.height(20.dp)) }
         }
+    }
+}
+
+private fun NotifSettingsState.withLocalPrefs(ctx: Context): NotifSettingsState = copy(
+    morningMin   = NotifPrefsHelper.scheduledMinutes(ctx, NotifPrefsHelper.SLOT_MORNING),
+    trendingMin  = NotifPrefsHelper.scheduledMinutes(ctx, NotifPrefsHelper.SLOT_TRENDING),
+    eveningMin   = NotifPrefsHelper.scheduledMinutes(ctx, NotifPrefsHelper.SLOT_EVENING),
+    nightMin     = NotifPrefsHelper.scheduledMinutes(ctx, NotifPrefsHelper.SLOT_NIGHT),
+    pausedUntil  = NotifPrefsHelper.pausedUntil(ctx),
+    quietEnabled = NotifPrefsHelper.isQuietHoursEnabled(ctx),
+    quietStart   = NotifPrefsHelper.quietStartMinutes(ctx),
+    quietEnd     = NotifPrefsHelper.quietEndMinutes(ctx)
+)
+
+/** 8:05 AM style label for minutes after midnight. */
+internal fun formatClock(minutes: Int): String {
+    val h24 = (minutes / 60) % 24
+    val m = minutes % 60
+    val h12 = if (h24 % 12 == 0) 12 else h24 % 12
+    return String.format(java.util.Locale.ENGLISH, "%d:%02d %s", h12, m, if (h24 < 12) "AM" else "PM")
+}
+
+private fun formatPausedUntil(untilMillis: Long): String {
+    val target = java.util.Calendar.getInstance().apply { timeInMillis = untilMillis }
+    val now = java.util.Calendar.getInstance()
+    val clock = formatClock(target.get(java.util.Calendar.HOUR_OF_DAY) * 60 + target.get(java.util.Calendar.MINUTE))
+    val sameDay = target.get(java.util.Calendar.YEAR) == now.get(java.util.Calendar.YEAR) &&
+        target.get(java.util.Calendar.DAY_OF_YEAR) == now.get(java.util.Calendar.DAY_OF_YEAR)
+    return if (sameDay) clock
+    else java.text.SimpleDateFormat("EEE", java.util.Locale.ENGLISH).format(target.time) + ", " + clock
+}
+
+private fun pickTime(ctx: Context, initialMinutes: Int, onPicked: (Int) -> Unit) {
+    android.app.TimePickerDialog(
+        ctx,
+        { _, hour, minute -> onPicked(hour * 60 + minute) },
+        initialMinutes / 60,
+        initialMinutes % 60,
+        false
+    ).show()
+}
+
+@Composable
+private fun PauseRow(pausedUntil: Long, onPick: (Int) -> Unit) {
+    val paused = pausedUntil > System.currentTimeMillis()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clip(CircleShape).background(BlueInfo.copy(0.12f)), Alignment.Center) {
+                Icon(Icons.Filled.NotificationsPaused, null, tint = BlueInfo, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Pause notifications", color = PrimaryText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                Text(
+                    if (paused) "Paused until ${formatPausedUntil(pausedUntil)}"
+                    else "Take a breather. Emergency alerts still come through.",
+                    color = if (paused) OrangePrimary else TertiaryText,
+                    fontSize = 12.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PausePill(if (paused) "Resume" else "Off", selected = !paused, modifier = Modifier.weight(1f)) { onPick(0) }
+            PausePill("8 hours", selected = false, modifier = Modifier.weight(1f)) { onPick(8) }
+            PausePill("1 day", selected = false, modifier = Modifier.weight(1f)) { onPick(24) }
+            PausePill("1 week", selected = false, modifier = Modifier.weight(1f)) { onPick(24 * 7) }
+        }
+    }
+}
+
+@Composable
+private fun PausePill(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) OrangePrimary.copy(0.16f) else SurfaceAlt)
+            .border(1.dp, if (selected) OrangePrimary.copy(0.6f) else Divider, RoundedCornerShape(50))
+            .clickable { onClick() }
+            .padding(vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = if (selected) OrangePrimary else PrimaryText,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
     }
 }
 
@@ -405,6 +562,7 @@ private fun NotifToggleRow(
     label: String, sub: String, icon: ImageVector, color: Color,
     checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit
 ) {
+    val haptic = rememberHaptic()
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -423,7 +581,7 @@ private fun NotifToggleRow(
         }
         Switch(
             modifier = Modifier.padding(start = 4.dp),
-            checked = checked, onCheckedChange = onCheckedChange, enabled = enabled,
+            checked = checked, onCheckedChange = { haptic.toggle(it); onCheckedChange(it) }, enabled = enabled,
             colors  = SwitchDefaults.colors(
                 checkedThumbColor            = Color.White,
                 checkedTrackColor            = color,
@@ -432,5 +590,61 @@ private fun NotifToggleRow(
                 disabledUncheckedTrackColor  = SurfaceAlt.copy(0.5f)
             )
         )
+    }
+}
+
+
+// ── Summary card ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun NotifSummaryCard(state: NotifSettingsState, hasPermission: Boolean) {
+    val on = state.pushEnabled && hasPermission
+    val paused = state.pausedUntil > System.currentTimeMillis()
+    val count = listOf(
+        state.notifReplies, state.notifMentions, state.notifMessages, state.notifUpvotes,
+        state.notifDigest, state.notifTrending, state.notifCommunity, state.notifAlerts
+    ).count { it }
+    val color = when {
+        !on -> TertiaryText
+        paused -> BlueInfo
+        else -> OrangePrimary
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Surface)
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(18.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        GlowIcon(
+            if (paused) Icons.Filled.NotificationsPaused else Icons.Filled.Notifications,
+            color,
+            active = on && !paused,
+            size = 44.dp
+        )
+        Spacer(Modifier.width(6.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                when {
+                    !on -> "Notifications are off"
+                    paused -> "Paused for now"
+                    else -> "You're in the loop"
+                },
+                color = PrimaryText,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            )
+            Text(
+                when {
+                    !on -> "Turn on push to hear about replies, mentions and city alerts."
+                    paused -> "We'll stay quiet until ${formatPausedUntil(state.pausedUntil)}."
+                    else -> "$count of 8 updates on" + if (state.quietEnabled) " · Quiet hours set" else ""
+                },
+                color = SecondaryText,
+                fontSize = 12.sp
+            )
+        }
     }
 }

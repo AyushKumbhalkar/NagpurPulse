@@ -10,6 +10,9 @@ object ThemeManager {
 
     var isLightTheme by mutableStateOf(true)
 
+    /** When true the app follows the device dark/light setting instead of [isLightTheme]. */
+    var followSystem by mutableStateOf(false)
+
     var animateThemeChange by mutableStateOf(false)
 
     var switchingToLight by mutableStateOf(true)

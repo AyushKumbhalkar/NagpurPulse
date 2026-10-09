@@ -55,19 +55,17 @@ fun IncognitoSettingsScreen(
         containerColor = Background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            Column(Modifier.background(Brush.verticalGradient(listOf(Surface, Background), 0f, 120f)).statusBarsPadding()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
+            SettingsTopBar(
+                title = "Incognito Mode",
+                subtitle = "Incognito is a preference, not guaranteed anonymity",
+                onBack = { navController.popBackStack() },
+                trailing = {
+                    if (state.isSaving) {
+                        CircularProgressIndicator(Modifier.size(20.dp), color = OrangePrimary, strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
                     }
-                    Column(Modifier.weight(1f)) {
-                        Text("Incognito Mode", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Incognito is a preference, not guaranteed anonymity", color = SecondaryText, fontSize = 12.sp)
-                    }
-                    if (state.isSaving) CircularProgressIndicator(Modifier.size(20.dp), color = OrangePrimary, strokeWidth = 2.dp)
                 }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp)
-            }
+            )
         }
     ) { padding ->
         if (state.isLoading) {
@@ -96,7 +94,9 @@ fun IncognitoSettingsScreen(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Surface).padding(18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Filled.VisibilityOff, contentDescription = null, tint = PurpleNight, modifier = Modifier.size(34.dp))
+                        GlowIcon(Icons.Filled.VisibilityOff, PurpleNight, active = state.incognitoMode, size = 52.dp)
+                        Spacer(Modifier.height(4.dp))
+                        StatusPill(if (state.incognitoMode) "Incognito is on" else "Incognito is off", if (state.incognitoMode) PurpleNight else TertiaryText)
                         Spacer(Modifier.height(8.dp))
                         Text("What Incognito means", color = PrimaryText, fontWeight = FontWeight.SemiBold)
                         Text(
@@ -105,7 +105,7 @@ fun IncognitoSettingsScreen(
                         )
                     }
                 }
-                item { SectionHeader("INCognito STATUS") }
+                item { SectionHeader("INCOGNITO STATUS") }
                 item {
                     SettingsGroup {
                         SettingsRowToggle(
@@ -217,7 +217,7 @@ fun SecuritySettingsScreen(
         AlertDialog(
             modifier = Modifier.border(
                 1.dp,
-                Color(0xFFFF6848).copy(alpha = 0.88f),
+                OrangePrimary.copy(alpha = 0.5f),
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { if (!state.isSendingReset) showPasswordDialog = false },
@@ -235,13 +235,13 @@ fun SecuritySettingsScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = OrangePrimary,
                             unfocusedBorderColor = Divider,
-                            focusedTextColor = Color(0xFFF7F3F5),
-                            unfocusedTextColor = Color(0xFFF7F3F5),
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText,
                             cursorColor = OrangePrimary,
                             focusedLabelColor = OrangePrimary,
                             unfocusedLabelColor = SecondaryText,
-                            focusedContainerColor = Color(0xFF201B22),
-                            unfocusedContainerColor = Color(0xFF201B22)
+                            focusedContainerColor = Background,
+                            unfocusedContainerColor = Background
                         )
                     )
                 }
@@ -256,9 +256,9 @@ fun SecuritySettingsScreen(
                 ) { Text(if (state.isSendingReset) "Sending…" else "Send reset email", color = OrangePrimary) }
             },
             dismissButton = { TextButton(onClick = { showPasswordDialog = false }) { Text("Cancel", color = SecondaryText) } },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = SurfaceAlt,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),)
     }
 
@@ -266,7 +266,7 @@ fun SecuritySettingsScreen(
         AlertDialog(
             modifier = Modifier.border(
                 1.dp,
-                Color(0xFFFF6848).copy(alpha = 0.88f),
+                OrangePrimary.copy(alpha = 0.5f),
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { if (!state.isChangingPassword) showCurrentPasswordDialog = false },
@@ -274,23 +274,23 @@ fun SecuritySettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Confirm your current password, then choose a new one.", color = SecondaryText)
-                    OutlinedTextField(currentPassword, { currentPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = Color(0xFFF7F3F5), unfocusedTextColor = Color(0xFFF7F3F5), cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Color(0xFF201B22), unfocusedContainerColor = Color(0xFF201B22)), label = { Text("Current password") }, singleLine = true, visualTransformation = if (showCurrentPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showCurrentPassword = !showCurrentPassword }) { Icon(if (showCurrentPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
-                    OutlinedTextField(newPassword, { newPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = Color(0xFFF7F3F5), unfocusedTextColor = Color(0xFFF7F3F5), cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Color(0xFF201B22), unfocusedContainerColor = Color(0xFF201B22)), label = { Text("New password (8+ characters)") }, singleLine = true, visualTransformation = if (showNewPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showNewPassword = !showNewPassword }) { Icon(if (showNewPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
-                    OutlinedTextField(confirmPassword, { confirmPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = Color(0xFFF7F3F5), unfocusedTextColor = Color(0xFFF7F3F5), cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Color(0xFF201B22), unfocusedContainerColor = Color(0xFF201B22)), label = { Text("Confirm new password") }, singleLine = true, visualTransformation = if (showConfirmPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) { Icon(if (showConfirmPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
+                    OutlinedTextField(currentPassword, { currentPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = PrimaryText, unfocusedTextColor = PrimaryText, cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Background, unfocusedContainerColor = Background), label = { Text("Current password") }, singleLine = true, visualTransformation = if (showCurrentPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showCurrentPassword = !showCurrentPassword }) { Icon(if (showCurrentPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
+                    OutlinedTextField(newPassword, { newPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = PrimaryText, unfocusedTextColor = PrimaryText, cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Background, unfocusedContainerColor = Background), label = { Text("New password (8+ characters)") }, singleLine = true, visualTransformation = if (showNewPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showNewPassword = !showNewPassword }) { Icon(if (showNewPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
+                    OutlinedTextField(confirmPassword, { confirmPassword = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, unfocusedBorderColor = Divider, focusedTextColor = PrimaryText, unfocusedTextColor = PrimaryText, cursorColor = OrangePrimary, focusedLabelColor = OrangePrimary, unfocusedLabelColor = SecondaryText, focusedContainerColor = Background, unfocusedContainerColor = Background), label = { Text("Confirm new password") }, singleLine = true, visualTransformation = if (showConfirmPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) { Icon(if (showConfirmPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null, tint = SecondaryText) } })
                 }
             },
             confirmButton = { TextButton(enabled = !state.isChangingPassword, onClick = { vm.changePassword(currentPassword, newPassword, confirmPassword); showCurrentPasswordDialog = false; currentPassword = ""; newPassword = ""; confirmPassword = "" }) { Text(if (state.isChangingPassword) "Updating…" else "Change password", color = OrangePrimary) } },
             dismissButton = { TextButton(onClick = { showCurrentPasswordDialog = false }) { Text("Cancel", color = SecondaryText) } },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = SurfaceAlt,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),)
     }
     if (showSignOutEverywhereDialog) {
         AlertDialog(
             modifier = Modifier.border(
                 1.dp,
-                Color(0xFFFF6848).copy(alpha = 0.88f),
+                OrangePrimary.copy(alpha = 0.5f),
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { if (!state.isSigningOutEverywhere) showSignOutEverywhereDialog = false },
@@ -298,9 +298,9 @@ fun SecuritySettingsScreen(
             text = { Text("This revokes your sign-in sessions on other devices too. You may need to sign in again on this device.", color = SecondaryText) },
             confirmButton = { TextButton(enabled = !state.isSigningOutEverywhere, onClick = { vm.signOutEverywhere { navController.navigate(com.nagpurpulse.ui.navigation.Screen.Login.route) { popUpTo(navController.graph.id) { inclusive = true } } }; showSignOutEverywhereDialog = false }) { Text(if (state.isSigningOutEverywhere) "Signing out…" else "Sign out everywhere", color = RedAlert) } },
             dismissButton = { TextButton(onClick = { showSignOutEverywhereDialog = false }) { Text("Cancel", color = SecondaryText) } },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = SurfaceAlt,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),)
     }
 
@@ -308,16 +308,16 @@ fun SecuritySettingsScreen(
         AlertDialog(
             modifier = Modifier.border(
                 1.dp,
-                Color(0xFFFF6848).copy(alpha = 0.88f),
+                OrangePrimary.copy(alpha = 0.5f),
                 RoundedCornerShape(28.dp)
             ),
             onDismissRequest = { infoMessage = null },
             title = { Text("Not available yet", color = PrimaryText) },
             text = { Text(message, color = SecondaryText) },
             confirmButton = { TextButton(onClick = { infoMessage = null }) { Text("Got it", color = OrangePrimary) } },
-            containerColor = Color(0xFF171318),
-            titleContentColor = Color(0xFFF7F3F5),
-            textContentColor = Color(0xFFC7C0CA),
+            containerColor = SurfaceAlt,
+            titleContentColor = PrimaryText,
+            textContentColor = SecondaryText,
             shape = RoundedCornerShape(28.dp),)
     }
 
@@ -325,18 +325,11 @@ fun SecuritySettingsScreen(
         containerColor = Background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            Column(Modifier.background(Brush.verticalGradient(listOf(Surface, Background), 0f, 120f)).statusBarsPadding()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text("Security", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Account protection and sessions", color = SecondaryText, fontSize = 12.sp)
-                    }
-                }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp)
-            }
+            SettingsTopBar(
+                title = "Security",
+                subtitle = "Account protection and sessions",
+                onBack = { navController.popBackStack() }
+            )
         }
     ) { padding ->
         LazyColumn(
@@ -344,6 +337,7 @@ fun SecuritySettingsScreen(
             contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            item { SecurityCheckupCard(lockOn = biometricEnabled, lockAvailable = biometricAvailable) }
             item { SectionHeader("ACCOUNT SECURITY") }
             item {
                 SettingsGroup {
@@ -417,6 +411,51 @@ fun SecuritySettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+
+// ── Security checkup ─────────────────────────────────────────────────────────
+
+@Composable
+private fun SecurityCheckupCard(lockOn: Boolean, lockAvailable: Boolean) {
+    val color = if (lockOn) GreenSuccess else OrangePrimary
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Surface)
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(18.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        GlowIcon(if (lockOn) Icons.Filled.Security else Icons.Filled.Lock, color, active = lockOn, size = 44.dp)
+        Spacer(Modifier.width(6.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Security checkup", color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.width(8.dp))
+                StatusPill(if (lockOn) "Well protected" else "Good start", color)
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                when {
+                    lockOn -> "App lock is on. Nobody can open NagpurPulse on this phone without you."
+                    lockAvailable -> "Turn on Biometric App Lock below to add a second layer of protection."
+                    else -> "Set up a screen lock or fingerprint on your phone to unlock app lock."
+                },
+                color = SecondaryText,
+                fontSize = 12.sp
+            )
+            Spacer(Modifier.height(10.dp))
+            SegmentMeter(filled = if (lockOn) 2 else 1, total = 2, color = color)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (lockOn) "Signed-in account ✓   App lock ✓" else "Signed-in account ✓   App lock not set",
+                color = TertiaryText,
+                fontSize = 11.sp
+            )
         }
     }
 }

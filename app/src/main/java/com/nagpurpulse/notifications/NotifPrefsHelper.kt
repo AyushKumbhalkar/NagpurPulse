@@ -56,8 +56,69 @@ object NotifPrefsHelper {
         return true
     }
 
+    // ── Pause & quiet hours (device-local; no backend column needed) ──────────
+    const val SLOT_MORNING = "morning"
+    const val SLOT_TRENDING = "trending"
+    const val SLOT_EVENING = "evening"
+    const val SLOT_NIGHT = "night"
+
+    fun pausedUntil(ctx: Context): Long = prefs(ctx).getLong("notif_paused_until", 0L)
+
+    fun isPaused(ctx: Context): Boolean = System.currentTimeMillis() < pausedUntil(ctx)
+
+    /** Pause everything except emergency alerts for [hours]; pass 0 to resume. */
+    fun pauseFor(ctx: Context, hours: Int) {
+        val until = if (hours <= 0) 0L else System.currentTimeMillis() + hours * 3_600_000L
+        prefs(ctx).edit().putLong("notif_paused_until", until).apply()
+    }
+
+    fun isQuietHoursEnabled(ctx: Context) = prefs(ctx).getBoolean("notif_quiet_enabled", false)
+    fun quietStartMinutes(ctx: Context) = prefs(ctx).getInt("notif_quiet_start", 23 * 60)
+    fun quietEndMinutes(ctx: Context) = prefs(ctx).getInt("notif_quiet_end", 7 * 60)
+
+    fun setQuietHours(ctx: Context, enabled: Boolean, startMinutes: Int, endMinutes: Int) {
+        prefs(ctx).edit()
+            .putBoolean("notif_quiet_enabled", enabled)
+            .putInt("notif_quiet_start", startMinutes)
+            .putInt("notif_quiet_end", endMinutes)
+            .apply()
+    }
+
+    fun isInQuietHours(ctx: Context): Boolean {
+        if (!isQuietHoursEnabled(ctx)) return false
+        val cal = java.util.Calendar.getInstance()
+        val now = cal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + cal.get(java.util.Calendar.MINUTE)
+        val start = quietStartMinutes(ctx)
+        val end = quietEndMinutes(ctx)
+        return when {
+            start == end -> false
+            start < end  -> now in start until end
+            else         -> now >= start || now < end   // window wraps past midnight
+        }
+    }
+
+    fun isSilencedNow(ctx: Context): Boolean = isPaused(ctx) || isInQuietHours(ctx)
+
+    // ── Delivery times for the scheduled updates (minutes after midnight) ─────
+    private fun defaultMinutes(slot: String) = when (slot) {
+        SLOT_MORNING  -> 8 * 60
+        SLOT_TRENDING -> 13 * 60
+        SLOT_EVENING  -> 18 * 60
+        SLOT_NIGHT    -> 22 * 60
+        else          -> 8 * 60
+    }
+
+    fun scheduledMinutes(ctx: Context, slot: String): Int =
+        prefs(ctx).getInt("notif_time_$slot", defaultMinutes(slot))
+
+    fun setScheduledMinutes(ctx: Context, slot: String, minutes: Int) {
+        prefs(ctx).edit().putInt("notif_time_$slot", minutes.coerceIn(0, 24 * 60 - 1)).apply()
+    }
+
     fun shouldShowType(ctx: Context, type: String): Boolean {
         if (!isPushEnabled(ctx)) return false
+        // Pause / quiet hours silence everything except emergency alerts.
+        if (type != "alert" && type != "emergency" && isSilencedNow(ctx)) return false
         return when (type) {
             "comment", "reply"          -> isRepliesEnabled(ctx)
             "mention"                   -> isMentionsEnabled(ctx)
