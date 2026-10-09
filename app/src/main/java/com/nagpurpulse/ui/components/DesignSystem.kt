@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.nagpurpulse.R
 import com.nagpurpulse.ui.theme.*
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -110,9 +112,9 @@ fun EmptyState(
             }
 
             Spacer(Modifier.height(20.dp))
-            Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+            Text(title, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(6.dp))
-            Text(subtitle, color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
+            Text(subtitle, color = SecondaryText, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
 
             if (ctaLabel != null && onCta != null) {
                 Spacer(Modifier.height(24.dp))
@@ -155,22 +157,22 @@ fun ErrorState(
             Icon(Icons.Filled.Warning, null, tint = RedAlert, modifier = Modifier.size(36.dp))
         }
         Spacer(Modifier.height(16.dp))
-        Text("Oops!", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(stringResource(R.string.error_generic_title), color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Spacer(Modifier.height(6.dp))
-        Text(message, color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
+        Text(message, color = SecondaryText, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
         Spacer(Modifier.height(20.dp))
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
-                .background(SurfaceTwo)
-                .border(1.dp, DividerColor, RoundedCornerShape(24.dp))
+                .background(SurfaceAlt)
+                .border(1.dp, Divider, RoundedCornerShape(24.dp))
                 .pressScale(onClick = onRetry)
                 .padding(horizontal = 24.dp, vertical = 11.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Refresh, null, tint = OrangePrimary, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Try again", color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(stringResource(R.string.error_try_again), color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
         }
     }
@@ -409,7 +411,7 @@ fun PremiumBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState       = sheetState,
-        containerColor   = SurfaceThree,
+        containerColor   = SurfaceAlt,
         tonalElevation   = 0.dp,
         dragHandle = {
             Box(
@@ -418,7 +420,7 @@ fun PremiumBottomSheet(
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(TextTertiary.copy(0.4f))
+                    .background(TertiaryText.copy(0.4f))
             )
         }
     ) {
@@ -479,7 +481,7 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
     }
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Text("Someone is typing", color = TextTertiary, fontSize = 12.sp)
+        Text("Someone is typing", color = TertiaryText, fontSize = 12.sp)
         Spacer(Modifier.width(6.dp))
         offsets.forEachIndexed { i, offsetY ->
             Box(
@@ -487,7 +489,7 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
                     .size(4.dp)
                     .offset(y = offsetY.dp)
                     .clip(CircleShape)
-                    .background(TextTertiary)
+                    .background(TertiaryText)
             )
             if (i < 2) Spacer(Modifier.width(3.dp))
         }
@@ -521,7 +523,7 @@ fun PremiumRefreshIndicator(refreshing: Boolean) {
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(SurfaceTwo)
+                    .background(SurfaceAlt)
                     .border(1.dp, OrangePrimary.copy(0.3f), RoundedCornerShape(20.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -532,7 +534,7 @@ fun PremiumRefreshIndicator(refreshing: Boolean) {
                     strokeWidth = 2.dp
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Refreshing Nagpur feed…", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.feed_refreshing), color = SecondaryText, fontSize = 12.sp)
             }
         }
     }

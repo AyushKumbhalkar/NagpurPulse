@@ -75,6 +75,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,6 +83,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nagpurpulse.data.model.Post
+import com.nagpurpulse.R
+import com.nagpurpulse.ui.components.Festivals
 import com.nagpurpulse.ui.components.UserAvatar
 import com.nagpurpulse.ui.components.categoryColor
 import com.nagpurpulse.ui.components.categoryDisplayName
@@ -355,6 +358,20 @@ internal fun GreetingBlock(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+
+        // A little local warmth on festival days.
+        val festival = remember { Festivals.today() }
+        if (festival != null) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "${festival.emoji} ${stringResource(festival.messageRes)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OrangePrimary,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
 

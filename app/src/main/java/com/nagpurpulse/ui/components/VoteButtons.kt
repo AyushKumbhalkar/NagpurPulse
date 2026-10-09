@@ -44,7 +44,7 @@ fun VoteButtons(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(22.dp))
-                .background(if (voted == "up") OrangeSubtle else SurfaceTwo)
+                .background(if (voted == "up") OrangeSubtle else SurfaceAlt)
                 .border(1.dp, if (voted == "up") OrangePrimary.copy(0.6f) else Color.Transparent, RoundedCornerShape(22.dp))
                 .pressScale {
                     upBurst = true
@@ -62,7 +62,7 @@ fun VoteButtons(
         ) {
             Icon(
                 Icons.Filled.KeyboardArrowUp, null,
-                tint = if (voted == "up") OrangePrimary else TextSecondary,
+                tint = if (voted == "up") OrangePrimary else SecondaryText,
                 modifier = Modifier.size(20.dp).scale(upScale)
             )
             Spacer(Modifier.width(5.dp))
@@ -78,7 +78,7 @@ fun VoteButtons(
             ) { count ->
                 Text(
                     formatCount(count),
-                    color = if (voted == "up") OrangePrimary else TextSecondary,
+                    color = if (voted == "up") OrangePrimary else SecondaryText,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -91,7 +91,7 @@ fun VoteButtons(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(22.dp))
-                .background(if (voted == "down") RedSubtle else SurfaceTwo)
+                .background(if (voted == "down") RedSubtle else SurfaceAlt)
                 .border(1.dp, if (voted == "down") RedAlert.copy(0.6f) else Color.Transparent, RoundedCornerShape(22.dp))
                 .pressScale {
                     downBurst = true
@@ -102,7 +102,7 @@ fun VoteButtons(
         ) {
             Icon(
                 Icons.Filled.KeyboardArrowDown, null,
-                tint = if (voted == "down") RedAlert else TextSecondary,
+                tint = if (voted == "down") RedAlert else SecondaryText,
                 modifier = Modifier.size(20.dp).scale(downScale)
             )
         }

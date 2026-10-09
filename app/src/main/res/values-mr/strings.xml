@@ -214,4 +214,21 @@
     <string name="explore_caught_up">तुम्ही नागपूरचे सर्व ताजे अपडेट पाहिले आहेत</string>
     <string name="explore_caught_up_hint">रिफ्रेश करण्यासाठी खाली ओढा</string>
     <string name="explore_scroll_top">वर जा</string>
+    <!-- Premium polish -->
+    <string name="tip_anon_comment">टीप: टॉगल दाबून अनामिक कमेंट करा — तुमचे नाव लपलेले राहील.</string>
+    <string name="tip_swipe_reply">टीप: उत्तर देण्यासाठी कमेंट उजवीकडे स्वाइप करा.</string>
+    <string name="tip_got_it">समजले</string>
+    <string name="comment_first_celebration">🎉 तुमची पहिली कमेंट प्रसिद्ध झाली — चर्चेत स्वागत आहे!</string>
+    <string name="comment_undo">पूर्ववत करा</string>
+    <string name="error_generic_title">काहीतरी बिघडले</string>
+    <string name="error_try_again">पुन्हा प्रयत्न करा</string>
+    <string name="feed_refreshing">रिफ्रेश होत आहे…</string>
+    <string name="festival_navratri">नवरात्रीच्या हार्दिक शुभेच्छा! 🪔</string>
+    <string name="festival_dussehra">दसऱ्याच्या हार्दिक शुभेच्छा! सत्याचा सदैव विजय होवो.</string>
+    <string name="festival_diwali">दिवाळीच्या हार्दिक शुभेच्छा! तुमचे घर आनंदाने उजळो.</string>
+    <string name="festival_ganeshotsav">गणपती बाप्पा मोरया! गणेशोत्सवाच्या हार्दिक शुभेच्छा.</string>
+    <string name="festival_gudi_padwa">गुढीपाडव्याच्या हार्दिक शुभेच्छा! नववर्ष सुखाचे जावो.</string>
+    <string name="festival_republic_day">प्रजासत्ताक दिनाच्या हार्दिक शुभेच्छा! जय हिंद.</string>
+    <string name="festival_independence_day">स्वातंत्र्य दिनाच्या हार्दिक शुभेच्छा! जय हिंद.</string>
+    <string name="festival_maharashtra_day">महाराष्ट्र दिनाच्या हार्दिक शुभेच्छा! जय महाराष्ट्र.</string>
 </resources>

@@ -214,4 +214,21 @@
     <string name="explore_caught_up">आप नागपुर की सारी ताज़ा खबरें देख चुके हैं</string>
     <string name="explore_caught_up_hint">रीफ़्रेश करने के लिए नीचे खींचें</string>
     <string name="explore_scroll_top">ऊपर जाएँ</string>
+    <!-- Premium polish -->
+    <string name="tip_anon_comment">टिप: टॉगल चालू करके गुमनाम कमेंट करें — आपका नाम छिपा रहेगा।</string>
+    <string name="tip_swipe_reply">टिप: जवाब देने के लिए कमेंट को दाईं ओर स्वाइप करें।</string>
+    <string name="tip_got_it">समझ गया</string>
+    <string name="comment_first_celebration">🎉 आपका पहला कमेंट लाइव है — चर्चा में स्वागत है!</string>
+    <string name="comment_undo">पूर्ववत करें</string>
+    <string name="error_generic_title">कुछ गड़बड़ हो गई</string>
+    <string name="error_try_again">फिर कोशिश करें</string>
+    <string name="feed_refreshing">रीफ़्रेश हो रहा है…</string>
+    <string name="festival_navratri">नवरात्रि की शुभकामनाएँ! 🪔</string>
+    <string name="festival_dussehra">दशहरे की शुभकामनाएँ! सत्य की सदा जीत हो।</string>
+    <string name="festival_diwali">दीपावली की शुभकामनाएँ! आपका घर खुशियों से जगमगाए।</string>
+    <string name="festival_ganeshotsav">गणपति बाप्पा मोरया! गणेशोत्सव की शुभकामनाएँ।</string>
+    <string name="festival_gudi_padwa">गुढी पाड़वा की शुभकामनाएँ! नया साल मंगलमय हो।</string>
+    <string name="festival_republic_day">गणतंत्र दिवस की शुभकामनाएँ! जय हिंद।</string>
+    <string name="festival_independence_day">स्वतंत्रता दिवस की शुभकामनाएँ! जय हिंद।</string>
+    <string name="festival_maharashtra_day">महाराष्ट्र दिन की शुभकामनाएँ! जय महाराष्ट्र।</string>
 </resources>

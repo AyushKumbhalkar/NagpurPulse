@@ -100,4 +100,21 @@
     <string name="signup_passwords_match">Passwords match</string>
     <string name="offline_banner_signup">No internet connection. Connect to create your account.</string>
     <string name="signup_success_title">Email verified!</string>
+    <!-- Premium polish -->
+    <string name="tip_anon_comment">Tip: turn on the toggle to comment anonymously — your name stays hidden.</string>
+    <string name="tip_swipe_reply">Tip: swipe a comment to the right to reply quickly.</string>
+    <string name="tip_got_it">Got it</string>
+    <string name="comment_first_celebration">🎉 Your first comment is live — welcome to the conversation!</string>
+    <string name="comment_undo">Undo</string>
+    <string name="error_generic_title">Something went off track</string>
+    <string name="error_try_again">Try again</string>
+    <string name="feed_refreshing">Refreshing…</string>
+    <string name="festival_navratri">Happy Navratri! 🪔 Shubh Navratri to you and your family.</string>
+    <string name="festival_dussehra">Happy Dussehra! May good always win.</string>
+    <string name="festival_diwali">Happy Diwali! May your home glow with joy.</string>
+    <string name="festival_ganeshotsav">Ganpati Bappa Morya! Happy Ganeshotsav.</string>
+    <string name="festival_gudi_padwa">Happy Gudi Padwa! Wishing you a bright new year.</string>
+    <string name="festival_republic_day">Happy Republic Day! Jai Hind.</string>
+    <string name="festival_independence_day">Happy Independence Day! Jai Hind.</string>
+    <string name="festival_maharashtra_day">Happy Maharashtra Day! Jai Maharashtra.</string>
 </resources>

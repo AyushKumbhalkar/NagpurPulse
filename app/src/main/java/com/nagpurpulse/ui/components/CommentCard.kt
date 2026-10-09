@@ -34,10 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -77,9 +75,48 @@ fun CommentCard(
     onDelete: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Swipe right to reply — a lower-friction alternative to finding the Reply button.
+    SwipeToReply(
+        enabled = isLoggedIn && !comment.isDeleted,
+        onReply = { onReply(comment) },
+        modifier = modifier
+    ) {
+        CommentCardContent(
+            navController = navController,
+            comment = comment,
+            isLoggedIn = isLoggedIn,
+            isAdmin = isAdmin,
+            isHighlighted = isHighlighted,
+            isReply = isReply,
+            replyToName = replyToName,
+            onUpvote = onUpvote,
+            onReply = onReply,
+            onReport = onReport,
+            onEdit = onEdit,
+            onDelete = onDelete
+        )
+    }
+}
+
+@Composable
+private fun CommentCardContent(
+    navController: NavController,
+    comment: Comment,
+    isLoggedIn: Boolean = false,
+    isAdmin: Boolean = false,
+    isHighlighted: Boolean = false,
+    isReply: Boolean = false,
+    replyToName: String? = null,
+    onUpvote: (String) -> Unit = {},
+    onReply: (Comment) -> Unit = {},
+    onReport: (String, String) -> Unit = { _, _ -> },
+    onEdit: (String, String) -> Unit = { _, _ -> },
+    onDelete: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val displayName = commentDisplayName(comment)
     val nowMillis = LocalNowMillis.current
-    val haptics = LocalHapticFeedback.current
+    val haptic = rememberHaptic()
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
@@ -238,7 +275,7 @@ fun CommentCard(
                         .background(if (liked) OrangeSubtle else MaterialTheme.colorScheme.surfaceVariant)
                         .let {
                             if (isLoggedIn) it.pressScale {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                if (liked) haptic.tap() else haptic.like()
                                 onUpvote(comment.id)
                             } else it
                         }

@@ -92,8 +92,10 @@ data class PendingComment(
 /** One-shot messages for the snackbar; the screen maps them to string resources. */
 enum class CommentMessage {
     REPORT_SENT, REPORT_FAILED, POST_FAILED, TOO_FAST, TOO_LONG,
-    EDIT_FAILED, DELETE_FAILED, DELETED, LIKE_FAILED, LOAD_FAILED
+    EDIT_FAILED, DELETE_FAILED, DELETED, LIKE_FAILED, LOAD_FAILED, POSTED
 }
+
+private const val UNDO_DELETE_WINDOW_MS = 4_500L
 
 private const val COMMENT_PAGE_SIZE = 20
 private const val MAX_RELOAD_ROOTS = 100
@@ -379,6 +381,7 @@ class ThreadDetailViewModel @Inject constructor(
                             pinnedCommentId = if (created.parentId == null) created.id else st.pinnedCommentId
                         )
                     }
+                    _events.tryEmit(CommentMessage.POSTED)
                 },
                 onFailure = { e ->
                     android.util.Log.e("ThreadDetailVM", "Posting comment failed", e)
@@ -434,7 +437,47 @@ class ThreadDetailViewModel @Inject constructor(
         }
     }
 
-    fun deleteComment(commentId: String) {
+    /** Deletes still waiting out the undo window: id -> (original comment, timer). */
+    private val pendingDeletes = mutableMapOf<String, Pair<Comment, kotlinx.coroutines.Job>>()
+    private val _undoableDeletes = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val undoableDeletes: SharedFlow<String> = _undoableDeletes.asSharedFlow()
+
+    /**
+     * Hides the comment right away, but only tells the server once the undo window has passed.
+     * If the user leaves the screen first, the delete is committed on the way out.
+     */
+    fun deleteCommentWithUndo(commentId: String) {
+        if (pendingDeletes.containsKey(commentId)) return
+        val original = _uiState.value.comments.firstOrNull { it.id == commentId } ?: return
+        mapComment(commentId) { it.copy(isDeleted = true, deletedByAuthor = true, body = "") }
+        val timer = viewModelScope.launch {
+            delay(UNDO_DELETE_WINDOW_MS)
+            pendingDeletes.remove(commentId)
+            deleteComment(commentId, announce = false, restore = original)
+        }
+        pendingDeletes[commentId] = original to timer
+        _undoableDeletes.tryEmit(commentId)
+    }
+
+    fun undoDelete(commentId: String) {
+        val (original, timer) = pendingDeletes.remove(commentId) ?: return
+        timer.cancel()
+        mapComment(commentId) { original }
+    }
+
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+    override fun onCleared() {
+        // Commit deletes that were still counting down; the user did ask for them.
+        val leftovers = pendingDeletes.keys.toList()
+        pendingDeletes.values.forEach { it.second.cancel() }
+        pendingDeletes.clear()
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.NonCancellable) {
+            leftovers.forEach { runCatching { postRepository.deleteComment(it) } }
+        }
+        super.onCleared()
+    }
+
+    fun deleteComment(commentId: String, announce: Boolean = true, restore: Comment? = null) {
         viewModelScope.launch {
             postRepository.deleteComment(commentId).fold(
                 onSuccess = {
@@ -442,9 +485,12 @@ class ThreadDetailViewModel @Inject constructor(
                     _uiState.update { st ->
                         st.copy(post = st.post?.let { p -> p.copy(commentCount = (p.commentCount - 1).coerceAtLeast(0)) })
                     }
-                    _events.tryEmit(CommentMessage.DELETED)
+                    if (announce) _events.tryEmit(CommentMessage.DELETED)
                 },
-                onFailure = { _events.tryEmit(CommentMessage.DELETE_FAILED) }
+                onFailure = {
+                    restore?.let { original -> mapComment(commentId) { original } }
+                    _events.tryEmit(CommentMessage.DELETE_FAILED)
+                }
             )
         }
     }
@@ -626,9 +672,22 @@ fun ThreadDetailScreen(
     val highlightId = uiState.scrollToCommentId ?: commentId
 
     // Snackbar messages from the ViewModel (errors, confirmations)
+    val haptic = rememberHaptic()
     LaunchedEffect(Unit) {
         viewModel.events.collect { msg ->
+            if (msg == CommentMessage.POSTED) {
+                haptic.success()
+                // A small peak moment, once per install: the user's very first comment.
+                if (TipPrefs.consume(context, "first_comment")) {
+                    snackbarHostState.showSnackbar(context.getString(R.string.comment_first_celebration))
+                }
+                return@collect
+            }
+            if (msg != CommentMessage.DELETED && msg != CommentMessage.REPORT_SENT && msg != CommentMessage.LIKE_FAILED) {
+                haptic.error()
+            }
             val res = when (msg) {
+                CommentMessage.POSTED -> return@collect
                 CommentMessage.REPORT_SENT -> R.string.comment_report_sent
                 CommentMessage.REPORT_FAILED -> R.string.comment_report_failed
                 CommentMessage.POST_FAILED -> R.string.comment_post_failed
@@ -641,6 +700,21 @@ fun ThreadDetailScreen(
                 CommentMessage.LOAD_FAILED -> R.string.comment_load_failed
             }
             snackbarHostState.showSnackbar(context.getString(res))
+        }
+    }
+
+    // Undo safety net for deleting a comment
+    LaunchedEffect(Unit) {
+        viewModel.undoableDeletes.collect { id ->
+            val result = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.comment_deleted_snack),
+                actionLabel = context.getString(R.string.comment_undo),
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                haptic.tap()
+                viewModel.undoDelete(id)
+            }
         }
     }
 
@@ -734,26 +808,13 @@ fun ThreadDetailScreen(
     val sendBg by animateColorAsState(if (sendEnabled) OrangePrimary
     else MaterialTheme.colorScheme.surfaceVariant, tween(200), label = "send_bg")
 
-    // Full-screen image preview
+    // Full-screen image preview: pinch, double-tap, drag down to dismiss
     if (showImagePreview && !uiState.post?.imageUrl.isNullOrBlank()) {
-        Dialog(onDismissRequest = { showImagePreview = false }) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(0.95f))) {
-                AsyncImage(
-                    model = uiState.post!!.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-                IconButton(
-                    onClick = { showImagePreview = false },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(
-                        DensityManager.cardPadding.dp
-                    )
-                ) {
-                    Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(28.dp))
-                }
-            }
-        }
+        FullScreenImageViewer(
+            images = listOf(uiState.post!!.imageUrl!!),
+            startIndex = 0,
+            onDismiss = { showImagePreview = false }
+        )
     }
     if (showReportDialog) {
         ReportPostDialog(
@@ -812,6 +873,21 @@ fun ThreadDetailScreen(
                         .imePadding()
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
+
+                    // One-time hints — shown once per install, never again.
+                    FirstTimeTip(
+                        tipKey = "tip_anon_comment",
+                        message = stringResource(R.string.tip_anon_comment),
+                        enabled = !isCommentAnonymous && uiState.replyTarget == null,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    val anonTipDone = remember { TipPrefs.seen(context, "tip_anon_comment") }
+                    FirstTimeTip(
+                        tipKey = "tip_swipe_reply",
+                        message = stringResource(R.string.tip_swipe_reply),
+                        enabled = anonTipDone && uiState.comments.isNotEmpty() && uiState.replyTarget == null,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
 
                     AnimatedVisibility(
                         visible = uiState.replyTarget != null,
@@ -874,6 +950,7 @@ fun ThreadDetailScreen(
                             )
                             .clickable {
                                 isCommentAnonymous = !isCommentAnonymous
+                                haptic.toggle(isCommentAnonymous)
                             }
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1348,7 +1425,7 @@ fun ThreadDetailScreen(
                             ).forEach { (sort, label) ->
                                 FilterChip(
                                     selected = uiState.commentSort == sort,
-                                    onClick = { viewModel.setCommentSort(sort) },
+                                    onClick = { haptic.selection(); viewModel.setCommentSort(sort) },
                                     label = { Text(stringResource(label)) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = OrangeSubtle,
@@ -1463,7 +1540,7 @@ fun ThreadDetailScreen(
                             onReply = { viewModel.setReplyTarget(it) },
                             onReport = viewModel::reportComment,
                             onEdit = viewModel::editComment,
-                            onDelete = viewModel::deleteComment
+                            onDelete = viewModel::deleteCommentWithUndo
                         )
 
                         if (thread.replies.isNotEmpty()) {
@@ -1521,7 +1598,7 @@ fun ThreadDetailScreen(
                                                 onReply = { viewModel.setReplyTarget(it) },
                                                 onReport = viewModel::reportComment,
                                                 onEdit = viewModel::editComment,
-                                                onDelete = viewModel::deleteComment
+                                                onDelete = viewModel::deleteCommentWithUndo
                                             )
                                         }
                                     }

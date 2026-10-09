@@ -67,7 +67,7 @@ fun GuestLoginPrompt(
                     .padding(horizontal = 28.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
-                        Brush.verticalGradient(listOf(Color(0xFF161616), Color(0xFF0E0E0E)))
+                        Brush.verticalGradient(listOf(Surface, SurfaceAlt))
                     )
                     .border(1.dp, OrangePrimary.copy(0.2f), RoundedCornerShape(28.dp))
                     .padding(28.dp)
@@ -78,11 +78,11 @@ fun GuestLoginPrompt(
                         .align(Alignment.TopEnd)
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(SurfaceTwo)
+                        .background(SurfaceAlt)
                         .pressScale(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Close, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.Close, null, tint = TertiaryText, modifier = Modifier.size(16.dp))
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -99,7 +99,7 @@ fun GuestLoginPrompt(
                             .border(1.5.dp, OrangePrimary.copy(0.3f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Filled.Person, null, tint = TextSecondary, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Filled.Person, null, tint = SecondaryText, modifier = Modifier.size(36.dp))
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
@@ -116,7 +116,7 @@ fun GuestLoginPrompt(
 
                     Text(
                         "Please Login to Continue",
-                        color      = TextPrimary,
+                        color      = PrimaryText,
                         fontWeight = FontWeight.Bold,
                         fontSize   = 20.sp,
                         textAlign  = TextAlign.Center
@@ -132,7 +132,7 @@ fun GuestLoginPrompt(
                             }
                             append(" community.")
                         },
-                        color     = TextSecondary,
+                        color     = SecondaryText,
                         fontSize  = 14.sp,
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
@@ -161,9 +161,9 @@ fun GuestLoginPrompt(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        HorizontalDivider(Modifier.weight(1f), color = DividerColor)
-                        Text("  or  ", color = TextTertiary, fontSize = 12.sp)
-                        HorizontalDivider(Modifier.weight(1f), color = DividerColor)
+                        HorizontalDivider(Modifier.weight(1f), color = Divider)
+                        Text("  or  ", color = TertiaryText, fontSize = 12.sp)
+                        HorizontalDivider(Modifier.weight(1f), color = Divider)
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -174,15 +174,15 @@ fun GuestLoginPrompt(
                             .fillMaxWidth()
                             .height(50.dp)
                             .clip(RoundedCornerShape(25.dp))
-                            .background(SurfaceTwo)
-                            .border(1.dp, DividerColor, RoundedCornerShape(25.dp))
+                            .background(SurfaceAlt)
+                            .border(1.dp, Divider, RoundedCornerShape(25.dp))
                             .pressScale(onClick = onDismiss),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Person, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Filled.Person, null, tint = SecondaryText, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Continue as Guest", color = TextSecondary, fontSize = 14.sp)
+                            Text("Continue as Guest", color = SecondaryText, fontSize = 14.sp)
                         }
                     }
 
@@ -191,9 +191,9 @@ fun GuestLoginPrompt(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Filled.Lock, null, tint = TextTertiary, modifier = Modifier.size(12.dp))
+                        Icon(Icons.Filled.Lock, null, tint = TertiaryText, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text("Some features will be limited", color = TextTertiary, fontSize = 12.sp)
+                        Text("Some features will be limited", color = TertiaryText, fontSize = 12.sp)
                     }
                 }
             }

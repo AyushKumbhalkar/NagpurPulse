@@ -30,10 +30,10 @@ fun AreaChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(if (isSelected) OrangeSubtle else SurfaceTwo)
+            .background(if (isSelected) OrangeSubtle else SurfaceAlt)
             .border(
                 1.dp,
-                if (isSelected) OrangePrimary.copy(0.6f) else DividerColor,
+                if (isSelected) OrangePrimary.copy(0.6f) else Divider,
                 RoundedCornerShape(20.dp)
             )
             .padding(horizontal = 12.dp, vertical = 7.dp),
@@ -41,13 +41,13 @@ fun AreaChip(
     ) {
         Icon(
             Icons.Filled.LocationOn, null,
-            tint     = if (isSelected) OrangePrimary else TextSecondary,
+            tint     = if (isSelected) OrangePrimary else SecondaryText,
             modifier = Modifier.size(13.dp)
         )
         Spacer(Modifier.width(4.dp))
         Text(
             area,
-            color      = if (isSelected) OrangePrimary else TextPrimary,
+            color      = if (isSelected) OrangePrimary else PrimaryText,
             fontSize   = 13.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
         )
