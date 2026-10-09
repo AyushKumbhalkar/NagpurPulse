@@ -168,11 +168,9 @@ internal fun LoginContent(
             enabled = !loading, onClick = onResend)
 
         AuthEntrance(3) {
-            Box {
-                AuthAction(stringResource(if (loading) R.string.login_signing_in else R.string.login_button),
-                    loading, contentColor = Color.White, height = d.button, elevated = true, onClick = onLogin)
-                if (lastMethod == "email" && !loading) LastUsedBadge(Modifier.align(Alignment.TopEnd))
-            }
+            AuthAction(stringResource(if (loading) R.string.login_signing_in else R.string.login_button),
+                loading, contentColor = Color.White, height = d.button, elevated = true,
+                badge = if (lastMethod == "email") stringResource(R.string.login_last_used) else null, onClick = onLogin)
         }
         // "or" + Google fold away while the keyboard is open, so the form never has to scroll.
         AnimatedVisibility(
@@ -184,28 +182,13 @@ internal fun LoginContent(
                 Spacer(Modifier.height(d.gap))
                 AuthOr()
                 Spacer(Modifier.height(d.gap))
-                Box {
-                    AuthAction(stringResource(R.string.login_continue_google), loading, google = true,
-                        height = d.google, elevated = true, onClick = onGoogle)
-                    if (lastMethod == "google" && !loading) LastUsedBadge(Modifier.align(Alignment.TopEnd))
-                }
+                AuthAction(stringResource(R.string.login_continue_google), loading, google = true,
+                    height = d.google, elevated = true,
+                    badge = if (lastMethod == "google") stringResource(R.string.login_last_used) else null, onClick = onGoogle)
             }
         }
         FlexSpacer(flex)
     }
-}
-
-/** Small "Last used" tag on the button the person used last time. */
-@Composable
-private fun LastUsedBadge(modifier: Modifier = Modifier) {
-    val colors = authPalette()
-    Text(
-        stringResource(R.string.login_last_used), color = Color.White, fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = modifier.offset(x = (-16).dp, y = (-8).dp)
-            .background(colors.accent, RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
-    )
 }
 
 @Composable
