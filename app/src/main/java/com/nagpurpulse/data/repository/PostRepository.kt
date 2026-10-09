@@ -65,7 +65,7 @@ class PostRepository @Inject constructor(
         return try {
             val from = (page * pageSize).toLong()
             val to   = (from + pageSize - 1)
-            val response = client.postgrest["posts"].select {
+            val response = client.postgrest["posts_public"].select {
                 filter {
                     if (category != null) eq("category", category)
                 }
@@ -90,7 +90,7 @@ class PostRepository @Inject constructor(
 
     suspend fun getPostById(id: String): Result<Post> {
         return try {
-            val post = client.postgrest["posts"]
+            val post = client.postgrest["posts_public"]
                 .select { filter { eq("id", id) } }
                 .decodeSingle<Post>()
             if (!isPostVisible(post)) {
@@ -113,7 +113,7 @@ class PostRepository @Inject constructor(
      */
     suspend fun getPostPreviewById(id: String): Result<Post> {
         return try {
-            val post = client.postgrest["posts"]
+            val post = client.postgrest["posts_public"]
                 .select { filter { eq("id", id) } }
                 .decodeSingle<Post>()
             if (!isPostVisible(post)) {
@@ -137,7 +137,7 @@ class PostRepository @Inject constructor(
 
     suspend fun searchPosts(query: String): Result<List<Post>> {
         return try {
-            val posts = client.postgrest["posts"].select {
+            val posts = client.postgrest["posts_public"].select {
                 filter { ilike("title", "%$query%") }
                 order("upvotes", Order.DESCENDING)
                 limit(100)
@@ -158,7 +158,7 @@ class PostRepository @Inject constructor(
      */
     suspend fun getPostsByArea(area: String): Result<List<Post>> {
         return try {
-            val posts = client.postgrest["posts"].select {
+            val posts = client.postgrest["posts_public"].select {
                 filter { ilike("area_tag", area) }
                 order("created_at", Order.DESCENDING)
                 limit(30)
@@ -172,7 +172,7 @@ class PostRepository @Inject constructor(
 
     suspend fun getPostsByUser(userId: String): Result<List<Post>> {
         return try {
-            val posts = client.postgrest["posts"].select {
+            val posts = client.postgrest["posts_public"].select {
                 filter { eq("user_id", userId) }
                 order("created_at", Order.DESCENDING)
             }.decodeList<Post>()
@@ -221,7 +221,7 @@ class PostRepository @Inject constructor(
             val posts = mutableListOf<Post>()
             postIds.chunked(10).forEach { chunk ->
                 try {
-                    val batch = client.postgrest["posts"].select {
+                    val batch = client.postgrest["posts_public"].select {
                         filter {
                             isIn("id", chunk)
                         }
@@ -265,7 +265,7 @@ class PostRepository @Inject constructor(
     }
     suspend fun getPostByIdForDelete(postId: String): Post? {
         return try {
-            client.postgrest["posts"]
+            client.postgrest["posts_public"]
                 .select {
                     filter {
                         eq("id", postId)
@@ -418,7 +418,15 @@ class PostRepository @Inject constructor(
                      put("alert_severity", alertSeverity)
                      put("image_url", imageUrl)
                  }
-             ) { select() }.decodeSingle<Post>()
+             ) {
+                 // posts.user_id is not readable by clients (anonymous authors); we know our own id.
+                 select(Columns.list(
+                     "id", "title", "body", "category", "area_tag", "is_anonymous", "upvotes", "downvotes",
+                     "comment_count", "view_count", "image_url", "is_alert", "alert_severity", "created_at",
+                     "is_pinned", "is_locked", "post_type", "edited_at", "edited_by_admin", "expires_at",
+                     "resolved_at", "confirm_count"
+                 ))
+             }.decodeSingle<Post>().copy(userId = userId)
 
              // Queue this post for future notification evaluation
              client.postgrest["notification_queue"].insert(
@@ -514,7 +522,7 @@ class PostRepository @Inject constructor(
                  ?: return Result.failure(Exception("You must be logged in"))
 
              // Get the existing post
-             val existingPost = client.postgrest["posts"]
+             val existingPost = client.postgrest["posts_public"]
                  .select {
                      filter {
                          eq("id", postId)
@@ -800,7 +808,7 @@ class PostRepository @Inject constructor(
 
     suspend fun getAlerts(category: String? = null): Result<List<Post>> {
         return try {
-            val posts = client.postgrest["posts"].select {
+            val posts = client.postgrest["posts_public"].select {
                 filter {
                     eq("is_alert", true)
                     if (category != null) eq("category", category)
@@ -917,10 +925,10 @@ class PostRepository @Inject constructor(
     private suspend fun tryAwardBadges(userId: String, category: String?) {
         try {
             // Count posts in this category for this user
-            val posts = client.postgrest["posts"].select {
+            val posts = client.postgrest["posts_public"].select {
                 if (category == null) return
 
-                val posts = client.postgrest["posts"].select {
+                val posts = client.postgrest["posts_public"].select {
                     filter {
                         eq("user_id", userId)
                         eq("category", category)
@@ -933,7 +941,7 @@ class PostRepository @Inject constructor(
                 category == "nightlife" && count >= 5  -> tryAwardBadge(userId, "night_owl")
             }
             // Area local: 20+ posts in same area
-            val allPosts = client.postgrest["posts"].select {
+            val allPosts = client.postgrest["posts_public"].select {
                 filter { eq("user_id", userId) }
             }.decodeList<Post>()
             val areaCounts = allPosts.groupBy { it.areaTag }
