@@ -6,6 +6,7 @@ package com.nagpurpulse.data.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class Post(
@@ -37,7 +38,11 @@ data class Post(
     val isVerified: Boolean = false,
 
     @SerialName("is_pinned") val isPinned: Boolean = false,
-    @SerialName("is_locked") val isLocked: Boolean = false
+    @SerialName("is_locked") val isLocked: Boolean = false,
+
+    // Filled client-side by PostRepository.enrichPostsWithUsernames(); never sent to
+    // or read from the posts table.
+    @Transient val authorAvatarUrl: String? = null
 )
 
 fun Post.timeAgo(): String {

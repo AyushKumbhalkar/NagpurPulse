@@ -21,7 +21,7 @@ class LocationHelper(
                 LocationServices.getFusedLocationProviderClient(context)
 
             fusedLocationClient.getCurrentLocation(
-                com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                com.google.android.gms.location.Priority.PRIORITY_BALANCED_POWER_ACCURACY,
                 null
             ).addOnSuccessListener { location ->
 
@@ -92,7 +92,7 @@ class LocationHelper(
                 LocationServices.getFusedLocationProviderClient(context)
 
             fusedLocationClient.getCurrentLocation(
-                com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                com.google.android.gms.location.Priority.PRIORITY_BALANCED_POWER_ACCURACY,
                 null
             ).addOnSuccessListener { location ->
 

@@ -9,9 +9,11 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.scale
@@ -101,12 +103,21 @@ fun ShimmerPostCard(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Surface, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp))
             .padding(
     DensityManager.cardPadding.dp
 )
     ) {
-        Box(Modifier.width(72.dp).height(20.dp).shimmerEffect(RoundedCornerShape(20.dp)))
+        // author row: avatar + two text lines (mirrors PostCard's header)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).shimmerEffect(CircleShape))
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Box(Modifier.width(110.dp).height(12.dp).shimmerEffect())
+                Spacer(Modifier.height(6.dp))
+                Box(Modifier.width(70.dp).height(10.dp).shimmerEffect())
+            }
+        }
         Spacer(Modifier.height(14.dp))
         Box(Modifier.fillMaxWidth().height(17.dp).shimmerEffect())
         Spacer(Modifier.height(7.dp))
@@ -132,7 +143,7 @@ fun StaggeredItem(
     index: Int,
     content: @Composable () -> Unit
 ) {
-    if (index < 3) {
+    if (index < 4) {
 
         var visible by remember {
             mutableStateOf(false)
@@ -142,10 +153,19 @@ fun StaggeredItem(
             visible = true
         }
 
+        val delay = index * 70
+
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(
-                animationSpec = tween(250)
+                animationSpec = tween(durationMillis = 300, delayMillis = delay)
+            ) + slideInVertically(
+                animationSpec = tween(
+                    durationMillis = 360,
+                    delayMillis = delay,
+                    easing = FastOutSlowInEasing
+                ),
+                initialOffsetY = { fullHeight -> fullHeight / 12 }
             )
         ) {
             content()

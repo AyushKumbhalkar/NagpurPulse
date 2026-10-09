@@ -1,104 +1,162 @@
 //This is the HomeSCreen.kt file and below is the path of the file
 // java/com/nagpurpulse/ui/screens/home/HomeScreen.kt
+//
+// ViewModel + screen wiring for Home. Reusable visual pieces live in HomeComponents.kt.
 
 package com.nagpurpulse.ui.screens.home
 
-
-
-import androidx.compose.ui.graphics.vector.ImageVector
-import android.content.Context
-import android.util.Log
-import com.nagpurpulse.data.repository.AdminRepository
-import com.nagpurpulse.data.repository.UserPreferencesRepository
-import com.nagpurpulse.ui.theme.ThemeManager
-import androidx.compose.foundation.lazy.rememberLazyListState
-import com.nagpurpulse.ui.preferences.DensityManager
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
-import androidx.compose.ui.platform.LocalContext
 import android.Manifest
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.nagpurpulse.data.location.LocationHelper
-import com.nagpurpulse.data.remote.weather.WeatherRepository
-import java.util.Calendar
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.input.pointer.pointerInput
-import kotlin.math.abs
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.nagpurpulse.data.location.LocationHelper
 import com.nagpurpulse.data.model.Post
+import com.nagpurpulse.data.remote.weather.WeatherRepository
+import com.nagpurpulse.data.repository.AdminRepository
 import com.nagpurpulse.data.repository.AuthRepository
-import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.MessageRepository
 import com.nagpurpulse.data.repository.NotificationRepository
+import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.PresenceRepository
 import com.nagpurpulse.data.repository.SavedPostsRepository
-import com.nagpurpulse.ui.components.*
+import com.nagpurpulse.data.repository.UserPreferencesRepository
+import com.nagpurpulse.ui.components.PostCard
+import com.nagpurpulse.ui.components.ShimmerPostCard
+import com.nagpurpulse.ui.components.StaggeredItem
+import com.nagpurpulse.ui.components.rememberHaptic
 import com.nagpurpulse.ui.navigation.BottomNavBar
 import com.nagpurpulse.ui.navigation.Screen
-import com.nagpurpulse.ui.theme.*
+import com.nagpurpulse.ui.preferences.DensityManager
+import com.nagpurpulse.ui.theme.OrangePrimary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
 
-// ── ViewModel (unchanged logic) ───────────────────────────────────────────────
+// ── ViewModel ─────────────────────────────────────────────────────────────────
 data class HomeUiState(
     val posts: List<Post> = emptyList(),
     val savedPostIds: Set<String> = emptySet(),
     val userVotes: Map<String, String?> = emptyMap(),
+
+    // First load with nothing to show yet → full skeleton.
     val isLoading: Boolean = false,
+    // Pull-to-refresh in progress.
     val isRefreshing: Boolean = false,
+    // Sort / category changed while old posts are still on screen (stale-while-revalidate).
+    val isSwitching: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val endReached: Boolean = false,
+
     val error: String? = null,
     val sortBy: String = "top",
     val category: String? = null,
+
     val unreadNotifCount: Int = 0,
     val hasLoadedUnreadNotifications: Boolean = false,
     val unreadMsgCount: Int = 0,
     val hasLoadedUnreadMessages: Boolean = false,
+
     val temperature: Int? = null,
+    // Raw PM2.5 (µg/m³) as returned by WeatherRepository; HomeComponents converts it to an AQI estimate.
     val aqi: Int? = null,
+    val weatherAttempted: Boolean = false,
     val currentArea: String = "Near You",
+
+    val userName: String? = null,
+    val userAvatarUrl: String? = null,
+    val userKarma: Int? = null,
+
+    val onlineCount: Int = 0,
+    val newPostsCount: Int = 0,
     val snackbarMessage: String? = null
 )
 
-
+private const val FEED_PAGE_SIZE = 20
+private const val BADGE_REFRESH_MS = 60_000L
+private const val NEW_POSTS_PROBE_MS = 90_000L
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -119,25 +177,69 @@ class HomeViewModel @Inject constructor(
     var isAdmin by mutableStateOf(false)
         private set
 
+    // Page index of the last page merged into the feed (0 = first page).
+    private var currentPage = 0
+
+    // Every post id the user has been shown; used to detect genuinely new posts.
+    private val seenPostIds = mutableSetOf<String>()
+
     init {
         loadPosts()
         loadWeather()
         loadLocation()
+        loadProfile()
         checkAdminStatus()
         loadUnreadMessages()
         subscribeToUnreadMessages()
         loadUnreadNotifications()
         subscribeToUnreadNotifications()
         startPresenceWhenAuthenticated()
+        observePresence()
+        startNewPostsProbe()
     }
 
+    // ── Profile (name / avatar / karma for greeting + composer) ──────────────
+    private fun loadProfile() {
+        viewModelScope.launch {
+            repeat(10) {
+                if (authRepository.currentUserId != null) {
+                    authRepository.getCurrentProfile().onSuccess { profile ->
+                        val firstName = (profile.displayName?.takeIf { it.isNotBlank() } ?: profile.username)
+                            .trim()
+                            .substringBefore(' ')
+                        _uiState.update {
+                            it.copy(
+                                userName = firstName.ifBlank { null },
+                                userAvatarUrl = profile.avatarUrl,
+                                userKarma = profile.karma
+                            )
+                        }
+                    }
+                    return@launch
+                }
+                delay(1_000)
+            }
+        }
+    }
+
+    private fun observePresence() {
+        viewModelScope.launch {
+            presenceRepository.onlineUserIds.collect { ids ->
+                _uiState.update { it.copy(onlineCount = ids.size) }
+            }
+        }
+    }
+
+    // ── Unread counters ──────────────────────────────────────────────────────
     private fun loadUnreadMessages() {
         viewModelScope.launch {
             messageRepository.getConversations().onSuccess { conversations ->
-                _uiState.value = _uiState.value.copy(
-                    unreadMsgCount = conversations.sumOf { it.myUnreadCount },
-                    hasLoadedUnreadMessages = true
-                )
+                _uiState.update {
+                    it.copy(
+                        unreadMsgCount = conversations.sumOf { c -> c.myUnreadCount },
+                        hasLoadedUnreadMessages = true
+                    )
+                }
             }
         }
     }
@@ -148,11 +250,11 @@ class HomeViewModel @Inject constructor(
                 loadUnreadMessages()
             }
         }
-        // Realtime is the fast path; periodic refresh recovers missed events and
+        // Realtime is the fast path; a slow periodic refresh recovers missed events and
         // keeps the Home badge consistent across devices.
         viewModelScope.launch {
             while (true) {
-                delay(15_000)
+                delay(BADGE_REFRESH_MS)
                 loadUnreadMessages()
             }
         }
@@ -162,7 +264,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = authRepository.currentUserId ?: return@launch
             notificationRepository.getUnreadCount(userId).onSuccess { count ->
-                _uiState.value = _uiState.value.copy(unreadNotifCount = count, hasLoadedUnreadNotifications = true)
+                _uiState.update {
+                    it.copy(unreadNotifCount = count, hasLoadedUnreadNotifications = true)
+                }
             }
         }
     }
@@ -183,7 +287,7 @@ class HomeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             while (true) {
-                delay(15_000)
+                delay(BADGE_REFRESH_MS)
                 loadUnreadNotifications()
             }
         }
@@ -204,84 +308,45 @@ class HomeViewModel @Inject constructor(
     private fun checkAdminStatus() {
         viewModelScope.launch {
             isAdmin = adminRepository.isAdmin()
-            android.util.Log.d("ADMIN_CHECK", "Home admin status = $isAdmin")
         }
     }
 
-
+    // ── Weather / location ───────────────────────────────────────────────────
     private fun loadWeather() {
-
         viewModelScope.launch {
-
             try {
-
-                val coords =
-                    locationHelper.getCoordinates()
-
-                if (coords == null) return@launch
-
-                val result =
-                    weatherRepository.getWeatherAndAqi(
-                        coords.first,
-                        coords.second
-                    )
-
-                _uiState.value = _uiState.value.copy(
-                    temperature = result.first,
-                    aqi = result.second
-                )
-
+                val coords = locationHelper.getCoordinates()
+                if (coords != null) {
+                    val result = weatherRepository.getWeatherAndAqi(coords.first, coords.second)
+                    _uiState.update { it.copy(temperature = result.first, aqi = result.second) }
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.w("HomeWeather", "Weather unavailable", e)
+            } finally {
+                _uiState.update { it.copy(weatherAttempted = true) }
             }
         }
     }
 
     private fun loadLocation() {
         viewModelScope.launch {
-
             try {
-
                 val area = locationHelper.getSubLocality()
-
-                _uiState.value = _uiState.value.copy(
-                    currentArea = area
-                )
-
+                _uiState.update { it.copy(currentArea = area) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.w("HomeLocation", "Location unavailable", e)
             }
         }
     }
 
-    fun updateTheme(
-        context: Context,
-        enabled: Boolean
-    ) {
-
-        android.util.Log.d(
-            "HOME_THEME",
-            "updateTheme() called. enabled = $enabled"
-        )
-
-        viewModelScope.launch {
-
-            // Save immediately for next app launch
-            userPreferencesRepository.saveThemeLocally(
-                context,
-                !enabled
-            )
-
-            // Save to Supabase
-            userPreferencesRepository.saveAmoledMode(
-                !enabled
-            )
-
-            ThemeManager.toggleTheme(enabled)
-        }
+    /** Re-reads location + weather, e.g. after the user grants permission or taps the area chip. */
+    fun refreshLocation() {
+        _uiState.update { it.copy(weatherAttempted = false) }
+        loadLocation()
+        loadWeather()
     }
 
-
+    // ── Feed ─────────────────────────────────────────────────────────────────
     // Only the most recently requested feed load may update the visible posts.
     // This prevents a slower response for an old tab from replacing a newer tab's feed.
     private var latestPostsLoadRequestId = 0L
@@ -292,104 +357,188 @@ class HomeViewModel @Inject constructor(
         val requestedCategory = _uiState.value.category
 
         viewModelScope.launch {
-            if (requestId != latestPostsLoadRequestId) {
-                Log.d("HomeSortTrace", "loadPosts STALE_BEFORE_START_IGNORED requestId=$requestId latest=$latestPostsLoadRequestId")
-                return@launch
+            // Keep whatever is on screen while the new feed loads (stale-while-revalidate);
+            // only show the full skeleton when there is nothing to show yet.
+            _uiState.update { s ->
+                s.copy(
+                    isLoading = !refresh && s.posts.isEmpty(),
+                    isRefreshing = refresh,
+                    isSwitching = !refresh && s.posts.isNotEmpty()
+                )
             }
-            Log.d("HomeSortTrace", "loadPosts START requestId=$requestId refresh=$refresh sort=$requestedSort category=$requestedCategory")
-            _uiState.value = _uiState.value.copy(isLoading = !refresh, isRefreshing = refresh)
+
             postRepository.getPosts(
                 category = requestedCategory,
-                sortBy = requestedSort
+                sortBy = requestedSort,
+                page = 0,
+                pageSize = FEED_PAGE_SIZE
             ).fold(
                 onSuccess = { posts ->
-                    val currentState = _uiState.value
+                    val current = _uiState.value
                     val isLatestRequest = requestId == latestPostsLoadRequestId
-                    val matchesCurrentFeed = requestedSort == currentState.sortBy &&
-                        requestedCategory == currentState.category
+                    val matchesCurrentFeed = requestedSort == current.sortBy &&
+                        requestedCategory == current.category
 
-                    Log.d(
-                        "HomeSortTrace",
-                        "loadPosts SUCCESS requestId=$requestId latest=$isLatestRequest " +
-                            "requestedSort=$requestedSort currentSort=${currentState.sortBy} " +
-                            "returnedPosts=${posts.size}"
-                    )
+                    if (!isLatestRequest || !matchesCurrentFeed) return@fold
 
-                    if (!isLatestRequest || !matchesCurrentFeed) {
-                        Log.d(
-                            "HomeSortTrace",
-                            "loadPosts STALE_IGNORED requestId=$requestId " +
-                                "requestedSort=$requestedSort currentSort=${currentState.sortBy} " +
-                                "requestedCategory=$requestedCategory currentCategory=${currentState.category}"
+                    currentPage = 0
+                    seenPostIds.addAll(posts.map { it.id })
+
+                    _uiState.update {
+                        it.copy(
+                            posts = posts,
+                            isLoading = false,
+                            isRefreshing = false,
+                            isSwitching = false,
+                            isLoadingMore = false,
+                            endReached = posts.isEmpty(),
+                            newPostsCount = 0,
+                            error = null
                         )
-                        return@fold
                     }
-
-                    _uiState.value = _uiState.value.copy(
-                        posts = posts, isLoading = false, isRefreshing = false, error = null
-                    )
                     loadSavedPostIds()
                     loadUserVotes()
-                    Log.d(
-                        "HomeSortTrace",
-                        "loadPosts STATE_APPLIED requestId=$requestId " +
-                            "requestedSort=$requestedSort finalSort=${_uiState.value.sortBy} " +
-                            "postCount=${_uiState.value.posts.size}"
-                    )
                 },
                 onFailure = { e ->
-                    Log.e(
-                        "HomeSortTrace",
-                        "loadPosts FAILED requestId=$requestId latest=${requestId == latestPostsLoadRequestId} " +
-                            "requestedSort=$requestedSort error=${e.message}",
-                        e
-                    )
-                    if (requestId == latestPostsLoadRequestId &&
-                        requestedSort == _uiState.value.sortBy &&
+                    Log.e("HomeFeed", "loadPosts failed (sort=$requestedSort)", e)
+                    val isLatestRequest = requestId == latestPostsLoadRequestId
+                    val matchesCurrentFeed = requestedSort == _uiState.value.sortBy &&
                         requestedCategory == _uiState.value.category
-                    ) {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false, isRefreshing = false, error = e.message
-                        )
-                    } else {
-                        Log.d("HomeSortTrace", "loadPosts STALE_FAILURE_IGNORED requestId=$requestId")
+
+                    if (isLatestRequest && matchesCurrentFeed) {
+                        _uiState.update { s ->
+                            val hasPosts = s.posts.isNotEmpty()
+                            s.copy(
+                                isLoading = false,
+                                isRefreshing = false,
+                                isSwitching = false,
+                                isLoadingMore = false,
+                                // Real error screen only when there is nothing else to show;
+                                // otherwise keep the feed and tell the user via snackbar.
+                                error = if (hasPosts) null else (e.message ?: "Couldn't load posts"),
+                                snackbarMessage = if (hasPosts) {
+                                    "Couldn't refresh. Check your connection."
+                                } else {
+                                    s.snackbarMessage
+                                }
+                            )
+                        }
                     }
                 }
             )
         }
+    }
+
+    /** Appends the next page of the current feed. Safe to call repeatedly. */
+    fun loadMore() {
+        val s = _uiState.value
+        if (s.isLoading || s.isRefreshing || s.isSwitching || s.isLoadingMore ||
+            s.endReached || s.posts.isEmpty()
+        ) return
+
+        val requestId = latestPostsLoadRequestId
+        val requestedSort = s.sortBy
+        val requestedCategory = s.category
+        val nextPage = currentPage + 1
+
+        _uiState.update { it.copy(isLoadingMore = true) }
+
+        viewModelScope.launch {
+            postRepository.getPosts(
+                category = requestedCategory,
+                sortBy = requestedSort,
+                page = nextPage,
+                pageSize = FEED_PAGE_SIZE
+            ).fold(
+                onSuccess = { more ->
+                    val current = _uiState.value
+                    val isStale = requestId != latestPostsLoadRequestId ||
+                        requestedSort != current.sortBy ||
+                        requestedCategory != current.category
+                    if (isStale) {
+                        _uiState.update { it.copy(isLoadingMore = false) }
+                        return@fold
+                    }
+
+                    currentPage = nextPage
+                    val existingIds = current.posts.map { it.id }.toSet()
+                    val fresh = more.filter { it.id !in existingIds }
+                    seenPostIds.addAll(fresh.map { it.id })
+
+                    _uiState.update {
+                        it.copy(
+                            posts = it.posts + fresh,
+                            isLoadingMore = false,
+                            endReached = more.isEmpty()
+                        )
+                    }
+                    if (fresh.isNotEmpty()) {
+                        loadSavedPostIds()
+                        loadUserVotes()
+                    }
+                },
+                onFailure = { e ->
+                    Log.w("HomeFeed", "loadMore failed (page=$nextPage)", e)
+                    _uiState.update { it.copy(isLoadingMore = false) }
+                }
+            )
+        }
+    }
+
+    // ── "N new posts" pill ───────────────────────────────────────────────────
+    private fun startNewPostsProbe() {
+        viewModelScope.launch {
+            while (true) {
+                delay(NEW_POSTS_PROBE_MS)
+                val s = _uiState.value
+                if (s.isLoading || s.isRefreshing || s.posts.isEmpty()) continue
+
+                val myId = authRepository.currentUserId
+                postRepository.getPosts(
+                    category = null,
+                    sortBy = "new",
+                    page = 0,
+                    pageSize = 10
+                ).onSuccess { latest ->
+                    val unseen = latest.count { it.id !in seenPostIds && it.userId != myId }
+                    if (unseen > 0) {
+                        _uiState.update { it.copy(newPostsCount = unseen) }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Jumps to the newest posts across all categories (used by the "N new posts" pill). */
+    fun showLatest() {
+        _uiState.update { it.copy(sortBy = "new", category = null, newPostsCount = 0) }
+        loadPosts()
     }
 
     private suspend fun loadSavedPostIds() {
         val userId = authRepository.currentUserId ?: return
         savedPostsRepository.getSavedPostIds(userId).fold(
-            onSuccess = { ids -> _uiState.value = _uiState.value.copy(savedPostIds = ids.toSet()) },
+            onSuccess = { ids -> _uiState.update { it.copy(savedPostIds = ids.toSet()) } },
             onFailure = {}
         )
     }
 
+    // One batched query for every visible post (was: one request per post).
     private suspend fun loadUserVotes() {
-
         val userId = authRepository.currentUserId ?: return
+        val ids = _uiState.value.posts.map { it.id }
+        if (ids.isEmpty()) return
 
-        // Preserve the last known vote if Supabase temporarily fails to read it.
-        val votes = _uiState.value.userVotes.toMutableMap()
-
-        _uiState.value.posts.forEach { post ->
-
-            android.util.Log.d(
-                "VOTE_DEBUG",
-                "currentUserId=$userId postId=${post.id}"
-            )
-            postRepository.getUserVote(userId, post.id).fold(
-                onSuccess = { vote -> votes[post.id] = vote },
-                onFailure = { error ->
-                    android.util.Log.w("VOTE_DEBUG", "Couldn't refresh vote for post ${post.id}", error)
+        postRepository.getUserVotesForPosts(userId, ids).fold(
+            onSuccess = { voteMap ->
+                _uiState.update { s ->
+                    val merged = s.userVotes.toMutableMap()
+                    ids.forEach { id -> merged[id] = voteMap[id] }
+                    s.copy(userVotes = merged)
                 }
-            )
-        }
-
-        _uiState.value = _uiState.value.copy(
-            userVotes = votes
+            },
+            // Preserve the last known votes if Supabase temporarily fails to read them.
+            onFailure = { error -> Log.w("HomeVotes", "Couldn't refresh votes", error) }
         )
     }
 
@@ -462,7 +611,7 @@ class HomeViewModel @Inject constructor(
         // Save to Supabase in background
         viewModelScope.launch {
             postRepository.votePost(userId, postId, voteType).onFailure { error ->
-                android.util.Log.e("VOTE_DEBUG", "Saving vote failed for post $postId", error)
+                Log.e("HomeVotes", "Saving vote failed for post $postId", error)
                 // Refresh authoritative state after a failed save; do not assume it toggled off.
                 loadUserVotes()
                 loadPosts()
@@ -472,15 +621,14 @@ class HomeViewModel @Inject constructor(
 
     fun setSortBy(sort: String) {
         val normalized = sort.trim().lowercase()
-        Log.d("HomeSortTrace", "ViewModel.setSortBy ENTER requested=$sort normalized=$normalized previous=${_uiState.value.sortBy}")
-        _uiState.value = _uiState.value.copy(sortBy = normalized)
-        Log.d("HomeSortTrace", "ViewModel.setSortBy STATE_WRITTEN sort=${_uiState.value.sortBy}")
+        if (normalized == _uiState.value.sortBy) return
+        _uiState.update { it.copy(sortBy = normalized) }
         loadPosts()
-        Log.d("HomeSortTrace", "ViewModel.setSortBy EXIT sort=${_uiState.value.sortBy}")
     }
 
     fun setCategory(cat: String?) {
-        _uiState.value = _uiState.value.copy(category = cat)
+        if (cat == _uiState.value.category) return
+        _uiState.update { it.copy(category = cat) }
         loadPosts()
     }
 
@@ -510,36 +658,26 @@ class HomeViewModel @Inject constructor(
                 reason = reason
             )
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = "Report submitted successfully."
-                    )
+                    _uiState.update { it.copy(snackbarMessage = "Report submitted successfully.") }
                 }
-                .onFailure {
-                    _uiState.value = _uiState.value.copy(
-                        snackbarMessage = it.message ?: "Failed to submit report."
-                    )
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(snackbarMessage = error.message ?: "Failed to submit report.")
+                    }
                 }
         }
     }
 
     fun clearSnackbarMessage() {
-        _uiState.value = _uiState.value.copy(
-            snackbarMessage = null
-        )
+        _uiState.update { it.copy(snackbarMessage = null) }
     }
 }
 
-// ── Quick stat cards (row below brand bar) ────────────────────────────────────
-private data class StatCard(
-    val emoji: String,
-    val label: String,
-    val value: String,
-    val sub: String,
-    val tint: Color,
-    val isLive: Boolean = false,
-    val route: String? = null
-)
+// Index of the sticky Top/New/Hot header inside the feed LazyColumn:
+// 0 location card · 1 greeting · 2 composer · 3 "right now" strip · 4 category chips · 5 sort header
+private const val STICKY_HEADER_INDEX = 5
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -548,84 +686,74 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onNotifications: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
-){
+) {
     val uiState by viewModel.uiState.collectAsState()
-    SideEffect {
-        Log.d("HomeSortTrace", "COMPOSE HomeScreen recomposed sortBy=${uiState.sortBy} posts=${uiState.posts.size} loading=${uiState.isLoading}")
-    }
-    LaunchedEffect(uiState.sortBy) {
-        Log.d("HomeSortTrace", "COMPOSE sortBy effect observed=${uiState.sortBy}")
-    }
     val context = LocalContext.current
-    val locationPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()
-        ) { }
+    val haptic = rememberHaptic()
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val compactWidth = LocalConfiguration.current.screenWidthDp < 360
+
+    // ── Location: explain first, then ask ────────────────────────────────────
+    fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    var locationGranted by remember { mutableStateOf(hasLocationPermission()) }
+    var showLocationCard by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        showLocationCard = false
+        val granted = results.values.any { it }
+        locationGranted = granted
+        if (granted) viewModel.refreshLocation()
+    }
 
     LaunchedEffect(Unit) {
-
-        val granted =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-
-        if (!granted) {
-
-            delay(500)
-
-            locationPermissionLauncher.launch(
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
+        if (!locationGranted && !HomeStreak.isLocationPromptSnoozed(context)) {
+            delay(1_500)
+            showLocationCard = true
         }
     }
 
+    // ── Gentle daily streak (device-only) ────────────────────────────────────
+    var streak by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { streak = HomeStreak.touch(context) }
 
-    val swipeRefreshState = rememberSwipeRefreshState(uiState.isRefreshing)
-    val listState = rememberLazyListState()
-    var sortExpanded by remember { mutableStateOf(false) }
-    var dragPreviewTab by remember { mutableStateOf<String?>(null) }
-    var selectedCategory by remember { mutableStateOf("All") }
+    // ── Header entrance ──────────────────────────────────────────────────────
     var headerVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(60); headerVisible = true }
-    val userName = "Ayush"
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
-  /*  val greeting = remember {
-        when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-            in 5..11 -> "Good Morning, $userName ☀️"
-            in 12..16 -> "Good Afternoon, $userName 🌤️"
-            in 17..20 -> "Good Evening, $userName 🌆"
-            else -> "Good Night, $userName 🌙"
-        }
-    }  */
+    var dragPreviewTab by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uiState.snackbarMessage) {
-
         uiState.snackbarMessage?.let { message ->
-
             snackbarHostState.showSnackbar(
                 message = message,
                 withDismissAction = false,
                 duration = SnackbarDuration.Short
             )
-
             viewModel.clearSnackbarMessage()
         }
     }
 
-    // Bell pulse
-    var previousUnreadNotifCount by remember { mutableStateOf(uiState.unreadNotifCount) }
-    var previousUnreadMsgCount by remember { mutableStateOf(uiState.unreadMsgCount) }
+    // ── Badge animations ─────────────────────────────────────────────────────
+    var previousUnreadNotifCount by remember { mutableIntStateOf(uiState.unreadNotifCount) }
+    var previousUnreadMsgCount by remember { mutableIntStateOf(uiState.unreadMsgCount) }
     var notificationCountInitialized by remember { mutableStateOf(false) }
     var messageCountInitialized by remember { mutableStateOf(false) }
-    val bellRotation = remember { androidx.compose.animation.core.Animatable(0f) }
-    val messageRotation = remember { androidx.compose.animation.core.Animatable(0f) }
+    val bellRotation = remember { Animatable(0f) }
+    val messageScale = remember { Animatable(1f) }
 
     LaunchedEffect(uiState.unreadNotifCount, uiState.hasLoadedUnreadNotifications) {
         val current = uiState.unreadNotifCount
         if (uiState.hasLoadedUnreadNotifications && notificationCountInitialized && current > previousUnreadNotifCount) {
+            haptic.alert()
             bellRotation.snapTo(0f)
             bellRotation.animateTo(0f, animationSpec = keyframes {
                 durationMillis = 900
@@ -644,17 +772,18 @@ fun HomeScreen(
         }
     }
 
+    // Messages get a friendly "pop" instead of a shake.
     LaunchedEffect(uiState.unreadMsgCount, uiState.hasLoadedUnreadMessages) {
         val current = uiState.unreadMsgCount
         if (uiState.hasLoadedUnreadMessages && messageCountInitialized && current > previousUnreadMsgCount) {
-            messageRotation.snapTo(0f)
-            messageRotation.animateTo(0f, animationSpec = keyframes {
-                durationMillis = 800
-                10f at 100
-                -10f at 200
-                7f at 300
-                -5f at 400
-                0f at 550
+            haptic.tap()
+            messageScale.snapTo(1f)
+            messageScale.animateTo(1f, animationSpec = keyframes {
+                durationMillis = 520
+                1.3f at 130
+                0.9f at 270
+                1.1f at 400
+                1f at 520
             })
         }
         if (uiState.hasLoadedUnreadMessages) {
@@ -663,6 +792,46 @@ fun HomeScreen(
         }
     }
 
+    // ── Scroll behaviour ─────────────────────────────────────────────────────
+    // When Top/New/Hot or a category changes while the user is deep in the feed,
+    // bring the first post of the new feed back into view.
+    var firstFeedKey by remember { mutableStateOf(true) }
+    LaunchedEffect(uiState.sortBy, uiState.category) {
+        if (firstFeedKey) {
+            firstFeedKey = false
+        } else if (listState.firstVisibleItemIndex > STICKY_HEADER_INDEX) {
+            listState.animateScrollToItem(STICKY_HEADER_INDEX)
+        }
+    }
+
+    // Infinite scroll: ask for the next page when the user is within 4 items of the end.
+    val nearEnd by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 4
+        }
+    }
+    LaunchedEffect(nearEnd, uiState.posts.size) {
+        if (nearEnd) viewModel.loadMore()
+    }
+
+    // ── Derived feed data ────────────────────────────────────────────────────
+    val alertPost = remember(uiState.posts) { uiState.posts.firstOrNull { it.isAlert } }
+    val trendingPost = remember(uiState.posts, alertPost) {
+        if (uiState.posts.size < 3) null
+        else uiState.posts
+            .maxByOrNull { it.upvotes + it.commentCount * 2 }
+            ?.takeIf { it.upvotes + it.commentCount * 2 >= 10 && it.id != alertPost?.id }
+    }
+
+    val itemSpacing = DensityManager.itemSpacing.dp
+    val feedAlpha by animateFloatAsState(
+        targetValue = if (uiState.isSwitching) 0.5f else 1f,
+        label = "feed_alpha"
+    )
+    val currentUserId = viewModel.getCurrentUserId()
+    val swipeRefreshState = rememberSwipeRefreshState(uiState.isRefreshing)
 
     Scaffold(
         modifier = Modifier.pointerInput(uiState.sortBy) {
@@ -692,7 +861,7 @@ fun HomeScreen(
                 onDragEnd = {
                     if (abs(horizontalDistance) > 80f) {
                         targetForSwipe(horizontalDistance)?.let { target ->
-                            Log.d("HomeSortTrace", "SWIPE sort=$sortAtDragStart dx=$horizontalDistance target=$target")
+                            haptic.tap()
                             viewModel.setSortBy(target)
                         }
                     }
@@ -708,11 +877,11 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
 
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState
-            )
+            SnackbarHost(hostState = snackbarHostState)
         },
 
+        // Slim, fixed top bar: brand + three actions. Greeting, weather and filters now
+        // live inside the feed so they scroll away and posts get the full screen.
         topBar = {
             AnimatedVisibility(
                 visible = headerVisible,
@@ -726,254 +895,54 @@ fun HomeScreen(
                                     MaterialTheme.colorScheme.surface,
                                     MaterialTheme.colorScheme.background
                                 ),
-                                startY = 0f, endY = 340f
+                                startY = 0f, endY = 220f
                             )
                         )
                         .statusBarsPadding()
                 ) {
-
-                    // ── Row 1: Brand + icons ──────────────────────────
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Brand
-                        Text(
-                            buildAnnotatedString {
-                                withStyle(
-                                    SpanStyle(
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 22.sp
-                                    )
-                                ) {
-                                    append("Nagpur ")
-                                }
-                                withStyle(
-                                    SpanStyle(
-                                        color = OrangePrimary,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 22.sp
-                                    )
-                                ) {
-                                    append("Pulse")
-                                }
-                                // animated waveform suffix
-                                withStyle(
-                                    SpanStyle(
-                                        color = OrangePrimary,
-                                        fontSize = 14.sp
-                                    )
-                                ) {
-                                    append(" ·⌇")
-                                }
-                            }
-                        )
+                        PulseBrand()
 
                         Spacer(Modifier.weight(1f))
 
-                        // Search
-                        HeaderIcon(Icons.Filled.Search, badge = 0) {
-                            navController.navigate(Screen.Explore.route)
-                        }
+                        val buttonSize = if (compactWidth) 40.dp else 44.dp
+                        val buttonGap = if (compactWidth) 6.dp else 8.dp
 
-                        Spacer(Modifier.width(6.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                                .clickable {
-                                    android.util.Log.d("HOME_THEME", "Moon clicked")
-                                    viewModel.updateTheme(
-                                        context = context,
-                                        enabled = !ThemeManager.isLightTheme
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector =
-                                    if (ThemeManager.isLightTheme)
-                                        Icons.Filled.DarkMode
-                                    else
-                                        Icons.Filled.LightMode,
-                                contentDescription = "Theme",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(Modifier.width(6.dp))
-
-                        // Notifications — with badge + pulse
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                                .pressScale(onClick = onNotifications),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Filled.Notifications, null,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp).rotate(bellRotation.value)
-                            )
-                            if (uiState.unreadNotifCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(
-                                            width = if (uiState.unreadNotifCount > 9) 16.dp else 12.dp,
-                                            height = 12.dp
-                                        )
-                                        .clip(CircleShape)
-                                        .background(OrangePrimary)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-3).dp, y = 3.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "${uiState.unreadNotifCount.coerceAtMost(9)}${if (uiState.unreadNotifCount > 9) "+" else ""}",
-                                        color = Color.White,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.width(6.dp))
-
-                        // Messages button
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable {
-                                    android.util.Log.d("MSG_TEST", "Messages Clicked")
-                                    navController.navigate(Screen.Messages.route)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Filled.Forum,
-                                contentDescription = "Messages",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp).rotate(messageRotation.value)
-                            )
-
-                            if (uiState.unreadMsgCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .background(OrangePrimary)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-1).dp, y = 1.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        if (uiState.unreadMsgCount > 9) "9+" else "${uiState.unreadMsgCount}",
-                                        color = Color.White,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Row 2: Location + Greeting ───────────────────
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 0.dp)
-                    ) {
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(11.dp)
-                            )
-
-                            Text(
-                                text = " ${uiState.currentArea}",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-
-
-
-                    }
-
-
-                    // ── Row 3: Weather + AQI + Sort ───────────────────────
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-                        val isDaytime = hour in 5..19
-
-                        QuickInfoChip(
-                            icon = if (isDaytime) Icons.Filled.WbSunny else Icons.Filled.DarkMode,
-                            text = uiState.temperature?.let { "$it°" } ?: "--°",
-                            color = if (isDaytime) Color(0xFFFFB300) else Color(0xFF5C9EFF)
+                        HeaderIconButton(
+                            icon = Icons.Filled.Search,
+                            contentDescription = "Search",
+                            size = buttonSize,
+                            onClick = { navController.navigate(Screen.Explore.route) }
                         )
 
-                        val aqiText =
-                            uiState.aqi?.let { "AQI $it" }
-                                ?: "AQI --"
+                        Spacer(Modifier.width(buttonGap))
 
-                        QuickInfoChip(
-                            icon = Icons.Filled.Eco,
-                            text = aqiText,
-                            color = when (uiState.aqi) {
-                                null -> OrangePrimary
-                                in 0..50 -> Color(0xFF4CAF50)
-                                in 51..100 -> Color(0xFFFFC107)
-                                else -> Color(0xFFF44336)
-                            }
+                        HeaderIconButton(
+                            icon = Icons.Filled.Notifications,
+                            contentDescription = "Notifications",
+                            size = buttonSize,
+                            badgeCount = uiState.unreadNotifCount,
+                            iconModifier = Modifier.rotate(bellRotation.value),
+                            onClick = onNotifications
                         )
 
-                        Spacer(
-                            modifier = Modifier.width(
-                                if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) {
-                                    24.dp
-                                } else {
-                                    8.dp
-                                }
-                            )
-                        )
+                        Spacer(Modifier.width(buttonGap))
 
-                        Log.d("HomeSortTrace", "HEADER rendering SortChipGroup selected=${uiState.sortBy}")
-                        SortChipGroup(
-                            selected = uiState.sortBy,
-                            onSelected = { sort ->
-                                Log.d("HomeSortTrace", "CHIP CALLBACK tapped=$sort stateBefore=${uiState.sortBy}")
-                                viewModel.setSortBy(sort.lowercase())
-                                Log.d("HomeSortTrace", "CHIP CALLBACK completed tapped=$sort")
-                            }
+                        HeaderIconButton(
+                            icon = Icons.Filled.Forum,
+                            contentDescription = "Messages",
+                            size = buttonSize,
+                            badgeCount = uiState.unreadMsgCount,
+                            iconModifier = Modifier.scale(messageScale.value),
+                            onClick = { navController.navigate(Screen.Messages.route) }
                         )
                     }
 
-
-
-                    Spacer(Modifier.height(2.dp))
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                         thickness = 0.5.dp
@@ -991,390 +960,290 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        Box(Modifier.fillMaxSize()) {
-        SwipeRefresh(
-            state = swipeRefreshState,
-            onRefresh = { viewModel.loadPosts(refresh = true) },
-            modifier = Modifier
+        Box(
+            Modifier
+                .fillMaxSize()
                 .padding(paddingValues)
-
         ) {
-            when {
-                uiState.isLoading -> {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(
-                            horizontal = DensityManager.cardPadding.dp,
-                            vertical = DensityManager.itemSpacing.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(
-                            DensityManager.itemSpacing.dp
-                        )
-                    ) {
-                        items(6) {
-                            ShimmerPostCard()
+            SwipeRefresh(
+                state = swipeRefreshState,
+                onRefresh = { viewModel.loadPosts(refresh = true) },
+                indicator = { state, trigger ->
+                    SwipeRefreshIndicator(
+                        state = state,
+                        refreshTriggerDistance = trigger,
+                        contentColor = OrangePrimary,
+                        backgroundColor = MaterialTheme.colorScheme.surface
+                    )
+                }
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)
+                ) {
+                    // 0 ── Location explainer (only while permission is missing)
+                    item(key = "location_card") {
+                        if (showLocationCard && !locationGranted) {
+                            LocationRationaleCard(
+                                onAllow = {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                },
+                                onDismiss = {
+                                    showLocationCard = false
+                                    HomeStreak.snoozeLocationPrompt(context)
+                                },
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .padding(bottom = 12.dp)
+                            )
                         }
                     }
-                }
 
-                uiState.posts.isEmpty() -> {
-                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    // 1 ── Greeting + location / weather / AQI / streak / level
+                    item(key = "greeting") {
+                        GreetingBlock(
+                            userName = uiState.userName,
+                            area = uiState.currentArea,
+                            temperature = uiState.temperature,
+                            pm25 = uiState.aqi,
+                            weatherAttempted = uiState.weatherAttempted,
+                            streak = streak,
+                            karma = uiState.userKarma,
+                            onLocationClick = { viewModel.refreshLocation() },
+                            onLevelClick = onProfileClick,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 4.dp, bottom = 12.dp)
+                        )
+                    }
+
+                    // 2 ── "What's happening in <area>?" composer
+                    item(key = "composer") {
+                        ComposerBar(
+                            userName = uiState.userName,
+                            avatarUrl = uiState.userAvatarUrl,
+                            area = uiState.currentArea,
+                            onClick = {
+                                haptic.tap()
+                                onCreatePost()
+                            },
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .padding(bottom = 12.dp)
+                        )
+                    }
+
+                    // 3 ── Live local signals (renders nothing when there is nothing real to show)
+                    item(key = "right_now") {
+                        RightNowStrip(
+                            onlineCount = uiState.onlineCount,
+                            alertPost = alertPost,
+                            trendingPost = trendingPost,
+                            onPostClick = onPostClick,
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .padding(bottom = 14.dp)
+                        )
+                    }
+
+                    // 4 ── Category filter chips
+                    item(key = "categories") {
+                        CategoryChipsRow(
+                            selected = uiState.category,
+                            onSelected = { viewModel.setCategory(it) },
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .padding(bottom = 10.dp)
+                        )
+                    }
+
+                    // 5 ── Sticky Top / New / Hot
+                    stickyHeader(key = "sort_header") {
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(horizontal = 12.dp)
+                                .padding(top = 4.dp, bottom = 8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.LocationCity,
-                                contentDescription = null,
-                                tint = OrangePrimary,
-                                modifier = Modifier.size(56.dp)
+                            SortTabs(
+                                selected = uiState.sortBy,
+                                onSelected = { viewModel.setSortBy(it) }
                             )
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                "Nothing trending yet",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "Be the first to post about Nagpur!",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(Modifier.height(20.dp))
+                            // Reserve the 2dp so the layout never jumps when the bar appears.
                             Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(OrangeSubtle)
-                                    .border(
-                                        1.dp,
-                                        OrangePrimary.copy(0.5f),
-                                        RoundedCornerShape(22.dp)
-                                    )
-                                    .pressScale(onClick = onCreatePost)
-                                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp)
+                                    .height(2.dp)
                             ) {
-                                Text(
-                                    "+ Create Post",
-                                    color = OrangePrimary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                if (uiState.isSwitching) {
+                                    LinearProgressIndicator(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = OrangePrimary,
+                                        trackColor = androidx.compose.ui.graphics.Color.Transparent
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                else -> {
+                    // ── Feed ────────────────────────────────────────────────
+                    when {
+                        uiState.isLoading && uiState.posts.isEmpty() -> {
+                            items(5, key = { "shimmer_$it" }) {
+                                ShimmerPostCard(
+                                    Modifier
+                                        .padding(horizontal = 12.dp)
+                                        .padding(bottom = itemSpacing)
+                                )
+                            }
+                        }
 
-                    LazyColumn(
-                        contentPadding = PaddingValues(
-                            horizontal = 12.dp,
-                            vertical = DensityManager.itemSpacing.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(
-                            DensityManager.itemSpacing.dp
-                        )
-                    )
-                   {
-                        itemsIndexed(
-                            items = uiState.posts,
-                            key = { _, post -> post.id }
-                        ) { index, post ->
-                            StaggeredItem(index = index) {
-                                PostCard(
-                                    post = post,
-                                    currentVote = uiState.userVotes[post.id],
-                                    isSaved = post.id in uiState.savedPostIds,
-                                    isOwnPost = post.userId == viewModel.getCurrentUserId(),
-                                    isAdmin = viewModel.isAdmin,
-                                    onClick = { onPostClick(post.id) },
-                                    onUserClick = { userId ->
-                                        navController.navigate("user_profile/$userId")
-                                    },
-                                    onUpvote = { viewModel.vote(post.id, "up") },
-                                    onDownvote = { viewModel.vote(post.id, "down") },
-                                    onToggleSave = { viewModel.toggleSave(post.id) },
+                        uiState.posts.isEmpty() && uiState.error != null -> {
+                            item(key = "feed_error") {
+                                FeedErrorState(onRetry = { viewModel.loadPosts() })
+                            }
+                        }
 
-                                    onReport = {
-                                        viewModel.reportPost(post.id, "other")
-                                    },
-
-                                    onEdit = {
-                                        navController.navigate(
-                                            Screen.CreatePost.createEditRoute(post.id)
-                                        )
-                                    },
-
-
-                                    onDelete = {
-                                        viewModel.deletePost(post.id)
+                        uiState.posts.isEmpty() -> {
+                            item(key = "feed_empty") {
+                                FeedEmptyState(
+                                    category = uiState.category,
+                                    onCreatePost = {
+                                        haptic.tap()
+                                        onCreatePost()
                                     }
                                 )
                             }
                         }
-                        item { Spacer(Modifier.height(8.dp)) }
+
+                        else -> {
+                            itemsIndexed(
+                                items = uiState.posts,
+                                key = { _, post -> post.id }
+                            ) { index, post ->
+                                StaggeredItem(index = index) {
+                                    PostCard(
+                                        post = post,
+                                        modifier = Modifier
+                                            .animateItem()
+                                            .alpha(feedAlpha)
+                                            .padding(start = 12.dp, end = 12.dp, bottom = itemSpacing),
+                                        currentVote = uiState.userVotes[post.id],
+                                        isSaved = post.id in uiState.savedPostIds,
+                                        isOwnPost = post.userId == currentUserId,
+                                        isAdmin = viewModel.isAdmin,
+                                        onClick = { onPostClick(post.id) },
+                                        onUserClick = { userId ->
+                                            navController.navigate("user_profile/$userId")
+                                        },
+                                        onUpvote = { viewModel.vote(post.id, "up") },
+                                        onDownvote = { viewModel.vote(post.id, "down") },
+                                        onToggleSave = { viewModel.toggleSave(post.id) },
+                                        onReport = {
+                                            viewModel.reportPost(post.id, "other")
+                                        },
+                                        onEdit = {
+                                            navController.navigate(
+                                                Screen.CreatePost.createEditRoute(post.id)
+                                            )
+                                        },
+                                        onDelete = {
+                                            viewModel.deletePost(post.id)
+                                        }
+                                    )
+                                }
+                            }
+
+                            if (uiState.isLoadingMore) {
+                                item(key = "loading_more") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = OrangePrimary,
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (uiState.endReached && !uiState.isLoadingMore) {
+                                item(key = "end_of_feed") {
+                                    FeedEndCard(
+                                        onExplore = { navController.navigate(Screen.Explore.route) }
+                                    )
+                                }
+                            }
+                        }
                     }
+
+                    item(key = "bottom_space") { Spacer(Modifier.height(8.dp)) }
                 }
             }
-        }
 
-        AnimatedVisibility(
-            visible = dragPreviewTab != null,
-            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.88f, animationSpec = tween(180)),
-            exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.92f, animationSpec = tween(120)),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp)
-        ) {
-            Row(
+            // ── "N new posts" pill ──────────────────────────────────────────
+            AnimatedVisibility(
+                visible = uiState.newPostsCount > 0,
+                enter = fadeIn(tween(200)) + slideInVertically(tween(260)) { -it },
+                exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { -it },
                 modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-                    .border(1.dp, OrangePrimary.copy(alpha = 0.55f), RoundedCornerShape(24.dp))
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
             ) {
-                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(18.dp))
-                Text(
-                    text = "Release to ${dragPreviewTab?.replaceFirstChar { it.uppercase() } ?: ""}",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleSmall
+                NewPostsPill(
+                    count = uiState.newPostsCount,
+                    onClick = {
+                        haptic.tap()
+                        viewModel.showLatest()
+                        scope.launch { listState.animateScrollToItem(0) }
+                    }
                 )
             }
-        }
-        }
-    }
 
-
-
-}
-
-// ── Header icon button ────────────────────────────────────────────────────────
-@Composable
-private fun HeaderIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    badge: Int = 0,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .pressScale(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-        if (badge > 0) {
-            Box(
+            // ── Swipe-to-switch hint ────────────────────────────────────────
+            AnimatedVisibility(
+                visible = dragPreviewTab != null,
+                enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.88f, animationSpec = tween(180)),
+                exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.92f, animationSpec = tween(120)),
                 modifier = Modifier
-                    .defaultMinSize(minWidth = 14.dp, minHeight = 14.dp)
-                    .clip(CircleShape)
-                    .background(OrangePrimary)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 3.dp, y = (-3).dp)
-                    .padding(horizontal = 2.dp),
-                contentAlignment = Alignment.Center
+                    .align(Alignment.TopCenter)
+                    .padding(top = 64.dp)
             ) {
-                Text(
-                    if (badge > 9) "9+" else "$badge",
-                    color = Color.White,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SortChipGroup(
-    selected: String,
-    onSelected: (String) -> Unit
-) {
-    SideEffect {
-        Log.d("HomeSortTrace", "CHIPS COMPOSE selectedRaw=$selected normalized=${selected.trim().lowercase()}")
-    }
-    // Keep the three sort labels on one line on narrow phones (e.g. Oppo A5).
-    // The existing spacing and typography remain unchanged on wider phones.
-    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
-
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(
-                1.dp,
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                RoundedCornerShape(18.dp)
-            )
-            .padding(3.dp)
-    ) {
-        listOf("top", "new", "hot").forEach { item ->
-            val isSelected = item.equals(selected.trim(), ignoreCase = true)
-            SideEffect {
-                Log.d("HomeSortTrace", "CHIP RENDER item=$item selected=$selected isSelected=$isSelected")
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (isSelected) OrangePrimary.copy(alpha = 0.22f)
-                        else Color.Transparent
-                    )
-                    .then(
-                        if (isSelected) Modifier.border(
-                            width = 1.dp,
-                            color = OrangePrimary.copy(alpha = 0.65f),
-                            shape = RoundedCornerShape(14.dp)
-                        ) else Modifier
-                    )
-                    .clickable { onSelected(item) }
-                    .padding(
-                        horizontal = if (compact) 5.dp else 10.dp,
-                        vertical = 6.dp
-                    )
-            ) {
-                Text(
-                    text = item.replaceFirstChar { it.uppercase() },
-                    maxLines = 1,
-                    softWrap = false,
-                    fontSize = if (compact) 14.sp else MaterialTheme.typography.bodyLarge.fontSize,
-                    color = if (isSelected) OrangePrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = if (isSelected) FontWeight.Bold
-                    else FontWeight.Medium
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickInfoChip(
-    icon: ImageVector,
-    text: String,
-    color: Color = OrangePrimary,
-    backgroundColor: Color = MaterialTheme.colorScheme.surface
-) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(backgroundColor)
-            .border(
-                1.dp,
-                color.copy(alpha = 0.25f),
-                RoundedCornerShape(20.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Spacer(modifier = Modifier.width(6.dp))
-
-        Text(
-            text = text,
-            color = color,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-// ── Quick stat card ───────────────────────────────────────────────────────────
-@Composable
-private fun QuickStatCard(
-    icon: ImageVector,
-    label: String,
-    value: String,
-    sub: String = "",
-    tint: Color,
-    subColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    selected: Boolean = false,
-    isLive: Boolean = false,
-    liveLabel: String = "",
-    onClick: () -> Unit
-) {
-    val t = rememberInfiniteTransition(label = "live_$label")
-    val liveAlpha by t.animateFloat(
-        1f, 0.2f,
-        infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "la"
-    )
-
-    Column(
-        modifier = Modifier
-            .width(106.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (selected)
-                    Brush.linearGradient(listOf(OrangePrimary.copy(0.22f), OrangeLight.copy(0.10f)))
-                else
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
-            )
-            .border(
-                1.dp,
-                if (selected) OrangePrimary.copy(0.55f) else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(16.dp)
-            )
-            .pressScale(onClick = onClick)
-            .padding(12.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = OrangePrimary,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(label, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(2.dp))
-        Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-
-        if (isLive && liveLabel.isNotBlank()) {
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(tint.copy(alpha = liveAlpha))
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(liveLabel, color = tint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.width(4.dp))
-                // Animated waveform bars
                 Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+                        .border(1.dp, OrangePrimary.copy(alpha = 0.55f), RoundedCornerShape(24.dp))
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(1.5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(0.6f, 1f, 0.7f).forEach { h ->
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height((8 * h).dp)
-                                .clip(RoundedCornerShape(1.dp))
-                                .background(tint.copy(alpha = liveAlpha * 0.8f))
-                        )
-                    }
+                    Icon(
+                        Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = OrangePrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Release to ${dragPreviewTab?.replaceFirstChar { it.uppercase() } ?: ""}",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmall
+                    )
                 }
             }
-        } else if (sub.isNotBlank()) {
-            Spacer(Modifier.height(4.dp))
-            Text(sub, color = subColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
         }
     }
 }

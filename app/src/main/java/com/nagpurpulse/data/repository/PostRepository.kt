@@ -690,6 +690,34 @@ class PostRepository @Inject constructor(
         }
     }
 
+    /**
+     * One round-trip replacement for calling [getUserVote] once per post.
+     * Returns post_id -> vote_type ("up" / "down"); posts without a vote are absent.
+     */
+    suspend fun getUserVotesForPosts(
+        userId: String,
+        postIds: List<String>
+    ): Result<Map<String, String>> {
+        if (postIds.isEmpty()) return Result.success(emptyMap())
+        return try {
+            val rows = client.postgrest["votes"].select {
+                filter {
+                    eq("user_id", userId)
+                    isIn("post_id", postIds)
+                }
+            }.decodeList<kotlinx.serialization.json.JsonObject>()
+
+            val votes = rows.mapNotNull { row ->
+                val postId = row["post_id"]?.jsonPrimitive?.content
+                val voteType = row["vote_type"]?.jsonPrimitive?.content
+                if (postId != null && voteType != null) postId to voteType else null
+            }.toMap()
+            Result.success(votes)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Alerts ────────────────────────────────────────────────────────────────
 
     suspend fun getAlerts(category: String? = null): Result<List<Post>> {
@@ -726,12 +754,14 @@ class PostRepository @Inject constructor(
 
                  post.copy(
                      username = profile?.username ?: "unknown",
-                     isVerified = profile?.isVerified ?: false
+                     isVerified = profile?.isVerified ?: false,
+                     authorAvatarUrl = profile?.avatarUrl
                  )
              } else {
                  post.copy(
                      username = null,
-                     isVerified = false
+                     isVerified = false,
+                     authorAvatarUrl = null
                  )
              }
          }
