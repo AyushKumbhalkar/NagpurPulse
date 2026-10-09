@@ -5,8 +5,7 @@
 -- able to continue, because Supabase simply re-sends the confirmation code for those.
 --
 -- Security note: like every "email taken?" check this reveals whether an address is registered.
--- That is the requested UX; the function returns a bare boolean, takes no other input, and the
--- app already exposes the same fact through the Supabase signup response.
+-- This RPC intentionally returns only a boolean and accepts no other input.
 create or replace function public.email_exists(p_email text)
 returns boolean
 language sql
@@ -23,4 +22,5 @@ as $$
   );
 $$;
 
-revoke all on function public.email_exists(text) from public;+grant execute on function public.email_exists(text) to anon, authenticated;
+revoke all on function public.email_exists(text) from public;
+grant execute on function public.email_exists(text) to anon, authenticated;
