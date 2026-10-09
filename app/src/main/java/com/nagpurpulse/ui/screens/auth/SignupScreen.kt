@@ -7,6 +7,15 @@
 
 package com.nagpurpulse.ui.screens.auth
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -359,11 +368,11 @@ private fun SignupSuccessOverlay() {
                 .padding(horizontal = 32.dp, vertical = 36.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
-            androidx.compose.material3.Icon(
-                imageVector = androidx.compose.material.icons.Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = androidx.compose.ui.graphics.Color(0xFF22A06B),
-                modifier = androidx.compose.ui.Modifier.size(72.dp)
+            androidx.compose.material3.Text(
+                text = "✓",
+                color = androidx.compose.ui.graphics.Color(0xFF22A06B),
+                fontSize = 64.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
             )
             androidx.compose.foundation.layout.Spacer(
                 modifier = androidx.compose.ui.Modifier.height(18.dp)
