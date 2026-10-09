@@ -969,3 +969,5 @@ internal fun SignupEmailAlreadyUsedDialog(
                 }
             }
         }
+    }
+}
