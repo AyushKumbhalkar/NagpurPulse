@@ -60,6 +60,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="nagpurpulse.in" android:pathPrefix="/auth" />
             </intent-filter>
+            <!-- Shared post links: https://nagpurpulse.in/p/{postId} (needs the site page + assetlinks.json). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="nagpurpulse.in" android:pathPrefix="/p/" />
+            </intent-filter>
         </activity>
 
         <!-- FCM Service -->

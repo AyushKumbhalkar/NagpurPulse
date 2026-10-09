@@ -49,6 +49,14 @@ android {
             localProperties.getProperty("AUTH_HTTPS_LINKS", "false")
         )
 
+        // Flip to true (local.properties: POST_SHARE_LINKS=true) once https://nagpurpulse.in/p/{id}
+        // serves a landing page. Until then shared posts contain no link.
+        buildConfigField(
+            "boolean",
+            "POST_SHARE_LINKS",
+            localProperties.getProperty("POST_SHARE_LINKS", "false")
+        )
+
         buildConfigField(
             "String",
             "SUPABASE_ANON_KEY",

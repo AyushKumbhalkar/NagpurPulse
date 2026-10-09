@@ -231,4 +231,38 @@
     <string name="festival_republic_day">प्रजासत्ताक दिनाच्या हार्दिक शुभेच्छा! जय हिंद.</string>
     <string name="festival_independence_day">स्वातंत्र्य दिनाच्या हार्दिक शुभेच्छा! जय हिंद.</string>
     <string name="festival_maharashtra_day">महाराष्ट्र दिनाच्या हार्दिक शुभेच्छा! जय महाराष्ट्र.</string>
+
+    <!-- Post card -->
+    <string name="post_card_verified">सत्यापित</string>
+    <string name="post_card_pinned">पिन केलेले</string>
+    <string name="post_card_locked">कमेंट बंद आहेत</string>
+    <string name="post_card_new">नवीन</string>
+    <string name="post_card_trending">ट्रेंडिंग</string>
+    <string name="post_card_you">तुम्ही</string>
+    <string name="post_card_author_fallback">नागपूरकर</string>
+    <string name="post_card_anonymous">अनामिक</string>
+    <string name="post_card_more_options">अधिक पर्याय</string>
+    <string name="post_card_edit">संपादित करा</string>
+    <string name="post_card_delete">हटवा</string>
+    <string name="post_card_share">शेअर करा</string>
+    <string name="post_card_save">सेव्ह करा</string>
+    <string name="post_card_unsave">सेव्ह काढा</string>
+    <string name="post_card_report">रिपोर्ट करा</string>
+    <string name="post_card_copy_link">लिंक कॉपी करा</string>
+    <string name="post_card_link_copied">लिंक कॉपी झाली</string>
+    <string name="post_card_delete_title">ही पोस्ट हटवायची?</string>
+    <string name="post_card_delete_message">हे परत करता येणार नाही.</string>
+    <string name="post_card_cancel">रद्द करा</string>
+    <string name="post_card_report_title">पोस्टची रिपोर्ट करा</string>
+    <string name="post_card_upvote">अपव्होट</string>
+    <string name="post_card_remove_upvote">अपव्होट काढा</string>
+    <string name="post_card_upvoted">अपव्होट केले</string>
+    <string name="post_card_not_upvoted">अपव्होट केलेले नाही</string>
+    <string name="post_card_comments_count">%1$d कमेंट</string>
+    <string name="post_card_save_post">पोस्ट सेव्ह करा</string>
+    <string name="post_card_unsave_post">पोस्टचे सेव्ह काढा</string>
+    <string name="post_card_share_post">पोस्ट शेअर करा</string>
+    <string name="post_card_view_profile">प्रोफाइल पहा</string>
+    <string name="post_card_open_post">पोस्ट उघडा</string>
+    <string name="post_card_share_footer">— Nagpur Pulse वरून शेअर केले 🍊</string>
 </resources>

@@ -55,6 +55,21 @@ private fun Intent.withNormalizedAuthLink(): Intent {
     return Intent(this).setData(rebuilt)
 }
 
+/**
+ * https://nagpurpulse.in/p/{id}  or  nagpurpulse://thread/{id}  ->  post id (null for anything else).
+ */
+private fun Intent.sharedPostIdOrNull(): String? {
+    val uri = data ?: return null
+    val segments = uri.pathSegments
+    val id = when {
+        uri.scheme == "https" && uri.host == "nagpurpulse.in" &&
+            segments.size >= 2 && segments[0] == "p" -> segments[1]
+        uri.scheme == "nagpurpulse" && uri.host == "thread" && segments.isNotEmpty() -> segments[0]
+        else -> null
+    }
+    return id?.takeIf { it.isNotBlank() }
+}
+
 private fun isPasswordRecoveryCallback(intent: Intent?): Boolean {
     val uri = intent?.data ?: return false
     if (uri.scheme != "nagpurpulse" || uri.host != "auth") return false
@@ -128,6 +143,9 @@ class MainActivity : FragmentActivity() {
             NotifDeepLink.pendingCommentId.value = it
         }
         intent?.getStringExtra("post_id")?.let {
+            NotifDeepLink.pendingPostId.value = it
+        }
+        intent?.sharedPostIdOrNull()?.let {
             NotifDeepLink.pendingPostId.value = it
         }
         intent?.getStringExtra("conversation_id")?.takeIf { it.isNotBlank() }?.let {
@@ -263,6 +281,9 @@ class MainActivity : FragmentActivity() {
             NotifDeepLink.pendingCommentId.value = it
         }
         intent.getStringExtra("post_id")?.let {
+            NotifDeepLink.pendingPostId.value = it
+        }
+        intent.sharedPostIdOrNull()?.let {
             NotifDeepLink.pendingPostId.value = it
         }
         intent.getStringExtra("conversation_id")?.takeIf { it.isNotBlank() }?.let {

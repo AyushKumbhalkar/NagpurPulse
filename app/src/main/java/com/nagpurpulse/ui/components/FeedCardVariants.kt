@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.nagpurpulse.R
+import androidx.compose.ui.res.stringResource
 import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.model.timeAgo
 import com.nagpurpulse.ui.theme.*
@@ -42,7 +44,7 @@ import com.nagpurpulse.ui.theme.*
 fun CompactPostCard(
     post: Post,
     onClick: () -> Unit,
-    onUpvote: () -> Unit = {},
+    onUpvote: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var upvoted by remember { mutableStateOf(false) }
@@ -61,7 +63,7 @@ fun CompactPostCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Surface)
+            .background(MaterialTheme.colorScheme.surface)
             .pressScale(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -81,8 +83,8 @@ fun CompactPostCard(
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CategoryBadge(post.category, modifier = Modifier.height(20.dp))
-                Text("  ·  ", color = TertiaryText, fontSize = 11.sp)
-                Text(post.timeAgo(), color = TertiaryText, fontSize = 11.sp)
+                Text("  ·  ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Text(post.timeAgo(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             }
         }
 
@@ -92,12 +94,15 @@ fun CompactPostCard(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 Icons.Filled.KeyboardArrowUp, null,
-                tint = if (upvoted) OrangePrimary else TertiaryText,
-                modifier = Modifier.size(20.dp).scale(upScale).pressScale {
-                    upvoted = !upvoted; count = if (upvoted) post.upvotes + 1 else post.upvotes; burst = true; onUpvote()
+                tint = if (upvoted) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp).scale(upScale).let { m ->
+                    // Read-only unless a real handler is wired, so we never fake a vote locally.
+                    if (onUpvote != null) m.pressScale {
+                        upvoted = !upvoted; count = if (upvoted) post.upvotes + 1 else post.upvotes; burst = true; onUpvote()
+                    } else m
                 }
             )
-            Text(formatCount(count), color = if (upvoted) OrangePrimary else TertiaryText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(formatCount(count), color = if (upvoted) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -109,7 +114,7 @@ fun CompactPostCard(
 fun FeaturedPostCard(
     post: Post,
     onClick: () -> Unit,
-    onUpvote: () -> Unit = {},
+    onUpvote: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val catColor = categoryColor(post.category)
@@ -126,8 +131,8 @@ fun FeaturedPostCard(
                 Brush.verticalGradient(
                     listOf(
                         catColor.copy(0.07f),
-                        Surface,
-                        Surface
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surface
                     )
                 )
             )
@@ -142,7 +147,7 @@ fun FeaturedPostCard(
                 Spacer(Modifier.width(8.dp))
                 CategoryBadge(post.category)
                 Spacer(Modifier.weight(1f))
-                Text(post.timeAgo(), color = TertiaryText, fontSize = 12.sp)
+                Text(post.timeAgo(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -150,13 +155,13 @@ fun FeaturedPostCard(
             // Large title for featured
             SmartTitle(
                 post.title,
-                color = PrimaryText,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
 
             if (!post.body.isNullOrBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Text(post.body, color = SecondaryText, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(post.body, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
 
             if (!post.imageUrl.isNullOrBlank()) {
@@ -171,38 +176,42 @@ fun FeaturedPostCard(
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = Divider, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
             Spacer(Modifier.height(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (post.isAnonymous) "u/Anonymous" else "u/${post.username ?: "unknown"}", color = OrangePrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(if (post.isAnonymous) "u/${stringResource(R.string.post_card_anonymous)}" else "u/${post.username ?: stringResource(R.string.post_card_author_fallback)}", color = OrangePrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 if (post.areaTag != null) {
-                    Text("  ·  ", color = TertiaryText, fontSize = 12.sp)
-                    Icon(Icons.Filled.LocationOn, null, tint = TertiaryText, modifier = Modifier.size(11.dp))
-                    Text(" ${post.areaTag}", color = TertiaryText, fontSize = 12.sp)
+                    Text("  ·  ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Icon(Icons.Filled.LocationOn, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(11.dp))
+                    Text(" ${post.areaTag}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
                 Spacer(Modifier.weight(1f))
                 // Upvote pill
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (upvoted) OrangeSubtle else SurfaceAlt)
-                        .pressScale { upvoted = !upvoted; count = if (upvoted) post.upvotes + 1 else post.upvotes; burst = true; onUpvote() }
+                        .background(if (upvoted) OrangeSubtle else MaterialTheme.colorScheme.surfaceVariant)
+                        .let { m ->
+                            if (onUpvote != null) m.pressScale {
+                                upvoted = !upvoted; count = if (upvoted) post.upvotes + 1 else post.upvotes; burst = true; onUpvote()
+                            } else m
+                        }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.KeyboardArrowUp, null, tint = if (upvoted) OrangePrimary else SecondaryText, modifier = Modifier.size(16.dp).scale(upScale))
+                    Icon(Icons.Filled.KeyboardArrowUp, null, tint = if (upvoted) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp).scale(upScale))
                     Spacer(Modifier.width(4.dp))
-                    Text(formatCount(count), color = if (upvoted) OrangePrimary else SecondaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(formatCount(count), color = if (upvoted) OrangePrimary else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.width(8.dp))
                 Row(
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(SurfaceAlt).padding(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.MailOutline, null, tint = SecondaryText, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Filled.MailOutline, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(formatCount(post.commentCount), color = SecondaryText, fontSize = 12.sp)
+                    Text(formatCount(post.commentCount), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
         }
@@ -348,7 +357,7 @@ fun EventPostCard(
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (post.isAnonymous) "u/Anonymous" else "u/${post.username ?: "unknown"}", color = OrangePrimary, fontSize = 12.sp)
+                    Text(if (post.isAnonymous) "u/${stringResource(R.string.post_card_anonymous)}" else "u/${post.username ?: stringResource(R.string.post_card_author_fallback)}", color = OrangePrimary, fontSize = 12.sp)
                     if (post.areaTag != null) {
                         Text("  ·  ", color = TertiaryText, fontSize = 12.sp)
                         Icon(Icons.Filled.LocationOn, null, tint = TertiaryText, modifier = Modifier.size(11.dp))
@@ -370,13 +379,13 @@ fun EventPostCard(
 fun SmartPostCard(
     post: Post,
     onClick: () -> Unit,
-    onUpvote: () -> Unit = {},
-    onDownvote: () -> Unit = {},
+    onUpvote: (() -> Unit)? = null,
+    onDownvote: (() -> Unit)? = null,
     isSaved: Boolean = false,
-    onToggleSave: () -> Unit = {},
-    onUserClick: (String) -> Unit = {},
+    onToggleSave: (() -> Unit)? = null,
+    onUserClick: ((String) -> Unit)? = null,
     isOwnPost: Boolean = false,
-    onDelete: () -> Unit = {}
+    onDelete: (() -> Unit)? = null
 ) {
     val isEmergency = post.category.lowercase() in listOf("emergency", "police")
     val isEvent     = post.category.lowercase() == "events"

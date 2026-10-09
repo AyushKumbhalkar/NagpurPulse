@@ -51,23 +51,7 @@ data class Post(
     @Transient val authorAvatarUrl: String? = null
 )
 
-fun Post.timeAgo(): String {
-    // Simple time ago calculation
-    return try {
-        val created = java.time.Instant.parse(createdAt)
-        val now = java.time.Instant.now()
-        val diff = java.time.Duration.between(created, now)
-        when {
-            diff.toMinutes() < 1 -> "just now"
-            diff.toMinutes() < 60 -> "${diff.toMinutes()}m ago"
-            diff.toHours() < 24 -> "${diff.toHours()}h ago"
-            diff.toDays() < 7 -> "${diff.toDays()}d ago"
-            else -> "${diff.toDays() / 7}w ago"
-        }
-    } catch (e: Exception) {
-        "recently"
-    }
-}
+fun Post.timeAgo(): String = relativeTimeLabel(createdAt)
 
 fun Post.categoryEmoji(): String = when (category) {
     "food" -> "🍜"

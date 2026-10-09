@@ -104,12 +104,9 @@ fun AdaptivePostImage(
     )
     val wasCropped = naturalRatio != null && (naturalRatio!! < minRatio || naturalRatio!! > maxRatio)
 
-    val pulse by rememberInfiniteTransition(label = "img_pulse").animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "img_pulse_alpha"
-    )
+    // Only runs while the image is loading. A permanent infinite transition per image keeps
+    // requesting frames for every photo in the feed, even after it has loaded.
+    val pulse = rememberLoadingPulse(enabled = isLoading)
 
     Box(
         modifier = modifier
@@ -178,4 +175,16 @@ fun AdaptivePostImage(
             }
         }
     }
+}
+
+@Composable
+private fun rememberLoadingPulse(enabled: Boolean): Float {
+    if (!enabled) return 1f
+    val pulse by rememberInfiniteTransition(label = "img_pulse").animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "img_pulse_alpha"
+    )
+    return pulse
 }

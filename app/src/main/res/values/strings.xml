@@ -284,4 +284,38 @@
     <string name="festival_republic_day">Happy Republic Day! Jai Hind.</string>
     <string name="festival_independence_day">Happy Independence Day! Jai Hind.</string>
     <string name="festival_maharashtra_day">Happy Maharashtra Day! Jai Maharashtra.</string>
+
+    <!-- Post card -->
+    <string name="post_card_verified">Verified</string>
+    <string name="post_card_pinned">Pinned</string>
+    <string name="post_card_locked">Comments locked</string>
+    <string name="post_card_new">NEW</string>
+    <string name="post_card_trending">Trending</string>
+    <string name="post_card_you">You</string>
+    <string name="post_card_author_fallback">Nagpurian</string>
+    <string name="post_card_anonymous">Anonymous</string>
+    <string name="post_card_more_options">More options</string>
+    <string name="post_card_edit">Edit</string>
+    <string name="post_card_delete">Delete</string>
+    <string name="post_card_share">Share</string>
+    <string name="post_card_save">Save</string>
+    <string name="post_card_unsave">Unsave</string>
+    <string name="post_card_report">Report</string>
+    <string name="post_card_copy_link">Copy link</string>
+    <string name="post_card_link_copied">Link copied</string>
+    <string name="post_card_delete_title">Delete this post?</string>
+    <string name="post_card_delete_message">This can’t be undone.</string>
+    <string name="post_card_cancel">Cancel</string>
+    <string name="post_card_report_title">Report post</string>
+    <string name="post_card_upvote">Upvote</string>
+    <string name="post_card_remove_upvote">Remove upvote</string>
+    <string name="post_card_upvoted">Upvoted</string>
+    <string name="post_card_not_upvoted">Not upvoted</string>
+    <string name="post_card_comments_count">%1$d comments</string>
+    <string name="post_card_save_post">Save post</string>
+    <string name="post_card_unsave_post">Unsave post</string>
+    <string name="post_card_share_post">Share post</string>
+    <string name="post_card_view_profile">View profile</string>
+    <string name="post_card_open_post">Open post</string>
+    <string name="post_card_share_footer">— Shared from Nagpur Pulse 🍊</string>
 </resources>

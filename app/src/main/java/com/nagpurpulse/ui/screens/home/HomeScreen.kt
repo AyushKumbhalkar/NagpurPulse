@@ -1147,8 +1147,8 @@ fun HomeScreen(
                                         onUpvote = { viewModel.vote(post.id, "up") },
                                         onDownvote = { viewModel.vote(post.id, "down") },
                                         onToggleSave = { viewModel.toggleSave(post.id) },
-                                        onReport = {
-                                            viewModel.reportPost(post.id, "other")
+                                        onReport = { reason ->
+                                            viewModel.reportPost(post.id, reason)
                                         },
                                         onEdit = {
                                             navController.navigate(
