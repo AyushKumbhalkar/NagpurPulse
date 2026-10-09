@@ -10,16 +10,10 @@ import android.content.Intent
 import android.util.Patterns
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -50,12 +44,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.outlined.LockReset
-import androidx.compose.material.icons.outlined.MarkEmailRead
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -220,117 +213,102 @@ internal fun ForgotPasswordDialog(
                         spotColor = colors.accent.copy(alpha = 0.35f)
                     )
                     .clip(shape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(colors.sand.copy(alpha = 0.7f), colors.surface, colors.surface)
-                        )
-                    )
+                    .background(colors.surface)
                     .border(1.dp, colors.outline.copy(alpha = 0.6f), shape)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Close
-                val closeLabel = stringResource(R.string.login_reset_close)
-                Box(Modifier.fillMaxWidth().height(44.dp)) {
-                    Box(
-                        modifier = Modifier.align(Alignment.CenterEnd).size(44.dp)
-                            .alpha(if (dismissible) 1f else 0.4f)
-                            .pressScale { if (dismissible) onDismiss() }
-                            .semantics { contentDescription = closeLabel },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            Modifier.size(32.dp).clip(CircleShape).background(colors.sand),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Close, null, tint = colors.muted, modifier = Modifier.size(18.dp))
+                // Brand accent strip: the only decoration, no images.
+                Box(
+                    Modifier.fillMaxWidth().height(5.dp)
+                        .background(if (showSuccess) Brush.horizontalGradient(listOf(colors.success, colors.success.copy(alpha = 0.55f))) else AuthTokens.Gradient)
+                )
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 22.dp, bottom = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val closeLabel = stringResource(R.string.login_reset_close)
+                    AnimatedContent(
+                        targetState = showSuccess,
+                        transitionSpec = {
+                            if (reduced) EnterTransition.None togetherWith ExitTransition.None
+                            else fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(120))
+                        },
+                        label = "reset_content"
+                    ) { ok ->
+                        if (ok) {
+                            ResetSuccessContent(
+                                email = lastSentTo,
+                                loading = isLoading,
+                                cooldown = cooldown,
+                                message = serverError ?: mailHint,
+                                closeLabel = closeLabel,
+                                dismissible = dismissible,
+                                onClose = onDismiss,
+                                onOpenMail = {
+                                    if (!openMailApp(context)) {
+                                        mailHint = context.getString(R.string.login_reset_no_mail_app)
+                                    }
+                                },
+                                onResend = { sentTo?.let { submit(it) } },
+                                onChangeEmail = {
+                                    sentTo = null
+                                    submitted = false
+                                    cooldown = 0
+                                    mailHint = null
+                                }
+                            )
+                        } else {
+                            ResetFormContent(
+                                email = email,
+                                onEmail = { email = it; submitted = false },
+                                valid = valid,
+                                loading = isLoading,
+                                message = formatError ?: serverError,
+                                focusRequester = focusRequester,
+                                closeLabel = closeLabel,
+                                dismissible = dismissible,
+                                onClose = onDismiss,
+                                onBlur = { touched = true },
+                                onSubmit = { submitForm() },
+                                onCancel = { if (dismissible) onDismiss() }
+                            )
                         }
                     }
                 }
-
-                ResetHeaderIcon(success = showSuccess, reduced = reduced)
-                Spacer(Modifier.height(20.dp))
-
-                AnimatedContent(
-                    targetState = showSuccess,
-                    transitionSpec = {
-                        if (reduced) EnterTransition.None togetherWith ExitTransition.None
-                        else fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(120))
-                    },
-                    label = "reset_content"
-                ) { ok ->
-                    if (ok) {
-                        ResetSuccessContent(
-                            email = lastSentTo,
-                            loading = isLoading,
-                            cooldown = cooldown,
-                            message = serverError ?: mailHint,
-                            onOpenMail = {
-                                if (!openMailApp(context)) {
-                                    mailHint = context.getString(R.string.login_reset_no_mail_app)
-                                }
-                            },
-                            onResend = { sentTo?.let { submit(it) } },
-                            onChangeEmail = {
-                                sentTo = null
-                                submitted = false
-                                cooldown = 0
-                                mailHint = null
-                            }
-                        )
-                    } else {
-                        ResetFormContent(
-                            email = email,
-                            onEmail = { email = it; submitted = false },
-                            valid = valid,
-                            loading = isLoading,
-                            message = formatError ?: serverError,
-                            focusRequester = focusRequester,
-                            onBlur = { touched = true },
-                            onSubmit = { submitForm() },
-                            onCancel = { if (dismissible) onDismiss() }
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
             }
         }
     }
 }
 
+/** Header row: title on the left, a 44dp-target close button on the right. */
 @Composable
-private fun ResetHeaderIcon(success: Boolean, reduced: Boolean) {
+private fun ResetHeader(
+    title: String, closeLabel: String, dismissible: Boolean, onClose: () -> Unit, success: Boolean = false
+) {
     val colors = authPalette()
-    val tint by animateColorAsState(if (success) colors.success else colors.accent, tween(300), label = "hdr_tint")
-    val pulse = rememberInfiniteTransition(label = "halo").animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Restart),
-        label = "halo_pulse"
-    )
-    Box(Modifier.size(108.dp), contentAlignment = Alignment.Center) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Row(Modifier.weight(1f).padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (success) {
+                Box(
+                    Modifier.size(28.dp).clip(CircleShape).background(colors.success.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Filled.Check, null, tint = colors.success, modifier = Modifier.size(17.dp)) }
+                Spacer(Modifier.width(10.dp))
+            }
+            Text(
+                title, color = colors.ink, fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.weight(1f, fill = false).semantics { heading() }
+            )
+        }
         Box(
-            Modifier.size(88.dp)
-                .graphicsLayer {
-                    val p = if (reduced) 0f else pulse.value
-                    scaleX = 1f + 0.22f * p
-                    scaleY = 1f + 0.22f * p
-                    alpha = if (reduced) 0.10f else 0.30f * (1f - p)
-                }
-                .clip(CircleShape)
-                .background(tint)
-        )
-        Box(
-            Modifier.size(88.dp).clip(CircleShape)
-                .background(Brush.radialGradient(listOf(colors.sand, colors.surface)))
-                .border(2.dp, tint, CircleShape),
+            modifier = Modifier.size(44.dp)
+                .alpha(if (dismissible) 1f else 0.4f)
+                .pressScale { if (dismissible) onClose() }
+                .semantics { contentDescription = closeLabel },
             contentAlignment = Alignment.Center
         ) {
-            Crossfade(targetState = success, animationSpec = tween(250), label = "hdr_icon") { ok ->
-                Icon(
-                    if (ok) Icons.Outlined.MarkEmailRead else Icons.Outlined.LockReset,
-                    contentDescription = null, tint = tint, modifier = Modifier.size(42.dp)
-                )
+            Box(Modifier.size(32.dp).clip(CircleShape).background(colors.sand), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Close, null, tint = colors.muted, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -339,19 +317,18 @@ private fun ResetHeaderIcon(success: Boolean, reduced: Boolean) {
 @Composable
 private fun ResetFormContent(
     email: String, onEmail: (String) -> Unit, valid: Boolean, loading: Boolean,
-    message: String?, focusRequester: FocusRequester, onBlur: () -> Unit,
-    onSubmit: () -> Unit, onCancel: () -> Unit
+    message: String?, focusRequester: FocusRequester, closeLabel: String, dismissible: Boolean,
+    onClose: () -> Unit, onBlur: () -> Unit, onSubmit: () -> Unit, onCancel: () -> Unit
 ) {
     val colors = authPalette()
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        ResetTitle(stringResource(R.string.login_reset_title))
-        Spacer(Modifier.height(10.dp))
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+        ResetHeader(stringResource(R.string.login_reset_title), closeLabel, dismissible, onClose)
+        Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.login_reset_body),
-            color = colors.muted, fontSize = 15.sp, lineHeight = 22.sp,
-            textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 4.dp)
+            color = colors.muted, fontSize = 15.sp, lineHeight = 22.sp
         )
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(20.dp))
         PremiumInputField(
             value = email,
             onValueChange = onEmail,
@@ -367,42 +344,34 @@ private fun ResetFormContent(
             clearEmail = true
         )
         ResetMessage(message)
-        Spacer(Modifier.height(22.dp))
-        Row(
+        Spacer(Modifier.height(20.dp))
+        GradientActionButton(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.weight(0.8f).height(54.dp)
-                    .pressScale { onCancel() }
-                    .clip(RoundedCornerShape(50))
-                    .background(colors.sand)
-                    .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(50)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    stringResource(R.string.login_cancel),
-                    color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold
-                )
-            }
-            GradientActionButton(
-                modifier = Modifier.weight(1.2f),
-                label = stringResource(R.string.login_reset_link),
-                loadingLabel = stringResource(R.string.login_reset_sending),
-                enabled = valid,
-                loading = loading,
-                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
-                onClick = onSubmit
+            label = stringResource(R.string.login_reset_link),
+            loadingLabel = stringResource(R.string.login_reset_sending),
+            enabled = valid,
+            loading = loading,
+            trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+            onClick = onSubmit
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            ResetTextAction(
+                label = stringResource(R.string.login_cancel),
+                enabled = dismissible, color = colors.muted, onClick = onCancel
             )
         }
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            Icon(Icons.Filled.Lock, null, tint = colors.muted, modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.height(6.dp))
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                .background(colors.sand.copy(alpha = 0.6f)).padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Filled.Lock, null, tint = colors.muted, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(R.string.login_reset_secure_note),
-                color = colors.muted, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center
+                color = colors.muted, fontSize = 12.sp, lineHeight = 16.sp
             )
         }
     }
@@ -411,29 +380,33 @@ private fun ResetFormContent(
 @Composable
 private fun ResetSuccessContent(
     email: String, loading: Boolean, cooldown: Int, message: String?,
+    closeLabel: String, dismissible: Boolean, onClose: () -> Unit,
     onOpenMail: () -> Unit, onResend: () -> Unit, onChangeEmail: () -> Unit
 ) {
     val colors = authPalette()
     val canResend = cooldown == 0 && !loading
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        ResetTitle(stringResource(R.string.login_reset_success_title))
-        Spacer(Modifier.height(10.dp))
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+        ResetHeader(stringResource(R.string.login_reset_success_title), closeLabel, dismissible, onClose, success = true)
+        Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.login_reset_success_body),
-            color = colors.muted, fontSize = 15.sp, lineHeight = 22.sp, textAlign = TextAlign.Center
+            color = colors.muted, fontSize = 15.sp, lineHeight = 22.sp
         )
-        Spacer(Modifier.height(10.dp))
-        Box(
+        Spacer(Modifier.height(12.dp))
+        Row(
             Modifier.clip(RoundedCornerShape(50)).background(colors.sand)
                 .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(50))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(Icons.Filled.Email, null, tint = colors.accent, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 email, color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
             )
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                 .background(colors.sand.copy(alpha = 0.6f)).padding(12.dp),
@@ -480,15 +453,6 @@ private fun ResetSuccessContent(
             }
         }
     }
-}
-
-@Composable
-private fun ResetTitle(text: String) {
-    Text(
-        text, color = authPalette().ink, fontSize = 25.sp, lineHeight = 32.sp,
-        fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-        modifier = Modifier.semantics { heading() }
-    )
 }
 
 @Composable
