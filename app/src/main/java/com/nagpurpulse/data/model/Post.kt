@@ -29,6 +29,10 @@ data class Post(
     @SerialName("comment_count") val commentCount: Int = 0,
     @SerialName("view_count") val viewCount: Int = 0,
     @SerialName("image_url") val imageUrl: String? = null,
+    // Video posts: image_url is the cover frame, video_url the playable file.
+    @SerialName("media_type") val mediaType: String = "image",
+    @SerialName("video_url") val videoUrl: String? = null,
+    @SerialName("video_duration_ms") val videoDurationMs: Int? = null,
     @SerialName("is_alert") val isAlert: Boolean = false,
     @SerialName("alert_severity") val alertSeverity: String? = null,
     @SerialName("created_at") val createdAt: String = "",
@@ -52,6 +56,14 @@ data class Post(
 )
 
 fun Post.timeAgo(): String = relativeTimeLabel(createdAt)
+
+val Post.isVideo: Boolean get() = mediaType == "video" && !videoUrl.isNullOrBlank()
+
+/** 75000 -> "1:15". */
+fun formatMediaDuration(ms: Long): String {
+    val total = (ms / 1000).coerceAtLeast(0)
+    return "%d:%02d".format(total / 60, total % 60)
+}
 
 fun Post.categoryEmoji(): String = when (category) {
     "food" -> "🍜"
