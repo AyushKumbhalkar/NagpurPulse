@@ -260,3 +260,31 @@ private fun ShareTarget(
                 .clip(CircleShape)
                 .let { if (brush != null) it.background(brush) else it.background(color) },
             contentAlignment = Alignment.Center
+
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (brush != null) Color.White else iconTint,
+                modifier = Modifier.size(25.dp)
+            )
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun socialProofLine(post: Post): String {
+    return when {
+        post.isAlert -> "Help this important local update reach more people"
+        post.isAnonymous -> "Share the message while keeping the author anonymous"
+        else -> "A little local update can go a long way"
+    }
+}
