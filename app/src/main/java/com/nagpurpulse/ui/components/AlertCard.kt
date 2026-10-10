@@ -121,6 +121,7 @@ fun AlertCard(
     onResolve: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    var showShareSheet by remember { mutableStateOf(false) }
     val isActive = status == AlertStatus.ACTIVE
     val accent = alertAccentColor(post.category)
     val edgeColor = alertSeverityColor(post.alertSeverity, accent)
@@ -134,6 +135,10 @@ fun AlertCard(
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
         label = "live_alpha"
     )
+
+    if (showShareSheet) {
+        PostShareSheet(post = post, onDismiss = { showShareSheet = false })
+    }
 
     Box(
         modifier = modifier
@@ -340,7 +345,7 @@ fun AlertCard(
                         label = "Share",
                         tint = SecondaryText,
                         filled = false,
-                        onClick = { shareAlert(context, post) }
+                        onClick = { showShareSheet = true }
                     )
                 }
             }
