@@ -442,5 +442,8 @@ revoke all on function public.get_posting_nudge()              from public;
 grant execute on function public.get_post_prompts(integer)        to anon, authenticated;
 grant execute on function public.get_reply_opportunities(integer) to anon, authenticated;
 -- Personal functions: signed-in users only.
+-- Supabase also grants EXECUTE to anon directly, so revoking from PUBLIC is not enough.
+revoke all on function public.get_posting_momentum() from anon;
+revoke all on function public.get_posting_nudge()    from anon;
 grant execute on function public.get_posting_momentum() to authenticated;
 grant execute on function public.get_posting_nudge()    to authenticated;
