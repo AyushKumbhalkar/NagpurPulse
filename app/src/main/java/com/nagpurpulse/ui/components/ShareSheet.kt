@@ -120,7 +120,7 @@ fun PostShareSheet(post: Post, onDismiss: () -> Unit) {
             }
             val launched = if (targetPackage != null) {
                 try {
-                    context.startActivityCompat(Intent(intent).setPackage(targetPackage))
+                    context.startActivity(Intent(intent).setPackage(targetPackage).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     true
                 } catch (_: ActivityNotFoundException) {
                     false // app not installed: fall back to the full chooser below
@@ -128,7 +128,7 @@ fun PostShareSheet(post: Post, onDismiss: () -> Unit) {
             } else false
             if (!launched) {
                 try {
-                    context.startActivityCompat(Intent.createChooser(intent, null))
+                    context.startActivity(Intent.createChooser(intent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 } catch (_: Exception) {
                     // No app can handle a share; nothing sensible to show.
                 }
