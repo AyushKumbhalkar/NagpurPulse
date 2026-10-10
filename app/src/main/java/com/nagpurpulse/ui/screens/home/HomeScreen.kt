@@ -89,6 +89,7 @@ import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.nagpurpulse.data.location.LocationHelper
 import com.nagpurpulse.data.model.Post
+import com.nagpurpulse.data.model.PostingMomentum
 import com.nagpurpulse.data.remote.weather.WeatherRepository
 import com.nagpurpulse.data.repository.AdminRepository
 import com.nagpurpulse.data.repository.AuthRepository
@@ -131,7 +132,7 @@ data class HomeUiState(
     val endReached: Boolean = false,
 
     val error: String? = null,
-    val sortBy: String = "top",
+    val sortBy: String = "foryou",
     val category: String? = null,
 
     val unreadNotifCount: Int = 0,
@@ -151,7 +152,11 @@ data class HomeUiState(
 
     val onlineCount: Int = 0,
     val newPostsCount: Int = 0,
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+
+    // Posting incentives (best-effort; null / empty = hide the card)
+    val momentum: PostingMomentum? = null,
+    val replyOpportunities: List<Post> = emptyList()
 )
 
 private const val FEED_PAGE_SIZE = 20
@@ -196,6 +201,16 @@ class HomeViewModel @Inject constructor(
         startPresenceWhenAuthenticated()
         observePresence()
         startNewPostsProbe()
+        loadPostingIncentives()
+    }
+
+    /** Streak / goal card and "be the first to reply" strip. Failures just hide the cards. */
+    fun loadPostingIncentives() {
+        viewModelScope.launch {
+            val momentum = postRepository.getPostingMomentum()
+            val opportunities = postRepository.getReplyOpportunities(limit = 8)
+            _uiState.update { it.copy(momentum = momentum, replyOpportunities = opportunities) }
+        }
     }
 
     // ── Profile (name / avatar / karma for greeting + composer) ──────────────
@@ -352,6 +367,7 @@ class HomeViewModel @Inject constructor(
     private var latestPostsLoadRequestId = 0L
 
     fun loadPosts(refresh: Boolean = false) {
+        if (refresh) loadPostingIncentives()
         val requestId = ++latestPostsLoadRequestId
         val requestedSort = _uiState.value.sortBy
         val requestedCategory = _uiState.value.category
@@ -835,13 +851,13 @@ fun HomeScreen(
 
     Scaffold(
         modifier = Modifier.pointerInput(uiState.sortBy) {
-            val tabs = listOf("top", "new", "hot")
+            val tabs = listOf("foryou", "top", "new", "hot")
             var horizontalDistance = 0f
             var sortAtDragStart = uiState.sortBy.trim().lowercase()
             fun targetForSwipe(distance: Float): String? {
                 val index = tabs.indexOf(sortAtDragStart)
                 if (index < 0 || distance == 0f) return null
-                // Finger right advances Top -> New -> Hot; finger left reverses.
+                // Finger right advances For You -> Top -> New -> Hot; finger left reverses.
                 val nextIndex = (index + if (distance > 0f) 1 else -1)
                     .coerceIn(0, tabs.lastIndex)
                 return tabs[nextIndex].takeIf { it != sortAtDragStart }
@@ -1039,6 +1055,22 @@ fun HomeScreen(
                         )
                     }
 
+                    // 2b ── Streak / next goal (signed-in users; hidden while filtering by category)
+                    if (uiState.category == null && uiState.momentum != null) {
+                        item(key = "momentum") {
+                            MomentumCard(
+                                momentum = uiState.momentum,
+                                onCreatePost = {
+                                    haptic.tap()
+                                    onCreatePost()
+                                },
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .padding(bottom = 12.dp)
+                            )
+                        }
+                    }
+
                     // 3 ── Live local signals (renders nothing when there is nothing real to show)
                     item(key = "right_now") {
                         RightNowStrip(
@@ -1050,6 +1082,19 @@ fun HomeScreen(
                                 .padding(horizontal = 12.dp)
                                 .padding(bottom = 14.dp)
                         )
+                    }
+
+                    // 3b ── Posts that still need a first reply (replying is the easiest way to join in)
+                    if (uiState.category == null && uiState.replyOpportunities.isNotEmpty()) {
+                        item(key = "reply_opportunities") {
+                            ReplyOpportunitiesStrip(
+                                posts = uiState.replyOpportunities,
+                                onPostClick = onPostClick,
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .padding(bottom = 14.dp)
+                            )
+                        }
                     }
 
                     // 4 ── Category filter chips

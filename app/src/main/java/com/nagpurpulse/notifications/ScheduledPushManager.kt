@@ -226,7 +226,8 @@ class NightAlertsSummaryWorker @AssistedInject constructor(
 class ReengagementWorker @AssistedInject constructor(
     @Assisted ctx: Context,
     @Assisted params: WorkerParameters,
-    private val engagementRepository: EngagementRepository
+    private val engagementRepository: EngagementRepository,
+    private val postRepository: PostRepository
 ) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         val ctx = applicationContext
@@ -272,13 +273,26 @@ class ReengagementWorker @AssistedInject constructor(
                 1005, "nudge", "Trending in Nagpur", trimTitle(topTitle, 90), postId = snap.topPostId
             )
             else -> null
-        }
+        } ?: serverNudgePulse()
 
         if (pulse != null) {
             PulseNotifier.showLocal(ctx, pulse)
             EngagementTracker.recordNudge(ctx, now)
         }
         return Result.success()
+    }
+
+    /**
+     * Fallback when there is no personal activity to report: ask the server whether to invite the
+     * user to post (first post, comeback, reply waiting) with a personalised idea. The server
+     * already applies quiet hours and the community-notification preference.
+     */
+    private suspend fun serverNudgePulse(): LocalPulse? {
+        val nudge = postRepository.getPostingNudge() ?: return null
+        val title = nudge.title
+        val body = nudge.body
+        if (!nudge.shouldNudge || title.isNullOrBlank() || body.isNullOrBlank()) return null
+        return LocalPulse(1005, "nudge", title, body)
     }
 }
 

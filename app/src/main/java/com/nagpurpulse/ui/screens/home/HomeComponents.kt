@@ -705,14 +705,14 @@ internal fun CategoryChipsRow(
     }
 }
 
-/** Full-width Top / New / Hot control with an animated sliding highlight. */
+/** Full-width For You / Top / New / Hot control with an animated sliding highlight. */
 @Composable
 internal fun SortTabs(
     selected: String,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val tabs = listOf("top" to "Top", "new" to "New", "hot" to "🔥 Hot")
+    val tabs = listOf("foryou" to "For You", "top" to "Top", "new" to "New", "hot" to "🔥 Hot")
     val index = tabs.indexOfFirst { it.first.equals(selected.trim(), ignoreCase = true) }
         .coerceAtLeast(0)
     val haptic = rememberHaptic()

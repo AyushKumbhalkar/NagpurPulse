@@ -9,6 +9,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nagpurpulse.data.model.ComposerInsights
+import com.nagpurpulse.data.model.PostPrompt
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.PostRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,7 +41,9 @@ data class CreateThreadUiState(
     val displayName: String = "",
     val avatarUrl: String? = null,
     // Best-effort live numbers (null / empty = hide)
-    val insights: ComposerInsights = ComposerInsights()
+    val insights: ComposerInsights = ComposerInsights(),
+    // "Not sure what to post?" ideas (empty = hide)
+    val prompts: List<PostPrompt> = emptyList()
 )
 
 @HiltViewModel
@@ -58,6 +61,14 @@ class CreateThreadViewModel @Inject constructor(
 
     init {
         loadProfile()
+        loadPrompts()
+    }
+
+    private fun loadPrompts() {
+        viewModelScope.launch {
+            val prompts = postRepository.getPostPrompts(limit = 5)
+            _uiState.update { it.copy(prompts = prompts) }
+        }
     }
 
     private fun loadProfile() {

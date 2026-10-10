@@ -20,6 +20,9 @@ import com.nagpurpulse.data.model.CommentLikeResult
 import com.nagpurpulse.data.model.CommentPage
 import com.nagpurpulse.data.model.ThreadCommentRow
 import com.nagpurpulse.data.model.ComposerInsights
+import com.nagpurpulse.data.model.PostPrompt
+import com.nagpurpulse.data.model.PostingMomentum
+import com.nagpurpulse.data.model.PostingNudge
 import com.nagpurpulse.data.model.Post
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
@@ -54,6 +57,37 @@ class PostRepository @Inject constructor(
 
  {
 
+    // ── Posting incentives ────────────────────────────────────────────────────
+    // Server-side helpers that make it easy and rewarding to join in. All are
+    // best-effort: on any failure they return empty / null so the UI just hides the card.
+
+    /** Personalised ideas for what to post right now (time of day, gaps, interests). */
+    suspend fun getPostPrompts(limit: Int = 5): List<PostPrompt> = runCatching {
+        client.postgrest.rpc("get_post_prompts", buildJsonObject { put("p_limit", limit) })
+            .decodeList<PostPrompt>()
+    }.getOrDefault(emptyList())
+
+    /** Recent posts that still need a first reply ("be the first to reply"). */
+    suspend fun getReplyOpportunities(limit: Int = 10): List<Post> = runCatching {
+        enrichPostsWithUsernames(
+            filterVisiblePosts(
+                client.postgrest.rpc("get_reply_opportunities", buildJsonObject { put("p_limit", limit) })
+                    .decodeList<Post>(),
+                forSearch = false
+            )
+        )
+    }.getOrDefault(emptyList())
+
+    /** Streak, next goal and community social proof for the signed-in user. */
+    suspend fun getPostingMomentum(): PostingMomentum? = runCatching {
+        client.postgrest.rpc("get_posting_momentum").decodeList<PostingMomentum>().firstOrNull()
+    }.getOrNull()
+
+    /** Asks the server whether (and with what message) to nudge this user to post now. */
+    suspend fun getPostingNudge(): PostingNudge? = runCatching {
+        client.postgrest.rpc("get_posting_nudge").decodeList<PostingNudge>().firstOrNull()
+    }.getOrNull()
+
     // ── Posts ─────────────────────────────────────────────────────────────────
 
     suspend fun getPosts(
@@ -65,19 +99,34 @@ class PostRepository @Inject constructor(
         return try {
             val from = (page * pageSize).toLong()
             val to   = (from + pageSize - 1)
-            val response = client.postgrest["posts_public"].select {
+            // Ranked feed: "foryou", "hot" and "top" are scored server-side by the
+            // get_feed RPC (freshness decay, cold-start boost, area/interest match,
+            // author diversity). If the RPC is unavailable (e.g. migration not applied
+            // yet) we quietly fall back to the plain column sort below.
+            val mode = sortBy.trim().lowercase()
+            val ranked: List<Post>? = if (mode == "foryou" || mode == "hot" || mode == "top") {
+                runCatching {
+                    client.postgrest.rpc("get_feed", buildJsonObject {
+                        put("p_mode", mode)
+                        if (category != null) put("p_category", category)
+                        put("p_limit", pageSize)
+                        put("p_offset", from)
+                    }).decodeList<Post>()
+                }.getOrNull()
+            } else null
+
+            val posts = ranked ?: client.postgrest["posts_public"].select {
                 filter {
                     if (category != null) eq("category", category)
                 }
-                when (sortBy) {
+                when (mode) {
                     "top" -> order("upvotes",      Order.DESCENDING)
-                    "new" -> order("created_at",   Order.DESCENDING)
+                    "new", "foryou" -> order("created_at", Order.DESCENDING)
                     "hot" -> order("comment_count", Order.DESCENDING)
                     else  -> order("upvotes",      Order.DESCENDING)
                 }
                 range(from, to)
-            }
-            val posts = response.decodeList<Post>()
+            }.decodeList<Post>()
             // Respect profile visibility in every feed page, not only search results.
             // This is a client-side UX guard; Supabase RLS is still required for
             // security because clients can bypass repository filtering.

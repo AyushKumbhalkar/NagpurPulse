@@ -823,6 +823,28 @@ fun CreateThreadScreen(
                         }
                     }
 
+                    // ── Ideas: shown only while the composer is still empty ─
+                    if (!isEditing && !isAlertMode && title.isBlank() && body.isBlank()) {
+                        PostPromptChips(
+                            prompts = uiState.prompts,
+                            onPick = { prompt ->
+                                haptic.tap()
+                                title = prompt.title.take(MAX_TITLE_CHARS)
+                                if (prompt.category.isNotBlank()) {
+                                    selectedCategory = prompt.category
+                                    categoryManuallyChanged = true
+                                }
+                                if (!areaManuallyChosen && selectedArea == CITY &&
+                                    prompt.areaTag.isNotBlank() && prompt.areaTag != CITY
+                                ) {
+                                    selectedArea = prompt.areaTag
+                                    areaManuallyChosen = true
+                                }
+                            }
+                        )
+                        if (uiState.prompts.isNotEmpty()) Spacer(Modifier.height(12.dp))
+                    }
+
                     // ── COMPOSER CARD ──────────────────────────────────────
                     val cardBorder by animateColorAsState(
                         if (titleFocused || bodyFocused) OrangeMain.copy(alpha = 0.7f)
