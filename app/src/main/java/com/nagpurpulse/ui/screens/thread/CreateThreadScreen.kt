@@ -337,6 +337,7 @@ fun CreateThreadScreen(
     }
 
     fun clearMedia() {
+        viewModel.cancelVideoPrep()
         selectedImageUri = null
         selectedIsVideo = false
         selectedDurationMs = 0L
@@ -356,8 +357,8 @@ fun CreateThreadScreen(
                 duration = withContext(Dispatchers.IO) { MediaFrameUtils.videoDurationMs(context, uri) }
                 val problem = when {
                     duration <= 0L -> "Couldn't read that video. Try another one."
-                    duration > MediaFrameUtils.MAX_VIDEO_MS + 500 -> "Videos can be up to 60 seconds."
-                    size > MediaFrameUtils.MAX_VIDEO_BYTES -> "That video is over 30 MB. Trim it and try again."
+                    duration > MediaFrameUtils.MAX_VIDEO_MS + 500 -> "Videos can be up to 5 minutes."
+                    size > MediaFrameUtils.MAX_SOURCE_BYTES -> "That video is over 1 GB. Trim it and try again."
                     else -> null
                 }
                 if (problem != null) {
@@ -375,6 +376,9 @@ fun CreateThreadScreen(
             framedPreview = null
             haptic.tap()
             if (video) {
+                val size = withContext(Dispatchers.IO) { MediaFrameUtils.sizeOf(context, uri) }
+                // Starts shrinking right away, so most of it is done by the time the author taps Post.
+                viewModel.prepareVideo(context, uri, duration, size)
                 // A first cover so the preview is never blank, even if the editor is dismissed.
                 framedPreview = withContext(Dispatchers.IO) { MediaFrameUtils.videoFrame(context, uri, 0L, 1080) }
             }
@@ -389,11 +393,11 @@ fun CreateThreadScreen(
         if (uri != null) attachMedia(uri)
     }
 
-    fun openPhotoPicker() {
-        photoPickerLauncher.launch(
-            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-        )
+    fun openPicker(type: ActivityResultContracts.PickVisualMedia.VisualMediaType) {
+        photoPickerLauncher.launch(PickVisualMediaRequest(type))
     }
+
+    fun openPhotoPicker() = openPicker(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
 
     // ── Insights (social proof, reach, trending) ───────────────────────────
     LaunchedEffect(selectedArea) { viewModel.loadInsights(selectedArea) }
@@ -1014,6 +1018,7 @@ fun CreateThreadScreen(
                                         durationMs = if (selectedImageUri != null) selectedDurationMs
                                         else (existingDurationMs ?: 0L),
                                         busyLabel = if (uiState.isLoading) uiState.statusLabel else null,
+                                        compressLabel = uiState.videoPrepProgress?.let { "Compressing $it%" },
                                         onEditFrame = if (selectedImageUri != null) ({ showFrameEditor = true }) else null,
                                         onRemove = {
                                             haptic.tap()
@@ -1025,6 +1030,43 @@ fun CreateThreadScreen(
                                     )
                                 }
                             }
+
+                            // Nothing attached yet: two big tiles make photo / video obvious
+                            AnimatedVisibility(
+                                visible = !hasImage,
+                                enter = fadeIn(tween(250)) + expandVertically(),
+                                exit = fadeOut(tween(150)) + shrinkVertically()
+                            ) {
+                                Column {
+                                    Spacer(Modifier.height(14.dp))
+                                    AddMediaDropzone(
+                                        onPhoto = { openPicker(ActivityResultContracts.PickVisualMedia.ImageOnly) },
+                                        onVideo = { openPicker(ActivityResultContracts.PickVisualMedia.VideoOnly) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Live preview of the feed card ──────────────────────
+                    AnimatedVisibility(
+                        visible = title.isNotBlank(),
+                        enter = fadeIn(tween(250)) + expandVertically(),
+                        exit = fadeOut(tween(150)) + shrinkVertically()
+                    ) {
+                        Column {
+                            Spacer(Modifier.height(14.dp))
+                            FeedPreviewCard(
+                                category = selectedCategory,
+                                area = selectedArea.takeIf { it != CITY },
+                                title = title,
+                                body = body,
+                                framedPreview = framedPreview,
+                                imageModel = selectedImageUri ?: existingImageUrl,
+                                isVideo = if (selectedImageUri != null) selectedIsVideo else existingIsVideo,
+                                durationMs = if (selectedImageUri != null) selectedDurationMs
+                                else (existingDurationMs ?: 0L)
+                            )
                         }
                     }
 

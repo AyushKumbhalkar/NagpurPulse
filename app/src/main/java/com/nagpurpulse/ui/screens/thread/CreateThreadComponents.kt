@@ -2,6 +2,8 @@
 
 package com.nagpurpulse.ui.screens.thread
 
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Videocam
 import android.net.Uri
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -946,6 +948,7 @@ internal fun AttachedMediaPreview(
     isVideo: Boolean,
     durationMs: Long,
     busyLabel: String?,
+    compressLabel: String? = null,
     onEditFrame: (() -> Unit)?,
     onRemove: () -> Unit,
     onReplace: () -> Unit
@@ -1051,6 +1054,7 @@ internal fun AttachedMediaPreview(
                         append("Feed preview")
                         if (framedPreview != null) append(" · ").append(frame.ratio.label)
                         if (isVideo && durationMs > 0L) append(" · ").append(formatMediaDuration(durationMs))
+                        if (compressLabel != null) append(" · ").append(compressLabel)
                     },
                     color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
                 )
@@ -1467,6 +1471,152 @@ internal fun SuccessOverlay(
                                 .background(OrangeMain.copy(alpha = 0.12f))
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+// ── Empty-state media picker + live feed preview ──────────────────────────────
+
+/** Two big, obvious tiles instead of a small toolbar icon: photos and (up to 5 minute) videos. */
+@Composable
+internal fun AddMediaDropzone(onPhoto: () -> Unit, onVideo: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        DropTile(Icons.Filled.PhotoLibrary, "Add photo", "Frame it your way", onPhoto, Modifier.weight(1f))
+        DropTile(Icons.Filled.Videocam, "Add video", "Up to 5 min, auto-compressed", onVideo, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun DropTile(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(OrangeMain.copy(alpha = 0.07f))
+            .border(1.dp, OrangeMain.copy(alpha = 0.35f), shape)
+            .pressScale(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(OrangeMain.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = OrangeMain, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, lineHeight = 14.sp)
+    }
+}
+
+/** Mini feed card that updates as the author types, so nothing is a surprise after posting. */
+@Composable
+internal fun FeedPreviewCard(
+    category: String,
+    area: String?,
+    title: String,
+    body: String,
+    framedPreview: Bitmap?,
+    imageModel: Any?,
+    isVideo: Boolean,
+    durationMs: Long
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            "How it will look in the feed",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(0.5.dp, hairline(), shape)
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (category.isNotBlank()) {
+                        Text(
+                            category.replaceFirstChar { it.uppercase() },
+                            color = OrangeMain,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(OrangeMain.copy(alpha = 0.12f))
+                                .padding(horizontal = 9.dp, vertical = 3.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    if (!area.isNullOrBlank()) {
+                        Text(area, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    title.ifBlank { "Your title" },
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                if (body.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        body,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            }
+            if (framedPreview != null || imageModel != null) {
+                Box(Modifier.fillMaxWidth()) {
+                    if (framedPreview != null) {
+                        Image(
+                            bitmap = remember(framedPreview) { framedPreview.asImageBitmap() },
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio((framedPreview.width.toFloat() / framedPreview.height).coerceIn(0.75f, 1.78f))
+                        )
+                    } else {
+                        AdaptivePostImage(
+                            imageUrl = imageModel.toString(),
+                            cornerRadius = 0.dp,
+                            showExpandHintWhenCropped = false
+                        )
+                    }
+                    if (isVideo) {
+                        Box(Modifier.matchParentSize()) {
+                            com.nagpurpulse.ui.components.VideoBadgeOverlay(
+                                durationMs = durationMs.toInt().takeIf { it > 0 }
+                            )
+                        }
                     }
                 }
             }

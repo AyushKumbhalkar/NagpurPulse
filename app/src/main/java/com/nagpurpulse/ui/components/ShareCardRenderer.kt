@@ -4,6 +4,7 @@ package com.nagpurpulse.ui.components
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -18,7 +19,10 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.TextUtils
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.content.res.ResourcesCompat
+import com.nagpurpulse.R
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -46,7 +50,7 @@ object ShareCardRenderer {
 
     suspend fun render(context: Context, post: Post): Bitmap = withContext(Dispatchers.Default) {
         val photo = post.imageUrl?.takeIf { it.isNotBlank() }?.let { loadBitmap(context, it) }
-        draw(post, photo)
+        draw(context, post, photo)
     }
 
     /** Text people paste next to the card. */
@@ -89,7 +93,11 @@ object ShareCardRenderer {
             .setIncludePad(false)
             .build()
 
-    private fun draw(post: Post, photo: Bitmap?): Bitmap {
+    private fun draw(context: Context, post: Post, photo: Bitmap?): Bitmap {
+        // The app's own typeface, so the card reads as Nagpur Pulse and not a generic screenshot.
+        val boldFace = ResourcesCompat.getFont(context, R.font.nunito_extrabold) ?: Typeface.DEFAULT_BOLD
+        val bodyFace = ResourcesCompat.getFont(context, R.font.nunito_semibold) ?: Typeface.DEFAULT
+
         val bmp = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val isAlert = post.isAlert
@@ -106,18 +114,35 @@ object ShareCardRenderer {
         c.drawCircle(-80f, H - 120f, 330f, glow)
 
         // ── Header: brand + area ──────────────────────────────────────
-        val brand = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE; textSize = 46f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        // White plate with the real logo (icon + "NagpurPulse" wordmark)
+        val logo = BitmapFactory.decodeResource(context.resources, R.drawable.nagpurpulse_logo)
+        if (logo != null) {
+            val logoH = 96f
+            val logoW = logoH * logo.width / logo.height
+            val plate = RectF(56f, 40f, 56f + logoW + 56f, 40f + logoH + 20f)
+            c.drawRoundRect(plate, 58f, 58f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                setShadowLayer(22f, 0f, 8f, Color.argb(60, 0, 0, 0))
+            })
+            c.drawBitmap(
+                logo, null,
+                RectF(plate.left + 28f, plate.top + 10f, plate.right - 28f, plate.bottom - 10f),
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            )
+        } else {
+            val brand = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE; textSize = 46f; typeface = boldFace
+            }
+            c.drawText("Nagpur Pulse", 72f, 112f, brand)
         }
-        c.drawText("🍊 Nagpur Pulse", 72f, 112f, brand)
         val area = post.areaTag?.takeIf { it.isNotBlank() && !it.equals("Nagpur", true) }
         if (area != null) {
             val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE; textSize = 34f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                color = Color.WHITE; textSize = 34f; typeface = boldFace
             }
             val label = "📍 $area"
             val tw = ap.measureText(label)
-            val pill = RectF(W - 72f - tw - 48f, 62f, W - 72f, 128f)
+            val pill = RectF(W - 72f - tw - 48f, 66f, W - 72f, 132f)
             c.drawRoundRect(pill, 33f, 33f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(60, 255, 255, 255) })
             c.drawText(label, pill.left + 24f, pill.top + 45f, ap)
         }
@@ -142,7 +167,7 @@ object ShareCardRenderer {
             "${alertEmoji(post.category)} ${alertLabel(post.category).uppercase()} ALERT$sev"
         } else "${post.categoryEmoji()} ${post.categoryDisplay()}"
         val pp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = pillColor; textSize = 34f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = pillColor; textSize = 34f; typeface = boldFace
         }
         val pillRect = RectF(card.left + pad, y, card.left + pad + pp.measureText(pillText) + 52f, y + 68f)
         c.drawRoundRect(pillRect, 34f, 34f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = pillBg })
@@ -161,7 +186,7 @@ object ShareCardRenderer {
         // Title
         val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0xFF17171A.toInt(); textSize = if (hasPhoto) 58f else 72f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            typeface = boldFace
         }
         val titleLayout = layout(post.title, titlePaint, innerW, if (hasPhoto) 3 else 5, 1.12f)
         c.save(); c.translate(card.left + pad, y); titleLayout.draw(c); c.restore()
@@ -171,7 +196,7 @@ object ShareCardRenderer {
         val statsTop = card.bottom - 128f
         val bodyText = sharePreview(post.body, 220)
         if (bodyText != null) {
-            val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF55555C.toInt(); textSize = 40f }
+            val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF55555C.toInt(); textSize = 40f; typeface = bodyFace }
             val lineH = bodyPaint.fontSpacing * 1.15f
             val lines = ((statsTop - 20f - y) / lineH).toInt().coerceIn(0, if (hasPhoto) 3 else 7)
             if (lines > 0) {
@@ -184,12 +209,12 @@ object ShareCardRenderer {
         val divider = Paint().apply { color = 0xFFEDEDF0.toInt(); strokeWidth = 3f }
         c.drawLine(card.left + pad, statsTop, card.right - pad, statsTop, divider)
         val stat = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF3A3A40.toInt(); textSize = 42f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = 0xFF3A3A40.toInt(); textSize = 42f; typeface = boldFace
         }
         val baseline = statsTop + 78f
         c.drawText("▲ ${post.upvotes}", card.left + pad, baseline, stat)
         c.drawText("💬 ${post.commentCount}", card.left + pad + 220f, baseline, stat)
-        val time = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF8E8E93.toInt(); textSize = 36f }
+        val time = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF8E8E93.toInt(); textSize = 36f; typeface = bodyFace }
         val ago = post.timeAgo()
         c.drawText(ago, card.right - pad - time.measureText(ago), baseline, time)
 
@@ -197,13 +222,23 @@ object ShareCardRenderer {
         val ctaText = "Join the conversation →"
         val cta = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = if (isAlert) 0xFFD7263D.toInt() else 0xFFE06A00.toInt()
-            textSize = 42f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textSize = 42f; typeface = boldFace
         }
-        val ctaW = cta.measureText(ctaText) + 96f
+        val iconSize = 58f
+        val ctaW = cta.measureText(ctaText) + 96f + iconSize + 16f
         val ctaRect = RectF((W - ctaW) / 2f, 1208f, (W + ctaW) / 2f, 1208f + 86f)
         c.drawRoundRect(ctaRect, 43f, 43f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
-        c.drawText(ctaText, ctaRect.left + 48f, ctaRect.top + 58f, cta)
-        val tag = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(220, 255, 255, 255); textSize = 30f }
+        val nIcon = ContextCompat.getDrawable(context, R.drawable.nagpurpulse_orange_n_icon)
+        var textX = ctaRect.left + 48f
+        if (nIcon != null) {
+            val ix = (ctaRect.left + 22f).toInt()
+            val iy = (ctaRect.centerY() - iconSize / 2f).toInt()
+            nIcon.setBounds(ix, iy, ix + iconSize.toInt(), iy + iconSize.toInt())
+            nIcon.draw(c)
+            textX = ctaRect.left + 22f + iconSize + 16f
+        }
+        c.drawText(ctaText, textX, ctaRect.top + 58f, cta)
+        val tag = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(230, 255, 255, 255); textSize = 30f; typeface = bodyFace }
         val tagText = "Nagpur's neighbourhood community app"
         c.drawText(tagText, (W - tag.measureText(tagText)) / 2f, 1326f, tag)
 

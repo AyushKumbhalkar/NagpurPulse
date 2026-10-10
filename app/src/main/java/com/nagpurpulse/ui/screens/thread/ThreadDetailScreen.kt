@@ -1221,6 +1221,29 @@ fun ThreadDetailScreen(
                             modifier = Modifier.padding(horizontal = DensityManager.cardPadding.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(listOf(Color(0xFFFFA726), Color(0xFFFF5A00)))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val avatar = post.authorAvatarUrl
+                                if (!post.isAnonymous && !avatar.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = avatar,
+                                        contentDescription = null,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Text(
+                                        if (post.isAnonymous) "?" else (post.username?.firstOrNull()?.uppercase() ?: "N"),
+                                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(8.dp))
                             Text(
                                 if (post.isAnonymous) "u/Anonymous" else "u/${post.username ?: "unknown"}",
                                 color = OrangePrimary,
@@ -1269,10 +1292,10 @@ fun ThreadDetailScreen(
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 post.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.padding(horizontal = DensityManager.cardPadding.dp),
-                                lineHeight = 22.sp
+                                lineHeight = 25.sp
                             )
                         }
 
@@ -1334,6 +1357,20 @@ fun ThreadDetailScreen(
                                     transitionSpec = { (slideInVertically { -it } + fadeIn()) togetherWith (slideOutVertically { it } + fadeOut()) },
                                     label = "ccount"
                                 ) { count -> Text("$count", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
+                            }
+
+                            // Share: the quickest way to bring neighbours into this thread
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Brush.horizontalGradient(listOf(Color(0xFFFFA726), Color(0xFFFF6A00))))
+                                    .pressScale { haptic.selection(); sharePost() }
+                                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.Share, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Share", color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                             }
 
                             Spacer(Modifier.weight(1f))
@@ -1422,7 +1459,11 @@ fun ThreadDetailScreen(
                                 else stringResource(R.string.comments_count, total),
                                 color = OrangePrimary,
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50.dp))
+                                    .background(OrangeSubtle)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
 
@@ -1510,12 +1551,15 @@ fun ThreadDetailScreen(
                 item {
                     Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Rounded.ChatBubbleOutline,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(40.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(listOf(Color(0x33FFA726), Color(0x33FF5A00)))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("💬", fontSize = 34.sp)
+                            }
                             Spacer(Modifier.height(10.dp))
                             Text(
                                 stringResource(R.string.comments_empty_title),
@@ -1524,9 +1568,22 @@ fun ThreadDetailScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Your neighbours are reading this. Say something first.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(Modifier.height(12.dp))
                             if (uiState.isLoggedIn) {
-                                TextButton(onClick = { runCatching { composerFocus.requestFocus() } }) {
-                                    Text(stringResource(R.string.comments_empty_cta), color = OrangePrimary)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50.dp))
+                                        .background(Brush.horizontalGradient(listOf(Color(0xFFFFA726), Color(0xFFFF6A00))))
+                                        .pressScale { runCatching { composerFocus.requestFocus() } }
+                                        .padding(horizontal = 22.dp, vertical = 10.dp)
+                                ) {
+                                    Text(stringResource(R.string.comments_empty_cta), color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                             } else {
                                 Text(

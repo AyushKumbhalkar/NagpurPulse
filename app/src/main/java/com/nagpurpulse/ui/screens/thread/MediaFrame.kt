@@ -91,8 +91,11 @@ fun scaleDownTo(src: Bitmap, maxSide: Int): Bitmap {
 
 object MediaFrameUtils {
 
-    const val MAX_VIDEO_BYTES = 30L * 1024 * 1024
-    const val MAX_VIDEO_MS = 60_000L
+    /** Largest file we upload (after compression); matches the post-videos bucket cap. */
+    const val MAX_VIDEO_BYTES = 48L * 1024 * 1024
+    /** Largest clip we accept for compression on the phone. */
+    const val MAX_SOURCE_BYTES = 1024L * 1024 * 1024
+    const val MAX_VIDEO_MS = 300_000L
 
     fun isVideo(context: Context, uri: Uri): Boolean =
         context.contentResolver.getType(uri)?.startsWith("video/") == true

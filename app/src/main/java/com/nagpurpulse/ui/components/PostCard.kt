@@ -512,7 +512,16 @@ fun PostCard(
                 }
                 if (hasImage) {
                     Spacer(Modifier.height(10.dp))
-                    Box {
+                    if (post.isVideo) {
+                        // Plays right in the feed; the expand button opens the thread.
+                        FeedVideoPlayer(
+                            postId = post.id,
+                            videoUrl = post.videoUrl!!,
+                            thumbnailUrl = post.imageUrl,
+                            durationMs = post.videoDurationMs,
+                            onOpenPost = onClick
+                        )
+                    } else {
                         AdaptivePostImage(
                             imageUrl = post.imageUrl!!,
                             modifier = Modifier.fillMaxWidth(),
@@ -520,10 +529,6 @@ fun PostCard(
                             maxRatio = 1.78f,   // widest shown uncropped: 16:9
                             cornerRadius = 0.dp // the card already clips the corners
                         )
-                        if (post.isVideo) {
-                            // Sits on top of the image box, which sizes the parent Box.
-                            Box(Modifier.matchParentSize()) { VideoBadgeOverlay(post.videoDurationMs) }
-                        }
                     }
                 }
             }

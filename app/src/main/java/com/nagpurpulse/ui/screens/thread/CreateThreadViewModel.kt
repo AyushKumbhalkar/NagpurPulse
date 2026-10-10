@@ -12,7 +12,10 @@ import com.nagpurpulse.data.model.ComposerInsights
 import com.nagpurpulse.data.repository.AuthRepository
 import com.nagpurpulse.data.repository.PostRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +34,8 @@ data class CreateThreadUiState(
     val isSuccess: Boolean = false,
     /** What the upload is doing right now ("Uploading video…"); only meaningful while isLoading. */
     val statusLabel: String? = null,
+    /** 0..100 while a picked video is being compressed in the background, otherwise null. */
+    val videoPrepProgress: Int? = null,
     // Composer header
     val displayName: String = "",
     val avatarUrl: String? = null,
@@ -90,6 +95,33 @@ class CreateThreadViewModel @Inject constructor(
                     onLoaded(it)
                 }
         }
+    }
+
+    // ── Video compression (starts as soon as a video is picked) ─────────────
+    private var prepJob: Deferred<File?>? = null
+    private var prepUri: Uri? = null
+
+    fun prepareVideo(context: Context, uri: Uri, durationMs: Long, sourceBytes: Long) {
+        cancelVideoPrep()
+        prepUri = uri
+        prepJob = viewModelScope.async {
+            if (!VideoCompressor.needsCompression(context, uri, durationMs, sourceBytes)) return@async null
+            _uiState.update { it.copy(videoPrepProgress = 0) }
+            try {
+                VideoCompressor.compress(context, uri) { p ->
+                    _uiState.update { it.copy(videoPrepProgress = p) }
+                }
+            } finally {
+                _uiState.update { it.copy(videoPrepProgress = null) }
+            }
+        }
+    }
+
+    fun cancelVideoPrep() {
+        prepJob?.cancel()
+        prepJob = null
+        prepUri = null
+        _uiState.update { it.copy(videoPrepProgress = null) }
     }
 
     fun clearError() {
@@ -162,26 +194,43 @@ class CreateThreadViewModel @Inject constructor(
             if (imageUri != null) {
 
                 if (isVideo) {
-                    _uiState.update { it.copy(statusLabel = "Uploading video…") }
+                    _uiState.update { it.copy(statusLabel = "Compressing video…") }
 
-                    val size = withContext(Dispatchers.IO) { MediaFrameUtils.sizeOf(context, imageUri) }
-                    if (size > MediaFrameUtils.MAX_VIDEO_BYTES) {
-                        setError("That video is over 30 MB. Trim it and try again.")
+                    // Compression normally finished while the author was still writing the post.
+                    val compressed: File? = if (prepUri == imageUri) {
+                        try { prepJob?.await() } catch (_: Exception) { null }
+                    } else null
+
+                    val sourceSize = withContext(Dispatchers.IO) { MediaFrameUtils.sizeOf(context, imageUri) }
+                    if (compressed == null && sourceSize > MediaFrameUtils.MAX_VIDEO_BYTES) {
+                        setError("Couldn't compress this video on your phone. Try a shorter clip.")
                         return@launch
                     }
+
+                    _uiState.update { it.copy(statusLabel = "Uploading video…") }
 
                     val videoBytes = withContext(Dispatchers.IO) {
                         runCatching {
-                            context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
+                            if (compressed != null) compressed.readBytes()
+                            else context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
                         }.getOrNull()
                     }
-                    if (videoBytes == null || videoBytes.size > MediaFrameUtils.MAX_VIDEO_BYTES) {
+                    if (videoBytes == null) {
                         setError("Couldn't read that video. Try another one.")
                         return@launch
                     }
+                    if (videoBytes.size > MediaFrameUtils.MAX_VIDEO_BYTES) {
+                        compressed?.delete()
+                        setError("That video is still too large after compression. Try a shorter clip.")
+                        return@launch
+                    }
 
-                    val ext = withContext(Dispatchers.IO) { MediaFrameUtils.videoExtension(context, imageUri) }
-                    postRepository.uploadPostVideo(videoBytes, ext).fold(
+                    val ext = if (compressed != null) "mp4"
+                    else withContext(Dispatchers.IO) { MediaFrameUtils.videoExtension(context, imageUri) }
+
+                    val uploaded = postRepository.uploadPostVideo(videoBytes, ext)
+                    compressed?.delete()
+                    uploaded.fold(
                         onSuccess = { videoUrl = it },
                         onFailure = { e ->
                             setError(friendlyError(e, "Video upload failed"))
