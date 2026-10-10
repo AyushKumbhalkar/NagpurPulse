@@ -32,8 +32,3 @@ fun incognitoColor(seed: String): Color {
     ]
 }
 
-fun incognitoIcon(seed: String): ImageVector {
-    return avatarIcons[
-        kotlin.math.abs(seed.hashCode()) % avatarIcons.size
-    ]
-}

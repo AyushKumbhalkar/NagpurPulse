@@ -35,7 +35,6 @@ data class AuthUiState(
     val failedLoginAttempts: Int = 0
 )
 
-
 private const val AUTH_UI_LOG_TAG = "NP_AUTH_FLOW"
 
 private fun safeAuthError(context: Context, e: Throwable, fallback: String): String {
@@ -301,7 +300,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-
     fun sendPasswordReset(email: String) {
         AuthAnalytics.log(context, "login_forgot_password_submit")
         val normalizedEmail = email.trim().lowercase(Locale.ROOT)
@@ -318,7 +316,6 @@ class AuthViewModel @Inject constructor(
             )
         }
     }
-
 
     fun signInWithGoogleToken(
         idToken: String,
@@ -366,17 +363,3 @@ class AuthViewModel @Inject constructor(
     }
 }
 
-// ─── Shared text-field colors ─────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun authTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor      = OrangePrimary,
-    unfocusedBorderColor    = Color(0xFF2A2A2A),
-    focusedTextColor        = TextPrimary,
-    unfocusedTextColor      = TextPrimary,
-    cursorColor             = OrangePrimary,
-    focusedContainerColor   = Color(0xFF161616),
-    unfocusedContainerColor = Color(0xFF141414),
-    focusedLabelColor       = OrangePrimary,
-    unfocusedLabelColor     = TextSecondary
-)

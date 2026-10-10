@@ -169,85 +169,6 @@ fun PasswordStrengthMeter(
 //  Inline field message (error / hint) that animates in and out
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Shows [message] below a field, or nothing when it is null. The height change
- * is animated, and screen readers announce the message when it appears.
- */
-@Composable
-fun AuthFieldMessage(
-    message: String?,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    AnimatedContent(
-        targetState = message,
-        transitionSpec = { fadeIn(tween(140)) togetherWith fadeOut(tween(100)) },
-        modifier = modifier.fillMaxWidth(),
-        label = "auth-field-message"
-    ) { text ->
-        if (text != null) {
-            Text(
-                text = text,
-                color = color,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                modifier = Modifier
-                    .padding(start = 10.dp, top = 4.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite }
-            )
-        } else {
-            Spacer(Modifier.height(0.dp))
-        }
-    }
-}
-
-/**
- * Everything shown under the password field: the strength bar, plus one line of
- * text that is either the validation error (when [errorMessage] is set) or a
- * tip while the password is still Weak/Fair.
- */
-@Composable
-internal fun StrengthSection(
-    password: String,
-    email: String,
-    trackColor: Color,
-    hintColor: Color,
-    errorColor: Color,
-    errorMessage: String?
-) {
-    val strength = evaluatePasswordStrength(password, email)
-    Column(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 8.dp)) {
-        if (strength != PasswordStrength.Empty) {
-            PasswordStrengthMeter(strength = strength, trackColor = trackColor)
-        }
-        val hint = when {
-            errorMessage != null -> errorMessage
-            strength != PasswordStrength.Empty && strength <= PasswordStrength.Fair ->
-                stringResource(R.string.password_tip)
-            else -> null
-        }
-        AnimatedContent(
-            targetState = hint,
-            transitionSpec = { fadeIn(tween(140)) togetherWith fadeOut(tween(100)) },
-            label = "password-hint"
-        ) { text ->
-            if (text != null) {
-                Text(
-                    text = text,
-                    color = if (errorMessage != null) errorColor else hintColor,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    modifier = Modifier
-                        .padding(top = 5.dp)
-                        .semantics { liveRegion = LiveRegionMode.Polite }
-                )
-            } else {
-                Spacer(Modifier.height(0.dp))
-            }
-        }
-    }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 //  Email typo suggestion ("gmial.com" -> "gmail.com")
 // ─────────────────────────────────────────────────────────────────────────────
@@ -272,30 +193,6 @@ fun suggestEmailCorrection(email: String): String? {
     if (at <= 0 || at == trimmed.length - 1) return null
     val fixedDomain = KNOWN_EMAIL_TYPOS[trimmed.substring(at + 1).lowercase(java.util.Locale.ROOT)] ?: return null
     return trimmed.substring(0, at) + "@" + fixedDomain
-}
-
-/** "Did you mean ...?" line under the email field. Tapping it applies the correction. */
-@Composable
-fun EmailSuggestionHint(
-    suggestion: String?,
-    color: Color,
-    onAccept: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    if (suggestion == null) return
-    Text(
-        text = stringResource(R.string.email_suggest_prompt, suggestion),
-        color = color,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        fontWeight = FontWeight.SemiBold,
-        textDecoration = TextDecoration.Underline,
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onAccept(suggestion) }
-            .padding(start = 10.dp, top = 6.dp, bottom = 2.dp)
-            .semantics { liveRegion = LiveRegionMode.Polite }
-    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

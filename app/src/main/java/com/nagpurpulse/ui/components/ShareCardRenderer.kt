@@ -46,8 +46,6 @@ object ShareCardRenderer {
     private const val W = 1080
     private const val H = 1350
 
-    private fun px(v: Int) = v.toFloat()
-
     suspend fun render(context: Context, post: Post): Bitmap = withContext(Dispatchers.Default) {
         val photo = post.imageUrl?.takeIf { it.isNotBlank() }?.let { loadBitmap(context, it) }
         draw(context, post, photo)

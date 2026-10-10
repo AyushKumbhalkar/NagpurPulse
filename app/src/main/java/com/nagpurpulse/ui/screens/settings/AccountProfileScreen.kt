@@ -279,24 +279,6 @@ class AccountProfileViewModel @Inject constructor(
         }
     }
 
-
-    fun randomAvatar() {
-
-        val uid = authRepository.currentUserId ?: return
-
-        viewModelScope.launch {
-
-            val url = RandomImages.avatars.random()
-
-            authRepository.updateFullProfile(
-                userId = uid,
-                avatarUrl = url
-            )
-
-            load()
-        }
-    }
-
     /*
     fun randomBanner() {
 
@@ -378,7 +360,6 @@ class AccountProfileViewModel @Inject constructor(
             )
         }
     }
-
 
     fun changeEmail(newEmail: String, onComplete: (Boolean, String) -> Unit) {
         viewModelScope.launch {
@@ -472,8 +453,6 @@ fun AccountProfileScreen(
 
             }
         }
-
-
 
     val pickBanner =
         rememberLauncherForActivityResult(
@@ -695,7 +674,6 @@ fun AccountProfileScreen(
                         vm.setDisplayName(it)
                     }
 
-
                     SettingsDivider()
 
                     SettingsRow(
@@ -792,7 +770,6 @@ fun AccountProfileScreen(
 
                     )
 
-
                 }
             }
 
@@ -819,7 +796,6 @@ fun AccountProfileScreen(
             }
         }
     }
-
 
     if (showDeactivateDialog) {
         AlertDialog(
@@ -1362,7 +1338,6 @@ fun AccountProfileScreen(
     }
 }
 
-
 @Composable
 private fun LocationPickerRow(
     value: String,
@@ -1498,41 +1473,6 @@ private fun ProfileEditRow(
 }}
 
 @Composable
-private fun AvatarActionButton(
-    icon: ImageVector,
-    title: String,
-    color: Color,
-    onClick: () -> Unit
-) {
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.08f))
-            .pressScale(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-
-        Icon(
-            icon,
-            null,
-            tint = color,
-            modifier = Modifier.size(18.dp)
-        )
-
-        Spacer(Modifier.width(12.dp))
-
-        Text(
-            title,
-            color = PrimaryText,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
 private fun AvatarManagementCard(
     avatarUrl: String?,
     localAvatarUri: Uri?,
@@ -1602,7 +1542,6 @@ private fun AvatarManagementCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-
 
                     val previewAvatar = when {
                         localAvatarUri != null -> localAvatarUri.toString()
@@ -1678,7 +1617,6 @@ private fun AvatarManagementCard(
         }
     }
 }
-
 
 // ── Profile strength ─────────────────────────────────────────────────────────
 

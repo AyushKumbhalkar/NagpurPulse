@@ -54,13 +54,6 @@ object EngagementTracker {
     fun openedToday(ctx: Context): Boolean =
         prefs(ctx).getLong(KEY_LAST_DAY, -1L) == LocalDate.now().toEpochDay()
 
-    /** Whole calendar days since the app was last opened (0 = today). */
-    fun daysAway(ctx: Context): Int {
-        val lastDay = prefs(ctx).getLong(KEY_LAST_DAY, -1L)
-        if (lastDay < 0) return 0
-        return (LocalDate.now().toEpochDay() - lastDay).toInt().coerceAtLeast(0)
-    }
-
     /** The streak that can still be saved tonight (last open was yesterday), else 0. */
     fun savableStreak(ctx: Context): Int {
         val p = prefs(ctx)

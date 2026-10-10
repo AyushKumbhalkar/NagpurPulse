@@ -68,26 +68,3 @@ fun Message.timeAgo(): String {
     } catch (_: Exception) { "" }
 }
 
-fun Message.shortTime(): String {
-    return try {
-        val created = java.time.Instant.parse(createdAt)
-        val now     = java.time.Instant.now()
-        val diff    = java.time.Duration.between(created, now)
-        when {
-            diff.toMinutes() < 60  -> "${diff.toMinutes()}m"
-            diff.toHours()   < 24  -> {
-                val dt = java.time.ZonedDateTime.ofInstant(created, java.time.ZoneId.systemDefault())
-                "${dt.hour.toString().padStart(2,'0')}:${dt.minute.toString().padStart(2,'0')}"
-            }
-            diff.toDays() < 2      -> "Yesterday"
-            diff.toDays() < 7      -> {
-                val dt = java.time.ZonedDateTime.ofInstant(created, java.time.ZoneId.systemDefault())
-                dt.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)
-            }
-            else -> {
-                val dt = java.time.ZonedDateTime.ofInstant(created, java.time.ZoneId.systemDefault())
-                "${dt.dayOfMonth} ${dt.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)}"
-            }
-        }
-    } catch (_: Exception) { "" }
-}

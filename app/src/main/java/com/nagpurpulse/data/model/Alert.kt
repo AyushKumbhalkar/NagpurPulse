@@ -35,15 +35,6 @@ fun Alert.timeAgo(): String {
     }
 }
 
-fun Alert.alertTypeLabel(): String = when (category) {
-    "traffic" -> "TRAFFIC — LIVE"
-    "alerts" -> "POWER CUT"
-    "weather" -> "WEATHER"
-    "police" -> "POLICE CHECK"
-    "emergency" -> "EMERGENCY"
-    else -> category.uppercase()
-}
-
 fun Alert.alertEmoji(): String = when (category) {
     "traffic" -> "🚨"
     "alerts" -> "⚡"

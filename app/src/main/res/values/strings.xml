@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Nagpur Pulse</string>
 
@@ -6,16 +6,9 @@
     <string name="signup_password_hint">Password (8+ characters)</string>
     <string name="signup_confirm_hint">Confirm password</string>
     <string name="signup_create_account">Create Account</string>
-    <string name="signup_creating_account">Creating account…</string>
+    <string name="signup_creating_account">Creating accountâ€¦</string>
     <string name="signup_passwords_match">Passwords match</string>
-    <string name="offline_banner_signup">You’re offline. Connect to the internet to create your account.</string>
-    <string name="signup_success_title">Account created successfully!</string>
     <string name="signup_continue_google">Continue with Google</string>
-    <string name="signup_or_continue_with">or continue with</string>
-    <string name="signup_have_account">Already have an account?</string>
-    <string name="signup_log_in">Log in</string>
-    <string name="signup_guest_title">Continue as Guest</string>
-    <string name="signup_guest_subtitle">Explore without an account</string>
 
     <string name="err_email_required">Enter your email address</string>
     <string name="err_email_invalid">Enter a valid email address</string>
@@ -25,39 +18,25 @@
     <string name="err_password_mismatch">Passwords do not match</string>
 
     <!-- Signup screen: dialogs, headline, consent, validation and auth messages -->
-    <string name="signup_subtitle">Create your account and join the conversations happening around Nagpur.</string>
     <string name="signup_headline_prefix">Your people</string>
     <string name="cd_hide_password">Hide password</string>
     <string name="cd_show_password">Show password</string>
-    <string name="cd_hide_confirm_password">Hide confirm password</string>
-    <string name="cd_show_confirm_password">Show confirm password</string>
-    <string name="cd_continue_guest">Continue as guest</string>
     <string name="cd_close">Close</string>
-    <string name="benefit_secure">Secure\n&amp; private</string>
-    <string name="benefit_part_of_nagpur">Be a part\nof Nagpur</string>
-    <string name="benefit_discussions">Interesting\ndiscussions</string>
-    <string name="loading_creating_account">Creating your account…</string>
-    <string name="loading_verifying_email">Verifying your email…</string>
+    <string name="loading_verifying_email">Verifying your emailâ€¦</string>
     <string name="loading_please_wait">Please wait</string>
-    <string name="verify_cd_icon">Email verification</string>
     <string name="verify_title_ink">Verify your</string>
     <string name="verify_title_accent">email</string>
     <string name="verify_enter_code">Enter the 6-digit code we sent to</string>
-    <string name="verify_email_delivery_note">If this email address is correct, the verification code has been sent there.</string>
     <string name="verify_button">Verify &amp; Continue</string>
-    <string name="verify_button_loading">Verifying…</string>
+    <string name="verify_button_loading">Verifyingâ€¦</string>
     <string name="verify_resend_in">Resend code in</string>
     <string name="verify_retry_in">Code already sent. Retry in</string>
     <string name="verify_resend_code">Resend code</string>
     <string name="verify_change_email">Change email address</string>
-    <string name="used_cd_icon">Email already used</string>
     <string name="used_title_ink">Email</string>
     <string name="used_title_accent">already used</string>
     <string name="used_body">This email address is already registered with NagpurPulse. Please log in to continue.</string>
     <string name="used_go_login">Go to Login</string>
-    <string name="google_existing_title">Welcome back!</string>
-    <string name="google_existing_body">This Google account is already registered with NagpurPulse. Welcome back — your account is ready.</string>
-    <string name="google_existing_continue">Continue to NagpurPulse</string>
     <string name="used_try_different">Try a different email</string>
     <string name="legal_terms">Terms of Service</string>
     <string name="legal_privacy">Privacy Policy</string>
@@ -67,10 +46,8 @@
     <string name="strength_good">Good</string>
     <string name="strength_strong">Strong</string>
     <string name="strength_cd">Password strength: %1$s</string>
-    <string name="password_tip">Tip: use 12+ characters with letters, numbers and symbols.</string>
     <string name="auth_err_login_cooldown">Too many failed attempts. Please wait %1$d seconds before trying again.</string>
     <string name="auth_err_email_not_confirmed">Please verify your email before signing in. We can send the verification code again.</string>
-    <string name="login_email_not_confirmed_hint">Your email is not verified yet. Verify it first, then sign in.</string>
     <string name="login_resend_verification">Send verification code again</string>
     <string name="auth_err_invalid_credentials">Invalid email or password.</string>
     <string name="auth_err_weak_password">That password is too easy to guess. Try a longer one with letters, numbers and symbols.</string>
@@ -92,15 +69,6 @@
     <string name="google_err_unavailable">Google sign-in isn\'t available on this phone. Update Google Play services and try again.</string>
     <string name="google_err_interrupted">Google sign-in was interrupted. Please try again.</string>
 
-    <string-array name="signup_headline_phrases">
-        <item>are here.</item>
-        <item>are online.</item>
-        <item>are talking.</item>
-        <item>are joining.</item>
-        <item>are active.</item>
-        <item>are around.</item>
-        <item>are asking.</item>
-    </string-array>
 
     <!-- Signup extras: language chip, email typo hint, open email app, resume verification -->
     <string name="language_picker_cd">Change language</string>
@@ -111,15 +79,6 @@
 
     <!-- Login screen -->
     <string name="login_headline_prefix">Your people </string>
-    <string-array name="login_headline_phrases">
-        <item>are here.</item>
-        <item>are online.</item>
-        <item>are talking.</item>
-        <item>are joining.</item>
-        <item>are active.</item>
-        <item>are around.</item>
-        <item>are asking.</item>
-    </string-array>
     <string name="login_welcome_back">WELCOME BACK</string>
     <string name="login_email_hint">Email address</string>
     <string name="login_password_hint">Password</string>
@@ -127,25 +86,18 @@
     <string name="login_forgot_password">Forgot password?</string>
     <string name="login_reset_sent">Reset email sent! Check your inbox.</string>
     <string name="login_button">Login</string>
-    <string name="login_signing_in">Logging in…</string>
-    <string name="login_or_continue_with">or continue with</string>
+    <string name="login_signing_in">Logging inâ€¦</string>
     <string name="login_continue_google">Continue with Google</string>
-    <string name="login_continue_guest">Continue as Guest</string>
-    <string name="login_guest_subtitle">Explore without an account</string>
-    <string name="login_no_account">Don\'t have an account?</string>
-    <string name="login_benefit_secure">Secure&#10;&amp; private</string>
-    <string name="login_benefit_nagpur">Be a part&#10;of Nagpur</string>
-    <string name="login_benefit_discussions">Interesting&#10;discussions</string>
     <string name="login_reset_title">Reset your password</string>
-    <string name="login_reset_body">Enter the email linked to your NagpurPulse account. We’ll send you a secure reset link.</string>
+    <string name="login_reset_body">Enter the email linked to your NagpurPulse account. Weâ€™ll send you a secure reset link.</string>
     <string name="login_cancel">Cancel</string>
     <string name="login_reset_link">Send reset link</string>
     <string name="login_reset_close">Close</string>
-    <string name="login_reset_sending">Sending…</string>
+    <string name="login_reset_sending">Sendingâ€¦</string>
     <string name="login_reset_secure_note">Sent only to the email linked to your account</string>
     <string name="login_reset_success_title">Check your inbox</string>
-    <string name="login_reset_success_body">We’ve sent a secure reset link to</string>
-    <string name="login_reset_spam_tip">Can’t see it? Check your spam or promotions folder.</string>
+    <string name="login_reset_success_body">Weâ€™ve sent a secure reset link to</string>
+    <string name="login_reset_spam_tip">Canâ€™t see it? Check your spam or promotions folder.</string>
     <string name="login_reset_open_mail">Open email app</string>
     <string name="login_reset_no_mail_app">No email app found on this device.</string>
     <string name="login_reset_resend">Resend link</string>
@@ -171,13 +123,13 @@
     <string name="comment_removed_mod">Removed by a moderator</string>
     <string name="comment_deleted_author">Comment deleted</string>
     <string name="comment_edit_title">Edit comment</string>
-    <string name="comment_edit_hint">Write your comment…</string>
+    <string name="comment_edit_hint">Write your commentâ€¦</string>
     <string name="comment_save">Save</string>
     <string name="comment_cancel">Cancel</string>
     <string name="comment_empty_error">Comment cannot be empty</string>
     <string name="comment_copied">Copied</string>
     <string name="comment_delete_title">Delete comment?</string>
-    <string name="comment_delete_message">This can’t be undone. Replies will stay in the thread.</string>
+    <string name="comment_delete_message">This canâ€™t be undone. Replies will stay in the thread.</string>
     <string name="comment_report_title">Report comment</string>
     <string name="comment_report_spam">Spam</string>
     <string name="comment_report_harassment">Harassment</string>
@@ -185,20 +137,20 @@
     <string name="comment_report_inappropriate">Inappropriate</string>
     <string name="comment_report_other">Other</string>
     <string name="comment_report_sent">Thanks for reporting. Our team will take a look.</string>
-    <string name="comment_report_failed">Couldn’t submit your report. Please try again.</string>
+    <string name="comment_report_failed">Couldnâ€™t submit your report. Please try again.</string>
     <string name="comment_char_counter">%1$d/%2$d</string>
-    <string name="comment_sending">Sending…</string>
-    <string name="comment_failed">Couldn’t send</string>
+    <string name="comment_sending">Sendingâ€¦</string>
+    <string name="comment_failed">Couldnâ€™t send</string>
     <string name="comment_retry">Retry</string>
     <string name="comment_discard">Discard</string>
-    <string name="comment_post_failed">Couldn’t post your comment. Please try again.</string>
-    <string name="comment_too_fast">You’re commenting too fast. Please wait a moment.</string>
+    <string name="comment_post_failed">Couldnâ€™t post your comment. Please try again.</string>
+    <string name="comment_too_fast">Youâ€™re commenting too fast. Please wait a moment.</string>
     <string name="comment_too_long">Comment is too long (max 2000 characters).</string>
-    <string name="comment_edit_failed">Couldn’t save your edit. Please try again.</string>
-    <string name="comment_delete_failed">Couldn’t delete the comment. Please try again.</string>
+    <string name="comment_edit_failed">Couldnâ€™t save your edit. Please try again.</string>
+    <string name="comment_delete_failed">Couldnâ€™t delete the comment. Please try again.</string>
     <string name="comment_deleted_snack">Comment deleted</string>
-    <string name="comment_like_failed">Couldn’t update your like. Please try again.</string>
-    <string name="comment_load_failed">Couldn’t refresh comments.</string>
+    <string name="comment_like_failed">Couldnâ€™t update your like. Please try again.</string>
+    <string name="comment_load_failed">Couldnâ€™t refresh comments.</string>
     <string name="comments_title">Comments</string>
     <string name="comments_count">%1$d comments</string>
     <string name="comments_count_one">1 comment</string>
@@ -214,8 +166,8 @@
     <string name="comments_load_more">Load more comments</string>
     <string name="comments_new_one">1 new comment</string>
     <string name="comments_new_many">%1$d new comments</string>
-    <string name="comment_composer_hint">Share your thoughts…</string>
-    <string name="comment_composer_hint_anon">Speak freely — nobody will know it’s you</string>
+    <string name="comment_composer_hint">Share your thoughtsâ€¦</string>
+    <string name="comment_composer_hint_anon">Speak freely â€” nobody will know itâ€™s you</string>
     <string name="comment_composer_replying">Replying to %1$s</string>
     <string name="comment_composer_cancel_reply">Cancel reply</string>
     <string name="comment_send">Send</string>
@@ -227,16 +179,15 @@
 
     <!-- Explore screen -->
     <string name="explore_title">Explore Nagpur</string>
-    <string name="explore_greeting_morning">Good morning ☀️</string>
-    <string name="explore_greeting_afternoon">Good afternoon 🌤️</string>
-    <string name="explore_greeting_evening">Good evening 🌙</string>
-    <string name="explore_hint_1">Search Nagpur…</string>
-    <string name="explore_hint_2">Try “Dharampeth”…</string>
-    <string name="explore_hint_3">Try “jobs”…</string>
-    <string name="explore_hint_4">Try “events this weekend”…</string>
+    <string name="explore_greeting_morning">Good morning â˜€ï¸</string>
+    <string name="explore_greeting_afternoon">Good afternoon ðŸŒ¤ï¸</string>
+    <string name="explore_greeting_evening">Good evening ðŸŒ™</string>
+    <string name="explore_hint_1">Search Nagpurâ€¦</string>
+    <string name="explore_hint_2">Try â€œDharampethâ€â€¦</string>
+    <string name="explore_hint_3">Try â€œjobsâ€â€¦</string>
+    <string name="explore_hint_4">Try â€œevents this weekendâ€â€¦</string>
     <string name="explore_cancel">Cancel</string>
     <string name="explore_clear_search">Clear search</string>
-    <string name="explore_section_happening">Happening now</string>
     <string name="explore_section_categories">Categories</string>
     <string name="explore_section_areas">Browse by area</string>
     <string name="explore_section_hot">Hot right now</string>
@@ -255,28 +206,27 @@
     <string name="explore_area_posts">%1$d posts</string>
     <string name="explore_area_empty">No posts yet</string>
     <string name="explore_area_yours">YOURS</string>
-    <string name="explore_results_for">%1$d results for “%2$s”</string>
+    <string name="explore_results_for">%1$d results for â€œ%2$sâ€</string>
     <string name="explore_area_results_title">Posts in %1$s</string>
-    <string name="explore_no_results_title">No results for “%1$s”</string>
+    <string name="explore_no_results_title">No results for â€œ%1$sâ€</string>
     <string name="explore_no_results_subtitle">Try a different word, or browse a category or area instead.</string>
     <string name="explore_no_area_posts_title">No posts in %1$s yet</string>
-    <string name="explore_no_area_posts_subtitle">Be the first to share what’s happening here.</string>
+    <string name="explore_no_area_posts_subtitle">Be the first to share whatâ€™s happening here.</string>
     <string name="explore_clear_cta">Clear search</string>
-    <string name="explore_error_message">Couldn’t load Explore. Check your connection and try again.</string>
+    <string name="explore_error_message">Couldnâ€™t load Explore. Check your connection and try again.</string>
     <string name="explore_search_error">Search failed. Please try again.</string>
-    <string name="explore_caught_up">You’re all caught up in Nagpur</string>
+    <string name="explore_caught_up">Youâ€™re all caught up in Nagpur</string>
     <string name="explore_caught_up_hint">Pull down to refresh</string>
     <string name="explore_scroll_top">Back to top</string>
     <!-- Premium polish -->
-    <string name="tip_anon_comment">Tip: turn on the toggle to comment anonymously — your name stays hidden.</string>
+    <string name="tip_anon_comment">Tip: turn on the toggle to comment anonymously â€” your name stays hidden.</string>
     <string name="tip_swipe_reply">Tip: swipe a comment to the right to reply quickly.</string>
     <string name="tip_got_it">Got it</string>
-    <string name="comment_first_celebration">🎉 Your first comment is live — welcome to the conversation!</string>
+    <string name="comment_first_celebration">ðŸŽ‰ Your first comment is live â€” welcome to the conversation!</string>
     <string name="comment_undo">Undo</string>
     <string name="error_generic_title">Something went off track</string>
     <string name="error_try_again">Try again</string>
-    <string name="feed_refreshing">Refreshing…</string>
-    <string name="festival_navratri">Happy Navratri! 🪔 Shubh Navratri to you and your family.</string>
+    <string name="festival_navratri">Happy Navratri! ðŸª” Shubh Navratri to you and your family.</string>
     <string name="festival_dussehra">Happy Dussehra! May good always win.</string>
     <string name="festival_diwali">Happy Diwali! May your home glow with joy.</string>
     <string name="festival_ganeshotsav">Ganpati Bappa Morya! Happy Ganeshotsav.</string>
@@ -304,7 +254,7 @@
     <string name="post_card_copy_link">Copy link</string>
     <string name="post_card_link_copied">Link copied</string>
     <string name="post_card_delete_title">Delete this post?</string>
-    <string name="post_card_delete_message">This can’t be undone.</string>
+    <string name="post_card_delete_message">This canâ€™t be undone.</string>
     <string name="post_card_cancel">Cancel</string>
     <string name="post_card_report_title">Report post</string>
     <string name="post_card_upvote">Upvote</string>
@@ -317,5 +267,7 @@
     <string name="post_card_share_post">Share post</string>
     <string name="post_card_view_profile">View profile</string>
     <string name="post_card_open_post">Open post</string>
-    <string name="post_card_share_footer">— Shared from Nagpur Pulse 🍊</string>
+    <string name="post_card_share_footer">â€” Shared from Nagpur Pulse ðŸŠ</string>
+    <string name="feed_refreshing">Refreshing feed...</string>
 </resources>
+

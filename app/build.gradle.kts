@@ -33,6 +33,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // App ships en/hi/mr only (res/xml/locales_config.xml); drops translations bundled by libraries.
+        resourceConfigurations += listOf("en", "hi", "mr")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField(
@@ -113,7 +116,6 @@ android {
 }
 
 dependencies {
-    implementation("com.google.android.material:material:1.12.0")
     // Android Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -145,12 +147,6 @@ dependencies {
     implementation(libs.supabase.realtime)
     implementation(libs.supabase.storage)
 
-    // Ktor
-    implementation(libs.ktor.client.android)
-
-    // Coil
-    implementation(libs.coil.compose)
-
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 
@@ -174,8 +170,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.2.0")
     ksp("androidx.hilt:hilt-compiler:1.2.0")
-
-    // Pager for image gallery viewer
 
     // Debug
     debugImplementation(libs.androidx.ui.tooling)

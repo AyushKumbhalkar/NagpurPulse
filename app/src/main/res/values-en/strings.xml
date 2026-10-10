@@ -8,11 +8,6 @@
     <string name="signup_create_account">Create Account</string>
     <string name="signup_creating_account">Creating account…</string>
     <string name="signup_continue_google">Continue with Google</string>
-    <string name="signup_or_continue_with">or continue with</string>
-    <string name="signup_have_account">Already have an account?</string>
-    <string name="signup_log_in">Log in</string>
-    <string name="signup_guest_title">Continue as Guest</string>
-    <string name="signup_guest_subtitle">Explore without an account</string>
 
     <string name="err_email_required">Enter your email address</string>
     <string name="err_email_invalid">Enter a valid email address</string>
@@ -22,21 +17,12 @@
     <string name="err_password_mismatch">Passwords do not match</string>
 
     <!-- Signup screen: dialogs, headline, consent, validation and auth messages -->
-    <string name="signup_subtitle">Create your account and join the conversations happening around Nagpur.</string>
     <string name="signup_headline_prefix">Your people</string>
     <string name="cd_hide_password">Hide password</string>
     <string name="cd_show_password">Show password</string>
-    <string name="cd_hide_confirm_password">Hide confirm password</string>
-    <string name="cd_show_confirm_password">Show confirm password</string>
-    <string name="cd_continue_guest">Continue as guest</string>
     <string name="cd_close">Close</string>
-    <string name="benefit_secure">Secure\n&amp; private</string>
-    <string name="benefit_part_of_nagpur">Be a part\nof Nagpur</string>
-    <string name="benefit_discussions">Interesting\ndiscussions</string>
-    <string name="loading_creating_account">Creating your account…</string>
     <string name="loading_verifying_email">Verifying your email…</string>
     <string name="loading_please_wait">Please wait</string>
-    <string name="verify_cd_icon">Email verification</string>
     <string name="verify_title_ink">Verify your</string>
     <string name="verify_title_accent">email</string>
     <string name="verify_enter_code">Enter the 6-digit code we sent to</string>
@@ -46,7 +32,6 @@
     <string name="verify_retry_in">Code already sent. Retry in</string>
     <string name="verify_resend_code">Resend code</string>
     <string name="verify_change_email">Change email address</string>
-    <string name="used_cd_icon">Email already used</string>
     <string name="used_title_ink">Email</string>
     <string name="used_title_accent">already used</string>
     <string name="used_body">This email address is already registered with NagpurPulse. Please log in to continue.</string>
@@ -60,7 +45,6 @@
     <string name="strength_good">Good</string>
     <string name="strength_strong">Strong</string>
     <string name="strength_cd">Password strength: %1$s</string>
-    <string name="password_tip">Tip: use 12+ characters with letters, numbers and symbols.</string>
     <string name="auth_err_invalid_credentials">Invalid email or password.</string>
     <string name="auth_err_weak_password">That password is too easy to guess. Try a longer one with letters, numbers and symbols.</string>
     <string name="auth_err_rate_limit">Too many attempts. Please wait a moment and try again.</string>
@@ -81,15 +65,6 @@
     <string name="google_err_unavailable">Google sign-in isn\'t available on this phone. Update Google Play services and try again.</string>
     <string name="google_err_interrupted">Google sign-in was interrupted. Please try again.</string>
 
-    <string-array name="signup_headline_phrases">
-        <item>are here.</item>
-        <item>are online.</item>
-        <item>are talking.</item>
-        <item>are joining.</item>
-        <item>are active.</item>
-        <item>are around.</item>
-        <item>are asking.</item>
-    </string-array>
 
     <!-- Signup extras: language chip, email typo hint, open email app, resume verification -->
     <string name="language_picker_cd">Change language</string>
@@ -98,8 +73,6 @@
     <string name="verify_open_email_app">Open email app</string>
     <string name="verify_no_email_app">No email app found on this phone.</string>
     <string name="signup_passwords_match">Passwords match</string>
-    <string name="offline_banner_signup">No internet connection. Connect to create your account.</string>
-    <string name="signup_success_title">Email verified!</string>
     <!-- Premium polish -->
     <string name="tip_anon_comment">Tip: turn on the toggle to comment anonymously — your name stays hidden.</string>
     <string name="tip_swipe_reply">Tip: swipe a comment to the right to reply quickly.</string>
@@ -108,7 +81,6 @@
     <string name="comment_undo">Undo</string>
     <string name="error_generic_title">Something went off track</string>
     <string name="error_try_again">Try again</string>
-    <string name="feed_refreshing">Refreshing…</string>
     <string name="festival_navratri">Happy Navratri! 🪔 Shubh Navratri to you and your family.</string>
     <string name="festival_dussehra">Happy Dussehra! May good always win.</string>
     <string name="festival_diwali">Happy Diwali! May your home glow with joy.</string>

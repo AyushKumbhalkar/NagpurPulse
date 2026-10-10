@@ -90,25 +90,6 @@ private fun alertSeverityBadge(severity: String?): String? = when (severity) {
     else       -> null
 }
 
-fun shareAlert(context: Context, post: Post) {
-    val where = post.areaTag?.takeIf { it.isNotBlank() && it != "Nagpur" }?.let { " in $it" }.orEmpty()
-    val text = buildString {
-        append(alertEmoji(post.category)).append(' ')
-        append(alertLabel(post.category).lowercase().replaceFirstChar { it.uppercase() })
-        append(" alert").append(where).append(": ").append(post.title)
-        append("\n\nLive neighbourhood alerts on Nagpur Pulse 🍊")
-    }
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    try {
-        context.startActivity(Intent.createChooser(send, "Share alert"))
-    } catch (_: Exception) {
-        // No share targets available; nothing useful to do.
-    }
-}
-
 @Composable
 fun AlertCard(
     post: Post,

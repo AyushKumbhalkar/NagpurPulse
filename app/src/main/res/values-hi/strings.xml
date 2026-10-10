@@ -6,11 +6,6 @@
     <string name="signup_create_account">खाता बनाएँ</string>
     <string name="signup_creating_account">खाता बन रहा है…</string>
     <string name="signup_continue_google">Google के साथ जारी रखें</string>
-    <string name="signup_or_continue_with">या इसके साथ जारी रखें</string>
-    <string name="signup_have_account">पहले से खाता है?</string>
-    <string name="signup_log_in">लॉग इन करें</string>
-    <string name="signup_guest_title">अतिथि के रूप में जारी रखें</string>
-    <string name="signup_guest_subtitle">बिना खाते के देखें</string>
 
     <string name="err_email_required">ईमेल पता दर्ज करें</string>
     <string name="err_email_invalid">मान्य ईमेल पता दर्ज करें</string>
@@ -20,21 +15,12 @@
     <string name="err_password_mismatch">पासवर्ड मेल नहीं खाते</string>
 
     <!-- Signup screen: dialogs, headline, consent, validation and auth messages -->
-    <string name="signup_subtitle">अपना खाता बनाएँ और नागपुर में चल रही चर्चाओं से जुड़ें।</string>
     <string name="signup_headline_prefix">आपके लोग</string>
     <string name="cd_hide_password">पासवर्ड छिपाएँ</string>
     <string name="cd_show_password">पासवर्ड दिखाएँ</string>
-    <string name="cd_hide_confirm_password">पुष्टि वाला पासवर्ड छिपाएँ</string>
-    <string name="cd_show_confirm_password">पुष्टि वाला पासवर्ड दिखाएँ</string>
-    <string name="cd_continue_guest">अतिथि के रूप में जारी रखें</string>
     <string name="cd_close">बंद करें</string>
-    <string name="benefit_secure">सुरक्षित\nऔर निजी</string>
-    <string name="benefit_part_of_nagpur">नागपुर का\nहिस्सा बनें</string>
-    <string name="benefit_discussions">दिलचस्प\nचर्चाएँ</string>
-    <string name="loading_creating_account">आपका खाता बनाया जा रहा है…</string>
     <string name="loading_verifying_email">आपका ईमेल सत्यापित हो रहा है…</string>
     <string name="loading_please_wait">कृपया प्रतीक्षा करें</string>
-    <string name="verify_cd_icon">ईमेल सत्यापन</string>
     <string name="verify_title_ink">अपना</string>
     <string name="verify_title_accent">ईमेल सत्यापित करें</string>
     <string name="verify_enter_code">इस पते पर भेजा गया 6 अंकों का कोड दर्ज करें:</string>
@@ -44,7 +30,6 @@
     <string name="verify_retry_in">कोड पहले ही भेजा जा चुका है। दोबारा कोशिश करें:</string>
     <string name="verify_resend_code">कोड दोबारा भेजें</string>
     <string name="verify_change_email">ईमेल पता बदलें</string>
-    <string name="used_cd_icon">ईमेल पहले से उपयोग में है</string>
     <string name="used_title_ink">ईमेल</string>
     <string name="used_title_accent">पहले से उपयोग में</string>
     <string name="used_body">यह ईमेल पता NagpurPulse में पहले से पंजीकृत है। जारी रखने के लिए कृपया लॉग इन करें।</string>
@@ -58,7 +43,6 @@
     <string name="strength_good">अच्छा</string>
     <string name="strength_strong">मज़बूत</string>
     <string name="strength_cd">पासवर्ड की मज़बूती: %1$s</string>
-    <string name="password_tip">सुझाव: अक्षरों, अंकों और चिह्नों के साथ 12+ अक्षर इस्तेमाल करें।</string>
     <string name="auth_err_invalid_credentials">ईमेल या पासवर्ड गलत है।</string>
     <string name="auth_err_weak_password">यह पासवर्ड अनुमान लगाने में बहुत आसान है। अक्षरों, अंकों और चिह्नों वाला लंबा पासवर्ड आज़माएँ।</string>
     <string name="auth_err_rate_limit">बहुत ज़्यादा प्रयास हो चुके हैं। कृपया थोड़ी देर रुककर फिर कोशिश करें।</string>
@@ -79,15 +63,6 @@
     <string name="google_err_unavailable">इस फ़ोन पर Google साइन-इन उपलब्ध नहीं है। Google Play services अपडेट करें और फिर कोशिश करें।</string>
     <string name="google_err_interrupted">Google साइन-इन बाधित हुआ। कृपया फिर कोशिश करें।</string>
 
-    <string-array name="signup_headline_phrases">
-        <item>यहाँ हैं।</item>
-        <item>ऑनलाइन हैं।</item>
-        <item>बात कर रहे हैं।</item>
-        <item>जुड़ रहे हैं।</item>
-        <item>सक्रिय हैं।</item>
-        <item>आसपास हैं।</item>
-        <item>पूछ रहे हैं।</item>
-    </string-array>
 
     <!-- Signup extras: language chip, email typo hint, open email app, resume verification -->
     <string name="language_picker_cd">भाषा बदलें</string>
@@ -96,8 +71,6 @@
     <string name="verify_open_email_app">ईमेल ऐप खोलें</string>
     <string name="verify_no_email_app">इस फ़ोन में कोई ईमेल ऐप नहीं मिला।</string>
     <string name="signup_passwords_match">पासवर्ड मेल खाते हैं</string>
-    <string name="offline_banner_signup">इंटरनेट कनेक्शन नहीं है। खाता बनाने के लिए नेटवर्क से जुड़ें।</string>
-    <string name="signup_success_title">ईमेल सत्यापित हो गया!</string>
 
     <!-- Comments -->
     <string name="comment_reply">जवाब दें</string>
@@ -183,7 +156,6 @@
     <string name="explore_hint_4">“इस वीकेंड के इवेंट” आज़माएँ…</string>
     <string name="explore_cancel">रद्द करें</string>
     <string name="explore_clear_search">खोज साफ़ करें</string>
-    <string name="explore_section_happening">अभी चल रहा है</string>
     <string name="explore_section_categories">श्रेणियाँ</string>
     <string name="explore_section_areas">इलाके के अनुसार देखें</string>
     <string name="explore_section_hot">अभी ट्रेंडिंग</string>
@@ -222,7 +194,6 @@
     <string name="comment_undo">पूर्ववत करें</string>
     <string name="error_generic_title">कुछ गड़बड़ हो गई</string>
     <string name="error_try_again">फिर कोशिश करें</string>
-    <string name="feed_refreshing">रीफ़्रेश हो रहा है…</string>
     <string name="festival_navratri">नवरात्रि की शुभकामनाएँ! 🪔</string>
     <string name="festival_dussehra">दशहरे की शुभकामनाएँ! सत्य की सदा जीत हो।</string>
     <string name="festival_diwali">दीपावली की शुभकामनाएँ! आपका घर खुशियों से जगमगाए।</string>

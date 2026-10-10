@@ -1,7 +1,6 @@
 //This is the PostRepository.kt file
 // java/com/nagpurpulse/data/repository/PostRepository.kt
 
-
 package com.nagpurpulse.data.repository
 
 import com.nagpurpulse.data.model.Profile
@@ -521,7 +520,6 @@ class PostRepository @Inject constructor(
                  }
              )
 
-
              updateKarma(userId, 5)
              tryAwardBadges(userId, category)
 
@@ -530,7 +528,6 @@ class PostRepository @Inject constructor(
              Result.failure(e)
          }
      }
-
 
      /**
       * Best-effort numbers for the Create Post screen (social proof, reach, trending topics).
@@ -983,25 +980,6 @@ class PostRepository @Inject constructor(
              }.decodeList<Profile>()
 
              profiles.associateBy { it.id }
-         } catch (_: Exception) {
-             emptyMap()
-         }
-     }
-     private suspend fun fetchUsernames(
-         userIds: List<String>
-     ): Map<String, String> {
-         if (userIds.isEmpty()) return emptyMap()
-
-         return try {
-             val profiles = client.postgrest["profiles"].select {
-                 filter {
-                     isIn("id", userIds)
-                 }
-             }.decodeList<Profile>()
-
-             profiles.associate { profile ->
-                 profile.id to profile.username
-             }
          } catch (_: Exception) {
              emptyMap()
          }
