@@ -48,6 +48,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nagpurpulse.data.model.Post
 import com.nagpurpulse.data.model.Profile
+import com.nagpurpulse.data.repository.AuthRepository
+import com.nagpurpulse.data.repository.MessageRepository
 import com.nagpurpulse.data.repository.PostRepository
 import com.nagpurpulse.data.repository.ProfileRepository
 import com.nagpurpulse.data.repository.PresenceRepository
@@ -71,14 +73,41 @@ data class PublicProfileUiState(
 class PublicProfileViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val postRepository: PostRepository,
-    private val presenceRepository: PresenceRepository
+    private val presenceRepository: PresenceRepository,
+    private val messageRepository: MessageRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PublicProfileUiState())
     val uiState: StateFlow<PublicProfileUiState> = _uiState
     val onlineUserIds: StateFlow<Set<String>> = presenceRepository.onlineUserIds
 
+    private val _isOpeningChat = MutableStateFlow(false)
+    val isOpeningChat: StateFlow<Boolean> = _isOpeningChat
+    private val _chatError = MutableStateFlow<String?>(null)
+    val chatError: StateFlow<String?> = _chatError
+
+    /** The signed-in user's id, so we never offer "Message" on your own profile. */
+    val myUserId: String? get() = authRepository.currentUserId
+
     init {
         presenceRepository.start()
+    }
+
+    fun dismissChatError() { _chatError.value = null }
+
+    /** Finds or creates the 1:1 conversation, then hands its id back for navigation. */
+    fun openChat(otherUserId: String, onOpened: (String) -> Unit) {
+        if (_isOpeningChat.value) return
+        viewModelScope.launch {
+            _isOpeningChat.value = true
+            messageRepository.getOrCreateConversation(otherUserId).fold(
+                onSuccess = { conv -> _isOpeningChat.value = false; onOpened(conv.id) },
+                onFailure = { e ->
+                    _isOpeningChat.value = false
+                    _chatError.value = e.message ?: "Couldn't open the chat. Please try again."
+                }
+            )
+        }
     }
 
     private var lastUserId: String? = null
@@ -119,37 +148,32 @@ fun PublicProfileScreen(
     userId: String,
     onBack: () -> Unit,
     onPostClick: (String) -> Unit,
+    onOpenChat: (String) -> Unit,
     viewModel: PublicProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isOpeningChat by viewModel.isOpeningChat.collectAsState()
+    val chatError by viewModel.chatError.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
     val onlineUserIds by viewModel.onlineUserIds.collectAsState()
-    val context = LocalContext.current
-
     val profile = uiState.profile
     val handle = profile?.username?.takeIf { it.isNotBlank() } ?: "User"
     // Respect the target user's visibility preference at the point of display too.
     val isOnline = userId in onlineUserIds && profile?.showOnlineStatus == true
-    val canShare = profile != null && !profile.hideProfile
 
     LaunchedEffect(userId) { viewModel.load(userId) }
+    LaunchedEffect(chatError) {
+        chatError?.let { snackbar.showSnackbar(it); viewModel.dismissChatError() }
+    }
 
     Scaffold(
         containerColor = Background,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             PublicProfileTopBar(
                 handle = handle,
                 isOnline = isOnline,
-                canShare = canShare,
-                onBack = onBack,
-                onShare = {
-                    profile?.let { targetProfile ->
-                        val send = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "Check out u/${targetProfile.username} on NagpurPulse")
-                        }
-                        context.startActivity(Intent.createChooser(send, "Share profile"))
-                    }
-                }
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -164,6 +188,9 @@ fun PublicProfileScreen(
                     profile = profile,
                     posts = uiState.posts,
                     isOnline = isOnline,
+                    canMessage = viewModel.myUserId != null && viewModel.myUserId != profile.id,
+                    isOpeningChat = isOpeningChat,
+                    onMessage = { viewModel.openChat(profile.id, onOpenChat) },
                     onPostClick = onPostClick
                 )
             }
@@ -177,9 +204,7 @@ fun PublicProfileScreen(
 private fun PublicProfileTopBar(
     handle: String,
     isOnline: Boolean,
-    canShare: Boolean,
-    onBack: () -> Unit,
-    onShare: () -> Unit
+    onBack: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -198,13 +223,8 @@ private fun PublicProfileTopBar(
                 Text("Online now", color = GreenSuccess, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
         }
-        if (canShare) {
-            IconButton(onClick = onShare) {
-                Icon(Icons.Filled.Share, contentDescription = "Share profile", tint = OrangePrimary)
-            }
-        } else {
-            Spacer(Modifier.size(48.dp))
-        }
+        // Balances the back button so the title stays optically centred.
+        Spacer(Modifier.size(48.dp))
     }
 }
 
@@ -407,18 +427,28 @@ private fun PublicProfileContent(
     profile: Profile,
     posts: List<Post>,
     isOnline: Boolean,
+    canMessage: Boolean,
+    isOpeningChat: Boolean,
+    onMessage: () -> Unit,
     onPostClick: (String) -> Unit
 ) {
     var shown by remember { mutableStateOf(false) }
-    var sortTop by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-    val sortedPosts = if (sortTop) posts.sortedByDescending { it.upvotes } else posts
     LaunchedEffect(Unit) { shown = true }
 
     val screenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
     val nameSize = if (screenWidth < 360) 23.sp else if (screenWidth < 400) 26.sp else 28.sp
     val name = profile.displayName?.takeIf { it.isNotBlank() } ?: profile.username
+
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val progress = remember(profile.karma) { ProfileLevels.progress(profile.karma) }
+    val totalUpvotes = remember(posts) {
+        computeImpact(posts.map { PostStat(it.createdAt, it.upvotes, it.commentCount, it.viewCount) }).totalUpvotes
+    }
+    var sortTop by remember { mutableStateOf(false) }
+    val visiblePosts = remember(posts, sortTop) {
+        if (sortTop) posts.sortedByDescending { it.upvotes } else posts
+    }
 
     LazyColumn(Modifier.fillMaxSize()) {
         item {
@@ -474,40 +504,60 @@ private fun PublicProfileContent(
                     Spacer(Modifier.height(20.dp))
 
                     Reveal(shown, 170) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
-                                onClick = {
-                                    val send = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, "Check out u/${profile.username} on NagpurPulse")
-                                    }
-                                    context.startActivity(Intent.createChooser(send, "Share profile"))
-                                },
-                                modifier = Modifier.weight(1f).height(50.dp),
-                                shape = RoundedCornerShape(25.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
-                            ) {
-                                Icon(Icons.Filled.Share, null, modifier = Modifier.size(17.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Share profile", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        val shareProfile = {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, "Check out u/${profile.username} on NagpurPulse")
                             }
-                            OutlinedButton(
-                                onClick = {
-                                    clipboard.setText(AnnotatedString("u/${profile.username}"))
-                                    Toast.makeText(context, "Username copied", Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.weight(1f).height(50.dp),
-                                shape = RoundedCornerShape(25.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, OrangePrimary.copy(alpha = 0.5f))
-                            ) {
-                                Icon(Icons.Filled.ContentCopy, null, tint = OrangePrimary, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Copy handle", color = OrangePrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            context.startActivity(Intent.createChooser(send, "Share profile"))
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (canMessage) {
+                                Button(
+                                    onClick = onMessage,
+                                    enabled = !isOpeningChat,
+                                    modifier = Modifier.weight(1f).height(50.dp),
+                                    shape = RoundedCornerShape(25.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = OrangePrimary, contentColor = Color.White,
+                                        disabledContainerColor = OrangePrimary.copy(alpha = 0.6f), disabledContentColor = Color.White
+                                    )
+                                ) {
+                                    if (isOpeningChat) {
+                                        CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                                    } else {
+                                        Icon(Icons.Filled.ChatBubble, null, modifier = Modifier.size(17.dp))
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(if (isOpeningChat) "Opening…" else "Message", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                                }
+                                CircleAction(Icons.Filled.Share, "Share profile", shareProfile)
+                            } else {
+                                Button(
+                                    onClick = shareProfile,
+                                    modifier = Modifier.weight(1f).height(50.dp),
+                                    shape = RoundedCornerShape(25.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary, contentColor = Color.White)
+                                ) {
+                                    Icon(Icons.Filled.Share, null, modifier = Modifier.size(17.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Share profile", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                                }
+                            }
+                            CircleAction(Icons.Filled.ContentCopy, "Copy username") {
+                                clipboard.setText(AnnotatedString("u/${profile.username}"))
+                                Toast.makeText(context, "Username copied", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
 
                     Spacer(Modifier.height(16.dp))
+
+                    Reveal(shown, 230) { CommunityLevelCard(progress) }
 
                     Spacer(Modifier.height(18.dp))
 
@@ -519,8 +569,8 @@ private fun PublicProfileContent(
                                 "Threads", BlueInfo, Modifier.weight(1f)
                             )
                             PublicStatBox(
-                                if (profile.hideComments) "Hidden" else "—",
-                                "Comments", GreenSuccess, Modifier.weight(1f)
+                                if (profile.hidePosts) "Hidden" else formatCount(totalUpvotes),
+                                "Upvotes", GreenSuccess, Modifier.weight(1f)
                             )
                         }
                     }
@@ -580,7 +630,7 @@ private fun PublicProfileContent(
                     modifier = Modifier.padding(40.dp)
                 )
             }
-            else -> itemsIndexed(sortedPosts) { i, post ->
+            else -> itemsIndexed(visiblePosts) { i, post ->
                 StaggeredItem(i) {
                     PostCard(
                         post = post,
@@ -659,6 +709,68 @@ private fun PublicStatBox(value: String, label: String, accentColor: Color, modi
 }
 
 @Composable
+private fun CommunityLevelCard(progress: LevelProgress) {
+    val start = Color(progress.level.colorStart)
+    val end = Color(progress.level.colorEnd)
+    val animated by animateFloatAsState(
+        targetValue = progress.fraction,
+        animationSpec = tween(900, delayMillis = 350, easing = FastOutSlowInEasing),
+        label = "level_progress"
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Surface)
+            .border(1.dp, start.copy(alpha = 0.30f), RoundedCornerShape(18.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(start, end))),
+            contentAlignment = Alignment.Center
+        ) { Text(progress.level.emoji, fontSize = 22.sp) }
+
+        Spacer(Modifier.width(14.dp))
+
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(progress.level.title, color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Level ${progress.level.number}", color = start, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(start.copy(alpha = 0.14f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(start.copy(alpha = 0.15f))
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(animated.coerceIn(0.04f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(50))
+                        .background(Brush.horizontalGradient(listOf(start, end)))
+                )
+            }
+            Spacer(Modifier.height(5.dp))
+            Text(
+                if (progress.next != null) "${progress.remaining} karma to ${progress.next.emoji} ${progress.next.title}"
+                else "Top level reached — a true city legend",
+                color = SecondaryText, fontSize = 11.sp
+            )
+        }
+    }
+}
+
+@Composable
 private fun SortPill(label: String, selected: Boolean, onClick: () -> Unit) {
     val bg by animateColorAsState(if (selected) OrangePrimary else SurfaceAlt, tween(200), label = "sort_bg")
     Text(
@@ -672,4 +784,19 @@ private fun SortPill(label: String, selected: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp)
     )
+}
+
+@Composable
+private fun CircleAction(icon: ImageVector, description: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(50.dp)
+            .clip(CircleShape)
+            .background(OrangePrimary.copy(alpha = 0.10f))
+            .border(1.dp, OrangePrimary.copy(alpha = 0.45f), CircleShape)
+            .pressScale(0.9f, onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = description, tint = OrangePrimary, modifier = Modifier.size(20.dp))
+    }
 }
