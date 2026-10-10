@@ -903,7 +903,10 @@ fun NagpurPulseNavGraph(
                 PublicProfileScreen(
                     userId = back.arguments?.getString("userId") ?: "",
                     onBack = { navController.popBackStack() },
-                    onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) }
+                    onPostClick = { navController.navigate(Screen.Thread.createRoute(it)) },
+                    onOpenChat = { conversationId ->
+                        navController.navigate(Screen.Chat.createRoute(conversationId))
+                    }
                 )
             }
         }
