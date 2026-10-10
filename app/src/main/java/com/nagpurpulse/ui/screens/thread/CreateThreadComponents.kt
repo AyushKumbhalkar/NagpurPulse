@@ -3,6 +3,17 @@
 package com.nagpurpulse.ui.screens.thread
 
 import android.net.Uri
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import coil.decode.VideoFrameDecoder
+import coil.request.ImageRequest
+import com.nagpurpulse.data.model.formatMediaDuration
+import com.nagpurpulse.ui.components.AdaptivePostImage
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -922,9 +933,20 @@ private fun SheetOption(
 // ═════════════════════════════════════════════════════════════════════════════
 //  Photos
 // ═════════════════════════════════════════════════════════════════════════════
+/**
+ * What the author is about to post, shown the way the feed will draw it (3:4 .. 16:9, centre-cropped beyond that).
+ * [framedPreview] is the bitmap produced by the frame editor; without it the raw file / existing URL is shown.
+ * [onEditFrame] == null hides the frame button (e.g. when editing a post that already has uploaded media).
+ */
 @Composable
-internal fun AttachedImagePreview(
+internal fun AttachedMediaPreview(
     model: Any,
+    framedPreview: Bitmap?,
+    frame: MediaFrame,
+    isVideo: Boolean,
+    durationMs: Long,
+    busyLabel: String?,
+    onEditFrame: (() -> Unit)?,
     onRemove: () -> Unit,
     onReplace: () -> Unit
 ) {
@@ -932,15 +954,27 @@ internal fun AttachedImagePreview(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
             .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        AsyncImage(
-            model = model,
-            contentDescription = "Photo attached to your post",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        if (framedPreview != null) {
+            val ratio = (framedPreview.width.toFloat() / framedPreview.height).coerceIn(0.75f, 1.78f)
+            Image(
+                bitmap = remember(framedPreview) { framedPreview.asImageBitmap() },
+                contentDescription = "Photo attached to your post",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(ratio)
+            )
+        } else {
+            AdaptivePostImage(
+                imageUrl = model.toString(),
+                cornerRadius = 0.dp,
+                showExpandHintWhenCropped = false
+            )
+        }
+
         // Scrim so the controls stay readable on bright photos
         Box(
             Modifier
@@ -950,6 +984,20 @@ internal fun AttachedImagePreview(
                     Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent))
                 )
         )
+
+        if (isVideo) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+        }
+
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -978,9 +1026,65 @@ internal fun AttachedImagePreview(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Filled.Close, contentDescription = "Remove photo",
+                Icons.Filled.Close, contentDescription = if (isVideo) "Remove video" else "Remove photo",
                 tint = Color.White, modifier = Modifier.size(16.dp)
             )
+        }
+
+        // Bottom row: how it will look + frame button
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    buildString {
+                        append("Feed preview")
+                        if (framedPreview != null) append(" · ").append(frame.ratio.label)
+                        if (isVideo && durationMs > 0L) append(" · ").append(formatMediaDuration(durationMs))
+                    },
+                    color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            if (onEditFrame != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(OrangeMain)
+                        .pressScale(onClick = onEditFrame)
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Crop, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text(if (isVideo) "Frame & cover" else "Frame", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        if (busyLabel != null) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp, modifier = Modifier.size(30.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Text(busyLabel, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                }
+            }
         }
     }
 }
@@ -992,7 +1096,7 @@ internal fun AttachedImagePreview(
 @Composable
 internal fun RecentPhotosSection(
     hasPermission: Boolean,
-    images: List<Uri>?,
+    images: List<RecentMedia>?,
     selectedUri: Uri?,
     onRequestPermission: () -> Unit,
     onBrowse: () -> Unit,
@@ -1006,7 +1110,7 @@ internal fun RecentPhotosSection(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Recent photos",
+                "Recent photos & videos",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp
@@ -1042,13 +1146,13 @@ internal fun RecentPhotosSection(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Show your recent photos here",
+                        "Show your recent photos & videos here",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
                     Text(
-                        "Allow photo access for one-tap attaching",
+                        "Allow access for one-tap attaching",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
@@ -1068,13 +1172,14 @@ internal fun RecentPhotosSection(
             }
 
             images.isEmpty() -> Text(
-                "No photos found on this device",
+                "No photos or videos found on this device",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp
             )
 
             else -> LazyRow(horizontalArrangement = spacedBy(8.dp)) {
-                items(images, key = { it.toString() }) { uri ->
+                items(images, key = { it.uri.toString() }) { item ->
+                    val uri = item.uri
                     val isSelected = selectedUri == uri
                     Box(
                         modifier = Modifier
@@ -1088,12 +1193,33 @@ internal fun RecentPhotosSection(
                             .pressScale { onToggle(uri) }
                     ) {
                         AsyncImage(
-                            model = uri,
-                            contentDescription = if (isSelected) "Selected photo, tap to remove"
-                            else "Recent photo, tap to attach",
+                            model = if (item.isVideo) {
+                                ImageRequest.Builder(LocalContext.current)
+                                    .data(uri)
+                                    .decoderFactory(VideoFrameDecoder.Factory())
+                                    .build()
+                            } else uri,
+                            contentDescription = (if (item.isVideo) "Recent video" else "Recent photo") +
+                                    (if (isSelected) ", selected, tap to remove" else ", tap to attach"),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
+                        if (item.isVideo) {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(10.dp))
+                                if (item.durationMs > 0L) {
+                                    Text(formatMediaDuration(item.durationMs), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
                         if (isSelected) {
                             Box(
                                 Modifier
