@@ -437,7 +437,7 @@ fun postQualityNudge(
     title.isBlank()              -> null
     title.trim().length < 10     -> "A little more detail helps neighbours understand"
     body.isBlank()               -> "Add details so people can reply faster"
-    !hasImage                    -> "Posts with a photo get noticed more"
+    !hasImage                    -> "Posts with a photo or video get noticed more"
     !hasArea                     -> "Pick an area so nearby people see it first"
     else                         -> null
 }
