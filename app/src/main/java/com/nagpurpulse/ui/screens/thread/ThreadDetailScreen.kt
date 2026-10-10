@@ -3,6 +3,9 @@
 
 package com.nagpurpulse.ui.screens.thread
 
+import com.nagpurpulse.data.model.isVideo
+import com.nagpurpulse.ui.components.PostShareSheet
+import com.nagpurpulse.ui.components.PostVideoPlayer
 import com.nagpurpulse.data.repository.AdminRepository
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
@@ -789,12 +792,10 @@ fun ThreadDetailScreen(
     var showImagePreview by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
 
+    var showShareSheet by remember { mutableStateOf(false) }
+
     fun sharePost() {
-        val post = uiState.post ?: return
-        val i = Intent(Intent.ACTION_SEND).apply {
-            putExtra(Intent.EXTRA_TEXT, "${post.title}\n\n${post.body ?: ""}"); type = "text/plain"
-        }
-        context.startActivity(Intent.createChooser(i, null))
+        if (uiState.post != null) showShareSheet = true
     }
 
     val saveScale by animateFloatAsState(
@@ -807,6 +808,10 @@ fun ThreadDetailScreen(
     val sendEnabled = commentText.isNotBlank() && commentText.length <= MAX_COMMENT_LENGTH
     val sendBg by animateColorAsState(if (sendEnabled) OrangePrimary
     else MaterialTheme.colorScheme.surfaceVariant, tween(200), label = "send_bg")
+
+    if (showShareSheet) {
+        uiState.post?.let { PostShareSheet(post = it, onDismiss = { showShareSheet = false }) }
+    }
 
     // Full-screen image preview: pinch, double-tap, drag down to dismiss
     if (showImagePreview && !uiState.post?.imageUrl.isNullOrBlank()) {
@@ -1236,7 +1241,16 @@ fun ThreadDetailScreen(
                         // No horizontal padding on purpose: this is the one
                         // element on the whole screen meant to touch both
                         // edges, exactly like Reddit's thread detail page.
-                        if (!post.imageUrl.isNullOrBlank()) {
+                        if (post.isVideo) {
+
+                            Spacer(Modifier.height(14.dp))
+
+                            PostVideoPlayer(
+                                videoUrl = post.videoUrl!!,
+                                thumbnailUrl = post.imageUrl,
+                                durationMs = post.videoDurationMs
+                            )
+                        } else if (!post.imageUrl.isNullOrBlank()) {
 
                             Spacer(Modifier.height(14.dp))
 
