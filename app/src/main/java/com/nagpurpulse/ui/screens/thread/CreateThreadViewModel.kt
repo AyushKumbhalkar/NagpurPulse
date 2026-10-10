@@ -29,6 +29,8 @@ data class CreateThreadUiState(
     /** Incremented on every error so the same message can be shown twice in a row. */
     val errorNonce: Int = 0,
     val isSuccess: Boolean = false,
+    /** What the upload is doing right now ("Uploading video…"); only meaningful while isLoading. */
+    val statusLabel: String? = null,
     // Composer header
     val displayName: String = "",
     val avatarUrl: String? = null,
@@ -130,6 +132,11 @@ class CreateThreadViewModel @Inject constructor(
         alertSeverity: String? = null,
         editingPostId: String? = null,
         clearImage: Boolean = false,
+        isVideo: Boolean = false,
+        mediaFrame: MediaFrame? = null,
+        coverTimeMs: Long = 0L,
+        videoDurationMs: Long = 0L,
+        clearVideo: Boolean = false,
         onSuccess: () -> Unit
     ) {
         if (_uiState.value.isLoading) return
@@ -149,21 +156,53 @@ class CreateThreadViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null, isSuccess = false) }
 
             var imageUrl: String? = null
+            var videoUrl: String? = null
 
-            // Upload only when a new image was selected
+            // Upload only when new media was selected
             if (imageUri != null) {
 
-                // Reading a full-size photo is disk I/O — keep it off the main thread.
-                val imageBytes = withContext(Dispatchers.IO) {
-                    runCatching {
-                        context.contentResolver
-                            .openInputStream(imageUri)
-                            ?.use { it.readBytes() }
-                    }.getOrNull()
+                if (isVideo) {
+                    _uiState.update { it.copy(statusLabel = "Uploading video…") }
+
+                    val size = withContext(Dispatchers.IO) { MediaFrameUtils.sizeOf(context, imageUri) }
+                    if (size > MediaFrameUtils.MAX_VIDEO_BYTES) {
+                        setError("That video is over 30 MB. Trim it and try again.")
+                        return@launch
+                    }
+
+                    val videoBytes = withContext(Dispatchers.IO) {
+                        runCatching {
+                            context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
+                        }.getOrNull()
+                    }
+                    if (videoBytes == null || videoBytes.size > MediaFrameUtils.MAX_VIDEO_BYTES) {
+                        setError("Couldn't read that video. Try another one.")
+                        return@launch
+                    }
+
+                    val ext = withContext(Dispatchers.IO) { MediaFrameUtils.videoExtension(context, imageUri) }
+                    postRepository.uploadPostVideo(videoBytes, ext).fold(
+                        onSuccess = { videoUrl = it },
+                        onFailure = { e ->
+                            setError(friendlyError(e, "Video upload failed"))
+                            return@launch
+                        }
+                    )
                 }
 
+                _uiState.update { it.copy(statusLabel = if (isVideo) "Adding your cover…" else "Optimising photo…") }
+
+                // Cropping to the chosen frame (and decoding a video cover) is CPU/disk work.
+                val imageBytes = MediaFrameUtils.renderCoverJpeg(
+                    context = context,
+                    uri = imageUri,
+                    isVideo = isVideo,
+                    coverTimeMs = coverTimeMs,
+                    frame = mediaFrame ?: MediaFrame()
+                )
+
                 if (imageBytes == null) {
-                    setError("Couldn't read that photo. Try another one.")
+                    setError(if (isVideo) "Couldn't read that video. Try another one." else "Couldn't read that photo. Try another one.")
                     return@launch
                 }
 
@@ -177,6 +216,8 @@ class CreateThreadViewModel @Inject constructor(
                     }
                 )
             }
+
+            _uiState.update { it.copy(statusLabel = "Posting…") }
 
             // ─────────────────────────────────────────────────────────────
             // EDIT EXISTING POST
@@ -194,7 +235,10 @@ class CreateThreadViewModel @Inject constructor(
                     isAlert = postType == "alert",
                     alertSeverity = alertSeverity,
                     imageUrl = imageUrl,
-                    clearImage = clearImage && imageUrl == null
+                    clearImage = clearImage && imageUrl == null,
+                    videoUrl = videoUrl,
+                    videoDurationMs = if (videoUrl != null) videoDurationMs.toInt() else null,
+                    clearVideo = clearVideo && videoUrl == null
                 ).fold(
                     onSuccess = {
                         _uiState.update { it.copy(isLoading = false, isSuccess = true) }
@@ -220,7 +264,9 @@ class CreateThreadViewModel @Inject constructor(
                     postType = postType,
                     isAlert = postType == "alert",
                     alertSeverity = alertSeverity,
-                    imageUrl = imageUrl
+                    imageUrl = imageUrl,
+                    videoUrl = videoUrl,
+                    videoDurationMs = if (videoUrl != null) videoDurationMs.toInt() else null
                 ).fold(
                     onSuccess = {
                         _uiState.update { it.copy(isLoading = false, isSuccess = true) }
