@@ -32,6 +32,7 @@ import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import android.content.Context
@@ -95,6 +96,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var authRepository: AuthRepository
     @Inject lateinit var presenceRepository: PresenceRepository
     @Inject lateinit var userPreferencesRepository: UserPreferencesRepository
+    @Inject lateinit var notificationRepository: com.nagpurpulse.data.repository.NotificationRepository
 
     // ── Deep link from cold-start tap on a notification ───────────────────────
     override fun attachBaseContext(newBase: Context) {
@@ -151,6 +153,7 @@ class MainActivity : FragmentActivity() {
         intent?.getStringExtra("conversation_id")?.takeIf { it.isNotBlank() }?.let {
             NotifDeepLink.pendingConversationId.value = it
         }
+        markTappedNotificationsRead(intent)
 
         setContent {
             // Load display preferences
@@ -259,6 +262,7 @@ class MainActivity : FragmentActivity() {
         super.onStart()
         presenceRepository.start()
         WellbeingManager.start(this)
+        com.nagpurpulse.notifications.EngagementTracker.markOpened(this)
     }
 
     override fun onStop() {
@@ -288,6 +292,27 @@ class MainActivity : FragmentActivity() {
         }
         intent.getStringExtra("conversation_id")?.takeIf { it.isNotBlank() }?.let {
             NotifDeepLink.pendingConversationId.value = it
+        }
+        markTappedNotificationsRead(intent)
+    }
+
+    /**
+     * Tapping a push opens the item, so its inbox row should stop showing as unread.
+     * The Supabase session restores asynchronously on cold start, so wait briefly for it.
+     */
+    private fun markTappedNotificationsRead(source: Intent?) {
+        val ids = (source?.getStringArrayExtra("notification_ids")?.toList().orEmpty() +
+            listOfNotNull(source?.getStringExtra("notification_id")?.takeIf { it.isNotBlank() })).distinct()
+        if (ids.isEmpty()) return
+        source?.removeExtra("notification_ids")
+        source?.removeExtra("notification_id")
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            var tries = 0
+            while (authRepository.currentUserId == null && tries < 10) {
+                kotlinx.coroutines.delay(400)
+                tries++
+            }
+            authRepository.currentUserId?.let { notificationRepository.setManyRead(it, ids, true) }
         }
     }
 }

@@ -1,92 +1,86 @@
-// notifications/ScheduledPushManager.kt  — REPLACE entirely
+// notifications/ScheduledPushManager.kt
+// Channels + the on-device scheduled updates (morning digest, trending, evening
+// community, night summary) and the streak / comeback nudge.
+//
+// Copy rules: no emoji (icons come from PulseStyle), no invented numbers. Every figure
+// shown comes from real data; if the data is unavailable the notification is either
+// generic-but-honest or skipped.
 package com.nagpurpulse.notifications
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.os.Build
-import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
-import com.nagpurpulse.MainActivity
 import com.nagpurpulse.R
+import com.nagpurpulse.data.repository.EngagementRepository
 import com.nagpurpulse.data.repository.PostRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.time.Instant
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
-// ── Channel IDs (keep same as original) ──────────────────────────────────────
+// ── Channel IDs (existing ids are unchanged so users keep their per-channel settings) ─
 const val CHANNEL_TRENDING  = "nagpur_trending"
 const val CHANNEL_ALERTS    = "nagpur_alerts"
 const val CHANNEL_COMMUNITY = "nagpur_community"
 const val CHANNEL_DIGEST    = "nagpur_digest"
 const val CHANNEL_MESSAGES  = "nagpur_messages"
-const val CHANNEL_SOCIAL = "nagpur_social_v2"
-const val CHANNEL_MAIN = "nagpur_pulse_main"
+const val CHANNEL_SOCIAL    = "nagpur_social_v2"
+const val CHANNEL_MAIN      = "nagpur_pulse_main"
+const val CHANNEL_REWARDS   = "nagpur_rewards"
+const val CHANNEL_FOR_YOU   = "nagpur_for_you"
+
+private data class ChannelDef(val id: String, val name: String, val description: String, val importance: Int)
 
 fun createNotificationChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val nm = context.getSystemService(NotificationManager::class.java)
+    val orange = android.graphics.Color.parseColor("#FF6B00")
     listOf(
-        Triple(CHANNEL_TRENDING,  "Trending in Nagpur",  NotificationManager.IMPORTANCE_DEFAULT),
-        Triple(CHANNEL_ALERTS,    "Live Alerts",         NotificationManager.IMPORTANCE_HIGH),
-        Triple(CHANNEL_COMMUNITY, "Community Updates",   NotificationManager.IMPORTANCE_DEFAULT),
-        Triple(CHANNEL_DIGEST,    "Daily Digest",        NotificationManager.IMPORTANCE_LOW),
-        Triple(CHANNEL_MESSAGES,  "Direct Messages",     NotificationManager.IMPORTANCE_HIGH),
-        // Use a new ID because Android preserves the importance of existing channels.
-        Triple(CHANNEL_SOCIAL, "Comments and Votes", NotificationManager.IMPORTANCE_HIGH),
-        Triple(CHANNEL_MAIN, "NagpurPulse Notifications", NotificationManager.IMPORTANCE_HIGH)
-    ).forEach { (id, name, importance) ->
+        ChannelDef(CHANNEL_SOCIAL, "Comments and upvotes",
+            "Replies, mentions and upvotes on your posts and comments.", NotificationManager.IMPORTANCE_HIGH),
+        ChannelDef(CHANNEL_MESSAGES, "Direct messages",
+            "New messages from people in Nagpur.", NotificationManager.IMPORTANCE_HIGH),
+        ChannelDef(CHANNEL_ALERTS, "Live city alerts",
+            "Safety, traffic and weather alerts near you, plus the nightly summary.", NotificationManager.IMPORTANCE_HIGH),
+        ChannelDef(CHANNEL_TRENDING, "Trending in Nagpur",
+            "The posts the whole city is talking about.", NotificationManager.IMPORTANCE_DEFAULT),
+        ChannelDef(CHANNEL_COMMUNITY, "Community updates",
+            "Evening community pulse and nearby activity.", NotificationManager.IMPORTANCE_DEFAULT),
+        ChannelDef(CHANNEL_DIGEST, "Daily digest",
+            "Your morning briefing of Nagpur's top stories.", NotificationManager.IMPORTANCE_LOW),
+        ChannelDef(CHANNEL_REWARDS, "Milestones and streaks",
+            "Celebrate when your posts take off and keep your daily streak alive.", NotificationManager.IMPORTANCE_DEFAULT),
+        ChannelDef(CHANNEL_FOR_YOU, "For you",
+            "Occasional reminders about activity you missed. Never more than a few per absence.", NotificationManager.IMPORTANCE_DEFAULT),
+        ChannelDef(CHANNEL_MAIN, "Account and general",
+            "Account notices and everything else from Nagpur Pulse.", NotificationManager.IMPORTANCE_HIGH)
+    ).forEach { def ->
+        // Re-creating an existing channel only refreshes its name/description; the user's
+        // sound, importance and other choices are preserved by Android.
         nm.createNotificationChannel(
-            NotificationChannel(id, name, importance).apply {
-                description  = "NagpurPulse $name"
+            NotificationChannel(def.id, def.name, def.importance).apply {
+                description = def.description
                 enableLights(true)
-                lightColor   = android.graphics.Color.parseColor("#FF6B00")
+                lightColor = orange
+                if (def.importance >= NotificationManager.IMPORTANCE_DEFAULT) {
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 40, 70, 40)
+                }
             }
         )
     }
 }
 
-// Safe icon helper — uses app icon if available, system fallback otherwise
-private fun safeNotifIcon(): Int = try {
-  //  R.drawable.ic_notification
+private const val MAX_ATTEMPTS = 3
 
-    R.mipmap.ic_launcher
-} catch (_: Exception) {
-    android.R.drawable.ic_dialog_info
-}
+private fun plural(n: Int, one: String, many: String) = if (n == 1) "$n $one" else "$n $many"
 
-fun sendLocalNotification(
-    context: Context,
-    channelId: String,
-    notifId: Int,
-    title: String,
-    body: String
-) {
-    val pi = PendingIntent.getActivity(
-        context, 0,
-        Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        },
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-    // Respect "Pause notifications" and "Quiet hours" for every scheduled update.
-    if (NotifPrefsHelper.isSilencedNow(context)) return
-    val notification = NotificationCompat.Builder(context, channelId)
-        .setSmallIcon(safeNotifIcon())
-        .setContentTitle(title)
-        .setContentText(body)
-        .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-        .setAutoCancel(true)
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .setContentIntent(pi)
-        .setColor(android.graphics.Color.parseColor("#FF6B00"))
-        .build()
-    context.getSystemService(NotificationManager::class.java).notify(notifId, notification)
-}
+private fun trimTitle(title: String, max: Int) =
+    title.trim().let { if (it.length <= max) it else it.take(max - 1).trimEnd() + "\u2026" }
 
 // ── Workers — each checks SharedPreferences before doing any work ─────────────
 
@@ -94,18 +88,39 @@ fun sendLocalNotification(
 class MorningDigestWorker @AssistedInject constructor(
     @Assisted ctx: Context,
     @Assisted params: WorkerParameters,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val engagementRepository: EngagementRepository
 ) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         if (!NotifPrefsHelper.isPushEnabled(applicationContext) ||
             !NotifPrefsHelper.isDigestEnabled(applicationContext)) return Result.success()
         return try {
-            val posts = postRepository.getPosts(sortBy = "hot").getOrNull() ?: emptyList()
-            val top   = posts.take(3).joinToString(" · ") { it.title.take(28) }
-            val body  = if (top.isNotBlank()) "Trending: $top" else "See what Nagpur is talking about today!"
-            sendLocalNotification(applicationContext, CHANNEL_DIGEST, 1001, "🌅 Good Morning, Nagpur!", body)
+            val posts = postRepository.getPosts(sortBy = "hot").getOrNull().orEmpty()
+            val snap = engagementRepository.snapshot(Instant.now().minusSeconds(12 * 3600L)).getOrNull()
+            val name = snap?.username?.takeIf { it.isNotBlank() }
+            val top = posts.firstOrNull()
+
+            val title = if (name != null) "Good morning, $name" else "Good morning, Nagpur"
+            val earned = (snap?.myNewUpvotes ?: 0) + (snap?.myNewComments ?: 0)
+            val body = when {
+                snap != null && earned > 0 ->
+                    "Overnight your posts picked up ${plural(snap.myNewUpvotes, "upvote", "upvotes")} " +
+                        "and ${plural(snap.myNewComments, "comment", "comments")}."
+                top != null -> "Top story: ${trimTitle(top.title, 80)}"
+                else -> "See what Nagpur is talking about today."
+            }
+            val lines = posts.take(3).map {
+                "${trimTitle(it.title, 56)} \u00B7 ${plural(it.upvotes, "upvote", "upvotes")}"
+            }
+            PulseNotifier.showLocal(
+                applicationContext,
+                LocalPulse(1001, "digest", title, body, lines, postId = top?.id?.takeIf { it.isNotBlank() }),
+                glyphOverride = R.drawable.ic_notif_morning
+            )
             Result.success()
-        } catch (_: Exception) { Result.retry() }
+        } catch (_: Exception) {
+            if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
+        }
     }
 }
 
@@ -113,36 +128,63 @@ class MorningDigestWorker @AssistedInject constructor(
 class AfternoonTrendingWorker @AssistedInject constructor(
     @Assisted ctx: Context,
     @Assisted params: WorkerParameters,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val engagementRepository: EngagementRepository
 ) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         if (!NotifPrefsHelper.isPushEnabled(applicationContext) ||
             !NotifPrefsHelper.isTrendingEnabled(applicationContext)) return Result.success()
         return try {
-            val hot  = postRepository.getPosts(sortBy = "top").getOrNull()?.firstOrNull()
-            val body = if (hot != null) "\"${hot.title.take(60)}\" — ${hot.upvotes} upvotes"
-                       else "Something hot is trending in Nagpur!"
-            sendLocalNotification(applicationContext, CHANNEL_TRENDING, 1002, "🔥 Trending in Nagpur", body)
+            // Prefer the best post of the last 24h; fall back to the all-round top post.
+            val snap = engagementRepository.snapshot(Instant.now().minusSeconds(24 * 3600L)).getOrNull()
+            var postId = snap?.topPostId
+            var title = snap?.topPostTitle
+            var upvotes = snap?.topPostUpvotes ?: 0
+            var comments = snap?.topPostComments ?: 0
+            if (title.isNullOrBlank()) {
+                val hot = postRepository.getPosts(sortBy = "top").getOrNull()?.firstOrNull()
+                postId = hot?.id
+                title = hot?.title
+                upvotes = hot?.upvotes ?: 0
+                comments = hot?.commentCount ?: 0
+            }
+            // Nothing genuinely trending: stay quiet rather than send filler.
+            if (title.isNullOrBlank()) return Result.success()
+
+            val stats = buildList {
+                if (upvotes > 0) add(plural(upvotes, "upvote", "upvotes"))
+                if (comments > 0) add(plural(comments, "comment", "comments"))
+            }.joinToString(", ")
+            val body = trimTitle(title, 90) + if (stats.isNotEmpty()) "\n$stats so far" else ""
+            PulseNotifier.showLocal(
+                applicationContext,
+                LocalPulse(1002, "trending", "Trending in Nagpur", body, postId = postId?.takeIf { it.isNotBlank() })
+            )
             Result.success()
-        } catch (_: Exception) { Result.retry() }
+        } catch (_: Exception) {
+            if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
+        }
     }
 }
 
 @HiltWorker
 class EveningCommunityWorker @AssistedInject constructor(
     @Assisted ctx: Context,
-    @Assisted params: WorkerParameters
+    @Assisted params: WorkerParameters,
+    private val engagementRepository: EngagementRepository
 ) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         if (!NotifPrefsHelper.isPushEnabled(applicationContext) ||
             !NotifPrefsHelper.isCommunityEnabled(applicationContext)) return Result.success()
-        val messages = listOf(
-            "🌆 Evening, Nagpur! Check what's happening around the city.",
-            "💬 New discussions are live. Jump in and share your take!",
-            "🏙️ Your Nagpur community is active! Don't miss today's conversations.",
-            "⭐ Stay connected with your city every evening."
-        )
-        sendLocalNotification(applicationContext, CHANNEL_COMMUNITY, 1003, "Evening Update 🌆", messages.random())
+
+        val snap = engagementRepository.snapshot(Instant.now().minusSeconds(6 * 3600L)).getOrNull()
+        val fresh = snap?.newPosts ?: 0
+        val (title, body) = if (fresh >= 3) {
+            "Nagpur is talking" to "${plural(fresh, "new post", "new posts")} since this afternoon. Catch up on what your neighbours are saying."
+        } else {
+            "Seen something worth sharing?" to "Nagpur reads what you post. Add today's moment to the feed."
+        }
+        PulseNotifier.showLocal(applicationContext, LocalPulse(1003, "community", title, body))
         return Result.success()
     }
 }
@@ -158,13 +200,85 @@ class NightAlertsSummaryWorker @AssistedInject constructor(
             !NotifPrefsHelper.isAlertsSummaryEnabled(applicationContext)) return Result.success()
         return try {
             val alerts = postRepository.getPosts(category = "alerts", sortBy = "new")
-                .getOrNull()?.filter { it.isAlert } ?: emptyList()
-            val body = if (alerts.isNotEmpty())
-                "${alerts.size} active alert${if (alerts.size > 1) "s" else ""} in Nagpur. Stay safe!"
-            else "All clear in Nagpur tonight. Stay safe! 🌙"
-            sendLocalNotification(applicationContext, CHANNEL_ALERTS, 1004, "🌙 Nagpur Night Summary", body)
+                .getOrNull()?.filter { it.isAlert }.orEmpty()
+            val body = if (alerts.isNotEmpty()) {
+                "${plural(alerts.size, "active alert", "active alerts")} across the city. Tap to stay informed."
+            } else {
+                "All clear across Nagpur tonight. Rest easy."
+            }
+            PulseNotifier.showLocal(
+                applicationContext,
+                LocalPulse(1004, "alerts_summary", "Nagpur tonight", body),
+                glyphOverride = if (alerts.isEmpty()) R.drawable.ic_notif_night else null
+            )
             Result.success()
-        } catch (_: Exception) { Result.retry() }
+        } catch (_: Exception) {
+            if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
+        }
+    }
+}
+
+/**
+ * Evening streak-saver / comeback nudge. See [EngagementTracker] for the respect rules.
+ * Sends nothing unless there is something real to say.
+ */
+@HiltWorker
+class ReengagementWorker @AssistedInject constructor(
+    @Assisted ctx: Context,
+    @Assisted params: WorkerParameters,
+    private val engagementRepository: EngagementRepository
+) : CoroutineWorker(ctx, params) {
+    override suspend fun doWork(): Result {
+        val ctx = applicationContext
+        if (!NotifPrefsHelper.isPushEnabled(ctx) || !NotifPrefsHelper.isCommunityEnabled(ctx)) return Result.success()
+        if (NotifPrefsHelper.isSilencedNow(ctx)) return Result.success()
+        if (!EngagementTracker.hasHistory(ctx) || EngagementTracker.openedToday(ctx)) return Result.success()
+        if (!EngagementTracker.canNudge(ctx)) return Result.success()
+
+        val now = System.currentTimeMillis()
+        val lastOpen = EngagementTracker.lastOpenMillis(ctx)
+        val since = Instant.ofEpochMilli(maxOf(lastOpen, now - 72L * 3600_000L))
+        val snap = engagementRepository.snapshot(since).getOrNull() ?: return Result.success()
+
+        val streak = EngagementTracker.savableStreak(ctx)
+        val earnedUp = snap.myNewUpvotes
+        val earnedCm = snap.myNewComments
+        val earned = earnedUp + earnedCm
+        val topTitle = snap.topPostTitle?.takeIf { it.isNotBlank() }
+
+        val pulse: LocalPulse? = when {
+            streak >= 3 -> LocalPulse(
+                1005, "streak",
+                "Keep your $streak-day streak",
+                if (earned > 0) {
+                    "Your posts picked up ${plural(earnedUp, "upvote", "upvotes")} and " +
+                        "${plural(earnedCm, "comment", "comments")}. Check in before midnight."
+                } else {
+                    "Check in before midnight to keep it going."
+                }
+            )
+            earned > 0 -> LocalPulse(
+                1005, "nudge",
+                "Your posts are getting noticed",
+                "${plural(earnedUp, "new upvote", "new upvotes")} and " +
+                    "${plural(earnedCm, "comment", "comments")} since you last visited."
+            )
+            snap.unreadCount > 0 -> LocalPulse(
+                1005, "nudge",
+                plural(snap.unreadCount, "unread update", "unread updates"),
+                topTitle?.let { "Also trending: ${trimTitle(it, 80)}" } ?: "Catch up on what you missed."
+            )
+            topTitle != null -> LocalPulse(
+                1005, "nudge", "Trending in Nagpur", trimTitle(topTitle, 90), postId = snap.topPostId
+            )
+            else -> null
+        }
+
+        if (pulse != null) {
+            PulseNotifier.showLocal(ctx, pulse)
+            EngagementTracker.recordNudge(ctx, now)
+        }
+        return Result.success()
     }
 }
 
@@ -172,8 +286,11 @@ class NightAlertsSummaryWorker @AssistedInject constructor(
 
 object ScheduledPushManager {
 
+    private const val REENGAGE_HOUR = 20
+    private const val REENGAGE_MINUTE = 30
+
     private val WORKER_NAMES = listOf(
-        "morning_digest", "afternoon_trend", "evening_comm", "night_summary"
+        "morning_digest", "afternoon_trend", "evening_comm", "night_summary", "reengage"
     )
 
     fun schedule(context: Context) {
@@ -185,6 +302,7 @@ object ScheduledPushManager {
         enqueue<AfternoonTrendingWorker>(wm,     "afternoon_trend", hm(NotifPrefsHelper.SLOT_TRENDING).first, hm(NotifPrefsHelper.SLOT_TRENDING).second)
         enqueue<EveningCommunityWorker>(wm,      "evening_comm",    hm(NotifPrefsHelper.SLOT_EVENING).first,  hm(NotifPrefsHelper.SLOT_EVENING).second)
         enqueue<NightAlertsSummaryWorker>(wm,    "night_summary",   hm(NotifPrefsHelper.SLOT_NIGHT).first,    hm(NotifPrefsHelper.SLOT_NIGHT).second)
+        enqueue<ReengagementWorker>(wm,          "reengage",        REENGAGE_HOUR,                            REENGAGE_MINUTE)
     }
 
     fun cancelAll(context: Context) {

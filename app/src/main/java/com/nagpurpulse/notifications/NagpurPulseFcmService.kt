@@ -1,13 +1,7 @@
 package com.nagpurpulse.notifications
 
-import android.app.PendingIntent
-import android.content.Intent
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.nagpurpulse.MainActivity
-import com.nagpurpulse.R
 import com.nagpurpulse.data.repository.NotificationRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -30,63 +24,47 @@ class NagpurPulseFcmService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 
-        val title = message.notification?.title ?: message.data["title"] ?: "Nagpur Pulse"
-        val body = message.notification?.body ?: message.data["body"] ?: ""
-        val postId = message.data["post_id"]?.takeIf { it.isNotBlank() }
-        val commentId = message.data["comment_id"]?.takeIf { it.isNotBlank() }
-        val conversationId = message.data["conversation_id"]?.takeIf { it.isNotBlank() }
-        val notificationId = message.data["notification_id"]?.takeIf { it.isNotBlank() }
-        val type = message.data["type"] ?: "general"
+        val data = message.data
+        val type = data["type"]?.takeIf { it.isNotBlank() } ?: "general"
 
         // Supabase notifications are the source of truth. Never insert another
         // row from FCM receipt: the database webhook would send it again.
         if (!NotifPrefsHelper.shouldShowType(applicationContext, type)) return
 
-        createNotificationChannels(applicationContext)
+        // The server sends data-only messages so this code styles EVERY push, whether the
+        // app is foreground, background or killed. Older servers sent a `notification`
+        // block; keep reading it as a fallback.
+        val title = data["title"]?.takeIf { it.isNotBlank() }
+            ?: message.notification?.title
+            ?: "Nagpur Pulse"
+        val body = data["body"]?.takeIf { it.isNotBlank() }
+            ?: message.notification?.body
+            ?: ""
 
-        val channelId = when (type) {
-            "alert", "emergency", "alerts_summary" -> CHANNEL_ALERTS
-            "trending" -> CHANNEL_TRENDING
-            "message" -> CHANNEL_MESSAGES
-            "community" -> CHANNEL_COMMUNITY
-            else -> CHANNEL_SOCIAL
-        }
-
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            postId?.let { putExtra("post_id", it) }
-            commentId?.let { putExtra("comment_id", it) }
-            conversationId?.let { putExtra("conversation_id", it) }
-            putExtra("notification_type", type)
-            notificationId?.let { putExtra("notification_id", it) }
-        }
-
-        val stableKey = notificationId ?: listOf(type, postId.orEmpty(), commentId.orEmpty(), conversationId.orEmpty(), title, body).joinToString("|")
-        val notificationCode = stableKey.hashCode() and 0x7fffffff
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            notificationCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setAutoCancel(true)
-            .setPriority(
-                if (type in listOf("alert", "emergency", "alerts_summary", "message") || channelId == CHANNEL_SOCIAL) {
-                    NotificationCompat.PRIORITY_HIGH
-                } else {
-                    NotificationCompat.PRIORITY_DEFAULT
-                }
+        PulseNotifier.show(
+            applicationContext,
+            PulsePayload(
+                type = type,
+                title = title,
+                body = body,
+                notificationId = data["notification_id"]?.takeIf { it.isNotBlank() },
+                postId = data["post_id"]?.takeIf { it.isNotBlank() },
+                commentId = data["comment_id"]?.takeIf { it.isNotBlank() },
+                conversationId = data["conversation_id"]?.takeIf { it.isNotBlank() },
+                senderUsername = data["sender_username"]?.takeIf { it.isNotBlank() },
+                senderAvatarUrl = data["sender_avatar_url"]?.takeIf { it.isNotBlank() },
+                imageUrl = data["image_url"]?.takeIf { it.isNotBlank() },
+                createdAtMillis = parseMillis(data["created_at"])
             )
-            .setContentIntent(pendingIntent)
-            .setColor(android.graphics.Color.parseColor("#FF6B00"))
-            .build()
+        )
+    }
 
-        NotificationManagerCompat.from(this).notify(notificationCode, notification)
+    private fun parseMillis(value: String?): Long {
+        if (value.isNullOrBlank()) return System.currentTimeMillis()
+        return try {
+            java.time.OffsetDateTime.parse(value).toInstant().toEpochMilli()
+        } catch (_: Exception) {
+            System.currentTimeMillis()
+        }
     }
 }

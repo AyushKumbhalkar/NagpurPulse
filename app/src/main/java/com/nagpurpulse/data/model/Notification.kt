@@ -67,26 +67,6 @@ fun Notification.timeLabel(): String {
     } catch (_: Exception) { "" }
 }
 
-// ── Type metadata ─────────────────────────────────────────────────────────────
-
-fun Notification.emoji(): String = when (type) {
-    "comment", "reply"            -> "💬"
-    "mention"                     -> "📣"
-    "upvote", "like"              -> "⬆️"
-    "message"                     -> "✉️"
-    "alert", "emergency"          -> "🚨"
-    "badge"                       -> "🏆"
-    "trending"                    -> "🔥"
-    "milestone"                   -> "🎉"
-    "streak"                      -> "🔥"
-    "community"                   -> "🌆"
-    "digest"                      -> "📰"
-    "admin_warning"               -> "⚠️"
-    "admin_suspension"            -> "🚫"
-    "admin_ban"                   -> "❌"
-    else                          -> "🔔"
-}
-
 // ── Badge model ───────────────────────────────────────────────────────────────
 
 @Serializable

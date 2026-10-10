@@ -39,6 +39,33 @@ function preferenceForType(type: string): string | null {
   }
 }
 
+// Strip emoji from SYSTEM-written titles (the app draws proper vector icons instead).
+// Never applied to body text, which can be user content.
+const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0E}\u{FE0F}\u{200D}\u{20E3}]/gu;
+function cleanTitle(value: string | null | undefined): string {
+  return (value ?? "").replace(EMOJI_RE, "").replace(/\s{2,}/g, " ").trim();
+}
+
+function clip(value: string | null | undefined, max: number): string {
+  const text = (value ?? "").trim();
+  return text.length <= max ? text : text.slice(0, max - 1).trimEnd() + "\u2026";
+}
+
+// How long FCM should keep trying while the phone is offline.
+function ttlForType(type: string): string {
+  switch (type) {
+    case "message": return "604800s";
+    case "alert":
+    case "emergency": return "3600s";
+    case "upvote":
+    case "like":
+    case "comment_like": return "21600s";
+    default: return "172800s";
+  }
+}
+
+type SendOutcome = { ok: boolean; stale: boolean; error?: string };
+
 async function getFirebaseAccessToken(): Promise<{ token: string; projectId: string }> {
   const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
   const clientEmail = Deno.env.get("FIREBASE_CLIENT_EMAIL");
@@ -166,59 +193,106 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ sent: false, skipped: true, reason: "notification_preference_disabled" });
     }
 
-    const { data: device, error: deviceError } = await supabase
+    // One account can be signed in on several phones. (Works with both the legacy
+    // one-token-per-user schema and the multi-device schema.)
+    const { data: devices, error: deviceError } = await supabase
       .from("device_tokens")
       .select("fcm_token")
       .eq("user_id", notification.user_id)
-      .maybeSingle();
+      .limit(10);
 
     if (deviceError) throw deviceError;
-    if (!device?.fcm_token) {
+    const tokens = [...new Set((devices ?? []).map((d: { fcm_token: string }) => d.fcm_token).filter(Boolean))];
+    if (tokens.length === 0) {
       return jsonResponse({ sent: false, skipped: true, reason: "no_device_token" });
     }
 
+    const type = String(notification.type || "general");
+    const title = cleanTitle(notification.title) || "Nagpur Pulse";
+    const body = clip(notification.body, 240);
+
+    // Cover image for the notification: only where it adds meaning (trending / milestone).
+    let imageUrl = "";
+    const isMilestone = type === "upvote" && !notification.sender_username;
+    if (notification.related_post_id && (type === "trending" || isMilestone)) {
+      const { data: post } = await supabase
+        .from("posts")
+        .select("image_url")
+        .eq("id", notification.related_post_id)
+        .maybeSingle();
+      if (post?.image_url && String(post.image_url).startsWith("https://")) imageUrl = String(post.image_url);
+    }
+
     const { token: accessToken, projectId } = await getFirebaseAccessToken();
-    const data = {
+
+    // DATA-ONLY on purpose. A `notification` block makes Android draw the tray entry itself
+    // whenever the app is in the background, bypassing the app's custom styling, grouping and
+    // action buttons. Data-only means the app renders every push. `title`/`body` are also
+    // included so older app builds (which read data.title) keep working.
+    const data: Record<string, string> = {
       notification_id: String(notification.id),
-      type: String(notification.type || "general"),
+      type,
+      title,
+      body,
       post_id: notification.related_post_id ? String(notification.related_post_id) : "",
       comment_id: notification.related_comment_id ? String(notification.related_comment_id) : "",
       conversation_id: notification.related_conversation_id ? String(notification.related_conversation_id) : "",
       sender_username: notification.sender_username || "",
       sender_avatar_url: notification.sender_avatar_url || "",
+      image_url: imageUrl,
+      created_at: String(notification.created_at || new Date().toISOString()),
     };
 
-    const fcmResponse = await fetch(
-      "https://fcm.googleapis.com/v1/projects/" + projectId + "/messages:send",
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + accessToken,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: {
-            token: device.fcm_token,
-            notification: {
-              title: notification.title,
-              body: notification.body || "",
-            },
-            data,
-            android: { priority: "HIGH" },
-          },
-        }),
-      },
-    );
+    // Reaction storms: if the phone is offline only the latest one needs to be delivered.
+    const isReaction = ["upvote", "like", "comment_like"].includes(type) && !isMilestone;
+    const collapseKey = isReaction
+      ? ("react_" + type + "_" + (notification.related_post_id || "") + "_" + (notification.related_comment_id || "")).slice(0, 100)
+      : undefined;
 
-    const fcmResult = await fcmResponse.json().catch(() => ({}));
-    if (!fcmResponse.ok) {
-      const fcmError = fcmResult?.error?.message || "FCM delivery failed";
-      console.error("FCM delivery failed", {
-        notificationId: notification.id,
-        status: fcmResponse.status,
-        error: fcmError,
-      });
-      return jsonResponse({ sent: false, error: fcmError }, 502);
+    const sendToToken = async (token: string): Promise<SendOutcome> => {
+      const res = await fetch(
+        "https://fcm.googleapis.com/v1/projects/" + projectId + "/messages:send",
+        {
+          method: "POST",
+          headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: {
+              token,
+              data,
+              android: {
+                priority: "HIGH",
+                ttl: ttlForType(type),
+                ...(collapseKey ? { collapse_key: collapseKey } : {}),
+              },
+            },
+          }),
+        },
+      );
+      if (res.ok) return { ok: true, stale: false };
+      const result = await res.json().catch(() => ({}));
+      const errorCode = result?.error?.details?.find?.((d: Record<string, unknown>) => d?.errorCode)?.errorCode;
+      return {
+        ok: false,
+        stale: res.status === 404 || errorCode === "UNREGISTERED",
+        error: result?.error?.message || "FCM delivery failed",
+      };
+    };
+
+    const outcomes = await Promise.all(tokens.map((t) => sendToToken(t)));
+
+    // Drop tokens FCM says no longer exist (app uninstalled / token rotated).
+    const staleTokens = tokens.filter((_, idx) => outcomes[idx].stale);
+    if (staleTokens.length > 0) {
+      const { error: pruneError } = await supabase.from("device_tokens").delete().in("fcm_token", staleTokens);
+      if (pruneError) console.error("Stale token cleanup failed", pruneError.message);
+    }
+
+    const delivered = outcomes.filter((o) => o.ok).length;
+    if (delivered === 0) {
+      const firstError = outcomes.find((o) => o.error)?.error || "FCM delivery failed";
+      console.error("FCM delivery failed", { notificationId: notification.id, error: firstError });
+      // Stale-only failures are not an outage; do not make the webhook retry.
+      return jsonResponse({ sent: false, error: firstError, pruned: staleTokens.length }, outcomes.every((o) => o.stale) ? 200 : 502);
     }
 
     // Best-effort aggregate counter only. Never store recipient or notification IDs.
@@ -230,7 +304,7 @@ Deno.serve(async (req: Request) => {
       console.error("Notification analytics counter failed", analyticsError.message);
     }
 
-    return jsonResponse({ sent: true, notificationId: notification.id, message: fcmResult });
+    return jsonResponse({ sent: true, notificationId: notification.id, delivered, devices: tokens.length });
   } catch (error) {
     console.error("send-push-notification failed", error);
     return jsonResponse(

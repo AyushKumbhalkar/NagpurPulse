@@ -89,13 +89,18 @@
             </intent-filter>
         </service>
 
+        <!-- Notification action buttons (Mark as read / inline Reply) -->
+        <receiver
+            android:name=".notifications.NotificationActionReceiver"
+            android:exported="false" />
+
         <!-- Default notification channel metadata -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="nagpur_pulse_main" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@drawable/ic_stat_nagpurpulse" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/orange_primary" />

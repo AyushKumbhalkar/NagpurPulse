@@ -306,7 +306,7 @@ class NotificationsViewModel @Inject constructor(
                     _s.update { st ->
                         st.copy(
                             notifications = st.notifications.map { it.copy(isRead = true) },
-                            info = "All caught up ✨",
+                            info = "You're all caught up",
                             error = null
                         )
                     }
@@ -433,7 +433,7 @@ class NotificationsViewModel @Inject constructor(
                 parentId = target.relatedCommentId
             ).fold(
                 onSuccess = {
-                    _s.update { it.copy(isSendingReply = false, replyTarget = null, info = "Reply sent 🎉") }
+                    _s.update { it.copy(isSendingReply = false, replyTarget = null, info = "Reply sent") }
                     setGroupRead(listOf(target.id), true)
                 },
                 onFailure = { error ->

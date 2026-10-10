@@ -419,6 +419,25 @@ fun NotifSettingsScreen(
                 }
             }
 
+            // ── Preview ───────────────────────────────────────────────────────
+            item { SectionHeader("PREVIEW") }
+            item {
+                SettingsGroup {
+                    SettingsRowAction(
+                        "Preview notifications",
+                        if (hasPermission.value) "Send yourself sample notifications" else "Grant OS permission first",
+                        Icons.Filled.NotificationsActive,
+                        OrangePrimary
+                    ) {
+                        if (hasPermission.value) {
+                            com.nagpurpulse.notifications.PulseNotifier.showPreview(ctx)
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                }
+            }
+
             item { Spacer(Modifier.height(20.dp)) }
         }
     }

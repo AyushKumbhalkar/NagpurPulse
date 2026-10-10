@@ -30,14 +30,24 @@ class NotificationRepository @Inject constructor(
         val userId = authRepository.currentUserId ?: return@runCatching
         val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
 
-        client.postgrest["device_tokens"].upsert(
-            mapOf(
-                "user_id" to userId,
-                "fcm_token" to fcmToken,
-                "updated_at" to java.time.Instant.now().toString()
+        // Preferred path: a SECURITY DEFINER RPC that also re-homes a token that still
+        // belongs to a previous account on this phone (RLS hides that row from a plain upsert).
+        val viaRpc = runCatching {
+            client.postgrest.rpc(
+                "register_device_token",
+                buildJsonObject { put("p_token", fcmToken) }
             )
-        ) {
-            onConflict = "fcm_token"
+        }
+        if (viaRpc.isFailure) {
+            client.postgrest["device_tokens"].upsert(
+                mapOf(
+                    "user_id" to userId,
+                    "fcm_token" to fcmToken,
+                    "updated_at" to java.time.Instant.now().toString()
+                )
+            ) {
+                onConflict = "fcm_token"
+            }
         }
     }
     suspend fun deleteFcmToken(): Result<Unit> = runCatching {
