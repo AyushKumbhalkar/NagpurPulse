@@ -271,25 +271,32 @@ internal object PulseNotifier {
         val sys = app.getSystemService(NotificationManager::class.java)
         val existing = findActive(sys, notifId) ?: return
         val nm = NotificationManagerCompat.from(app)
-        val b = NotificationCompat.Builder.recoverBuilder(app, existing).setOnlyAlertOnce(true)
+        // recoverBuilder is unavailable in some AndroidX Core versions. Rebuild the
+        // reply result using the original channel and preserve MessagingStyle for chats.
+        val title = if (success) {
+            if (kind == PulseActions.KIND_MESSAGE) "Message sent" else "Reply sent"
+        } else {
+            "Reply not sent"
+        }
+        val message = if (success) text else "Tap to open Nagpur Pulse and try again."
+        val b = NotificationCompat.Builder(app, existing.channelId)
+            .setSmallIcon(R.drawable.ic_stat_nagpurpulse)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setOnlyAlertOnce(true)
+            .setAutoCancel(true)
+            .setTimeoutAfter(if (success && kind != PulseActions.KIND_MESSAGE) 4_000L else 0L)
 
         if (success && kind == PulseActions.KIND_MESSAGE) {
             val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(existing)
             if (style != null) {
                 style.addMessage(text, System.currentTimeMillis(), null as Person?)
                 b.setStyle(style)
+            } else {
+                b.setStyle(NotificationCompat.BigTextStyle().bigText(text))
             }
-        } else if (success) {
-            b.clearActions()
-                .setContentTitle("Reply sent")
-                .setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-                .setTimeoutAfter(4_000L)
         } else {
-            b.clearActions()
-                .setContentTitle("Reply not sent")
-                .setContentText("Tap to open Nagpur Pulse and try again.")
-                .setStyle(NotificationCompat.BigTextStyle().bigText("Tap to open Nagpur Pulse and try again."))
+            b.setStyle(NotificationCompat.BigTextStyle().bigText(message))
         }
         nm.notify(notifId, b.build())
     }
