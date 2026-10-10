@@ -106,7 +106,8 @@ internal fun MediaFrameEditor(
         if (bmp != null) { source = bmp; failed = false } else if (source == null) failed = true
     }
 
-    val src = source+    val srcRatio = src?.let { it.width.toFloat() / it.height } ?: 1f
+    val src = source
+    val srcRatio = src?.let { it.width.toFloat() / it.height } ?: 1f
     val outRatio = frame.ratio.ratio ?: srcRatio
     val feedWillCrop = outRatio < FEED_MIN_RATIO - 0.01f || outRatio > FEED_MAX_RATIO + 0.01f
 
