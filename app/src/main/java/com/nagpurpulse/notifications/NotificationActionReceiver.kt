@@ -28,8 +28,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
     @Inject lateinit var postRepository: PostRepository
 
     override fun onReceive(context: Context, intent: Intent) {
-        // Hilt injects the fields in the generated super implementation.
-        super.onReceive(context, intent)
+        // BroadcastReceiver.onReceive is abstract; Hilt injects fields via its generated wrapper.
         val pending = goAsync()
         val app = context.applicationContext
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
