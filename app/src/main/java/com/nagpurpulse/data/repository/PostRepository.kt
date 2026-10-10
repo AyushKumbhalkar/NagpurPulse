@@ -263,6 +263,31 @@ class PostRepository @Inject constructor(
             Result.failure(e)
         }
     }
+    suspend fun uploadPostVideo(
+        videoBytes: ByteArray,
+        extension: String = "mp4"
+    ): Result<String> {
+
+        return try {
+
+            val currentUserId = authRepository.currentUserId
+                ?: return Result.failure(IllegalStateException("You must be logged in to upload a video."))
+
+            val ext = extension.lowercase().takeIf { it in setOf("mp4", "webm", "3gp", "mov") } ?: "mp4"
+            val storagePath = "$currentUserId/${UUID.randomUUID()}.$ext"
+
+            client.storage["post-videos"].upload(
+                path = storagePath,
+                data = videoBytes
+            )
+
+            Result.success(client.storage["post-videos"].publicUrl(storagePath))
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getPostByIdForDelete(postId: String): Post? {
         return try {
             client.postgrest["posts_public"]
@@ -402,9 +427,21 @@ class PostRepository @Inject constructor(
          postType: String = "normal",
          isAlert: Boolean = false,
          alertSeverity: String? = null,
-         imageUrl: String? = null
+         imageUrl: String? = null,
+         videoUrl: String? = null,
+         videoDurationMs: Int? = null
      ): Result<Post> {
          return try {
+             // Video columns only exist after 20261011100000_post_video_support.sql; ask for them only for videos.
+             val returnColumns = buildList {
+                 addAll(listOf(
+                     "id", "title", "body", "category", "area_tag", "is_anonymous", "upvotes", "downvotes",
+                     "comment_count", "view_count", "image_url", "is_alert", "alert_severity", "created_at",
+                     "is_pinned", "is_locked", "post_type", "edited_at", "edited_by_admin", "expires_at",
+                     "resolved_at", "confirm_count"
+                 ))
+                 if (videoUrl != null) addAll(listOf("media_type", "video_url", "video_duration_ms"))
+             }
              val post = client.postgrest["posts"].insert(
                  buildJsonObject {
                      put("user_id", userId)
@@ -417,15 +454,15 @@ class PostRepository @Inject constructor(
                      put("post_type", postType)
                      put("alert_severity", alertSeverity)
                      put("image_url", imageUrl)
+                     if (videoUrl != null) {
+                         put("media_type", "video")
+                         put("video_url", videoUrl)
+                         put("video_duration_ms", videoDurationMs)
+                     }
                  }
              ) {
                  // posts.user_id is not readable by clients (anonymous authors); we know our own id.
-                 select(Columns.list(
-                     "id", "title", "body", "category", "area_tag", "is_anonymous", "upvotes", "downvotes",
-                     "comment_count", "view_count", "image_url", "is_alert", "alert_severity", "created_at",
-                     "is_pinned", "is_locked", "post_type", "edited_at", "edited_by_admin", "expires_at",
-                     "resolved_at", "confirm_count"
-                 ))
+                 select(Columns.list(*returnColumns.toTypedArray()))
              }.decodeSingle<Post>().copy(userId = userId)
 
              // Queue this post for future notification evaluation
@@ -513,7 +550,10 @@ class PostRepository @Inject constructor(
          isAlert: Boolean = false,
          alertSeverity: String? = null,
          imageUrl: String? = null,
-         clearImage: Boolean = false
+         clearImage: Boolean = false,
+         videoUrl: String? = null,
+         videoDurationMs: Int? = null,
+         clearVideo: Boolean = false
      ): Result<Unit> {
 
          return try {
@@ -567,6 +607,17 @@ class PostRepository @Inject constructor(
                      put("image_url", imageUrl)
                  } else if (clearImage) {
                      put("image_url", null as String?)
+                 }
+
+                 // Video columns are only touched when a video is involved (keeps image edits migration-independent)
+                 if (videoUrl != null) {
+                     put("media_type", "video")
+                     put("video_url", videoUrl)
+                     put("video_duration_ms", videoDurationMs)
+                 } else if (clearVideo) {
+                     put("media_type", "image")
+                     put("video_url", null as String?)
+                     put("video_duration_ms", null as Int?)
                  }
 
                  put("edited_at", kotlinx.datetime.Clock.System.now().toString())
