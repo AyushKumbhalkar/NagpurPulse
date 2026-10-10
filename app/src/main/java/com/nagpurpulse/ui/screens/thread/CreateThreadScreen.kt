@@ -111,6 +111,9 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.nagpurpulse.ui.components.pressScale
 import com.nagpurpulse.ui.components.rememberHaptic
+import android.graphics.Bitmap
+import androidx.compose.runtime.mutableLongStateOf
+import com.nagpurpulse.data.model.isVideo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -170,6 +173,15 @@ fun CreateThreadScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var existingImageUrl by remember { mutableStateOf<String?>(null) }
     var removedExistingImage by remember { mutableStateOf(false) }
+    // Media framing (photos and videos)
+    var selectedIsVideo by remember { mutableStateOf(false) }
+    var selectedDurationMs by remember { mutableLongStateOf(0L) }
+    var mediaFrame by remember { mutableStateOf(MediaFrame()) }
+    var coverTimeMs by remember { mutableLongStateOf(0L) }
+    var framedPreview by remember { mutableStateOf<Bitmap?>(null) }
+    var showFrameEditor by remember { mutableStateOf(false) }
+    var existingIsVideo by remember { mutableStateOf(false) }
+    var existingDurationMs by remember { mutableStateOf<Long?>(null) }
 
     // Edit-mode baseline, used to detect unsaved changes
     var baselineTitle by remember { mutableStateOf("") }
@@ -198,6 +210,8 @@ fun CreateThreadScreen(
             baselineTitle = post.title
             baselineBody = post.body ?: ""
             existingImageUrl = post.imageUrl
+            existingIsVideo = post.isVideo
+            existingDurationMs = post.videoDurationMs?.toLong()
             // Keep the post's current settings instead of silently resetting them
             if (post.category.isNotBlank()) selectedCategory = post.category
             post.areaTag?.takeIf { it.isNotBlank() }?.let { selectedArea = it }
@@ -304,31 +318,80 @@ fun CreateThreadScreen(
         buildAreaOptions(userLat, userLng, currentArea, selectedArea = null, limit = null)
     }
 
-    // ── Photos (permission is asked only when the user wants recent photos) ─
+    // ── Photos & videos (permission is asked only when the user wants recent media) ─
     var hasMediaPermission by remember { mutableStateOf(hasPermission(context, mediaPermission())) }
-    var recentImages by remember { mutableStateOf<List<Uri>?>(null) }
+    var hasVideoPermission by remember { mutableStateOf(hasPermission(context, videoPermission())) }
+    var recentMedia by remember { mutableStateOf<List<RecentMedia>?>(null) }
 
     val mediaPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> hasMediaPermission = granted }
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        hasMediaPermission = hasPermission(context, mediaPermission())
+        hasVideoPermission = hasPermission(context, videoPermission())
+    }
 
-    LaunchedEffect(hasMediaPermission) {
-        recentImages = if (hasMediaPermission) loadRecentImages(context) else emptyList()
+    LaunchedEffect(hasMediaPermission, hasVideoPermission) {
+        recentMedia = if (hasMediaPermission)
+            MediaFrameUtils.loadRecentMedia(context, includeVideos = hasVideoPermission)
+        else emptyList()
+    }
+
+    fun clearMedia() {
+        selectedImageUri = null
+        selectedIsVideo = false
+        selectedDurationMs = 0L
+        mediaFrame = MediaFrame()
+        coverTimeMs = 0L
+        framedPreview = null
+        showFrameEditor = false
+    }
+
+    /** Attaches a photo or video, checks video limits, then opens the frame editor. */
+    fun attachMedia(uri: Uri) {
+        scope.launch {
+            val video = withContext(Dispatchers.IO) { MediaFrameUtils.isVideo(context, uri) }
+            var duration = 0L
+            if (video) {
+                val size = withContext(Dispatchers.IO) { MediaFrameUtils.sizeOf(context, uri) }
+                duration = withContext(Dispatchers.IO) { MediaFrameUtils.videoDurationMs(context, uri) }
+                val problem = when {
+                    duration <= 0L -> "Couldn't read that video. Try another one."
+                    duration > MediaFrameUtils.MAX_VIDEO_MS + 500 -> "Videos can be up to 60 seconds."
+                    size > MediaFrameUtils.MAX_VIDEO_BYTES -> "That video is over 30 MB. Trim it and try again."
+                    else -> null
+                }
+                if (problem != null) {
+                    haptic.error()
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(problem)
+                    return@launch
+                }
+            }
+            selectedImageUri = uri
+            selectedIsVideo = video
+            selectedDurationMs = duration
+            mediaFrame = MediaFrame()
+            coverTimeMs = 0L
+            framedPreview = null
+            haptic.tap()
+            if (video) {
+                // A first cover so the preview is never blank, even if the editor is dismissed.
+                framedPreview = withContext(Dispatchers.IO) { MediaFrameUtils.videoFrame(context, uri, 0L, 1080) }
+            }
+            showFrameEditor = true
+        }
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        // Cancelling the picker must not clear a photo that is already attached.
-        if (uri != null) {
-            selectedImageUri = uri
-            haptic.tap()
-        }
+        // Cancelling the picker must not clear media that is already attached.
+        if (uri != null) attachMedia(uri)
     }
 
     fun openPhotoPicker() {
         photoPickerLauncher.launch(
-            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
         )
     }
 
@@ -447,6 +510,11 @@ fun CreateThreadScreen(
             areaTag = selectedArea,
             isAnonymous = isAnonymous,
             imageUri = selectedImageUri,
+            isVideo = selectedIsVideo,
+            mediaFrame = mediaFrame,
+            coverTimeMs = coverTimeMs,
+            videoDurationMs = selectedDurationMs,
+            clearVideo = existingIsVideo && (removedExistingImage || selectedImageUri != null),
             postType = if (isAlertMode) "alert" else postType,
             alertSeverity = if (isAlertMode) alertSeverity else null,
             editingPostId = editingPostId,
@@ -602,7 +670,7 @@ fun CreateThreadScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        ToolButton(Icons.Filled.Image, "Add photo", hasImage) { openPhotoPicker() }
+                        ToolButton(Icons.Filled.Image, "Photo / video", hasImage) { openPhotoPicker() }
                         if (!isAlertMode) {
                             ToolButton(
                                 Icons.Filled.Tag, "Choose topic",
@@ -938,12 +1006,19 @@ fun CreateThreadScreen(
                             ) {
                                 Column {
                                     Spacer(Modifier.height(14.dp))
-                                    AttachedImagePreview(
+                                    AttachedMediaPreview(
                                         model = selectedImageUri ?: existingImageUrl ?: "",
+                                        framedPreview = framedPreview,
+                                        frame = mediaFrame,
+                                        isVideo = if (selectedImageUri != null) selectedIsVideo else existingIsVideo,
+                                        durationMs = if (selectedImageUri != null) selectedDurationMs
+                                        else (existingDurationMs ?: 0L),
+                                        busyLabel = if (uiState.isLoading) uiState.statusLabel else null,
+                                        onEditFrame = if (selectedImageUri != null) ({ showFrameEditor = true }) else null,
                                         onRemove = {
                                             haptic.tap()
                                             if (existingImageUrl != null) removedExistingImage = true
-                                            selectedImageUri = null
+                                            clearMedia()
                                             existingImageUrl = null
                                         },
                                         onReplace = { openPhotoPicker() }
@@ -1013,15 +1088,19 @@ fun CreateThreadScreen(
                     // ── Recent photos ──────────────────────────────────────
                     RecentPhotosSection(
                         hasPermission = hasMediaPermission,
-                        images = recentImages,
+                        images = recentMedia,
                         selectedUri = selectedImageUri,
                         onRequestPermission = {
-                            mediaPermissionLauncher.launch(mediaPermission())
+                            mediaPermissionLauncher.launch(
+                                arrayOf(mediaPermission(), videoPermission()).distinct().toTypedArray()
+                            )
                         },
                         onBrowse = { openPhotoPicker() },
                         onToggle = { uri ->
-                            haptic.tap()
-                            selectedImageUri = if (selectedImageUri == uri) null else uri
+                            if (selectedImageUri == uri) {
+                                haptic.tap()
+                                clearMedia()
+                            } else attachMedia(uri)
                         }
                     )
 
@@ -1154,6 +1233,25 @@ fun CreateThreadScreen(
         )
     }
 
+    // ── Frame editor (what shows on the post) ──────────────────────────────
+    val editorUri = selectedImageUri
+    if (showFrameEditor && editorUri != null) {
+        MediaFrameEditor(
+            uri = editorUri,
+            isVideo = selectedIsVideo,
+            durationMs = selectedDurationMs,
+            initialFrame = mediaFrame,
+            initialCoverMs = coverTimeMs,
+            onDismiss = { showFrameEditor = false },
+            onApply = { frame, cover, preview ->
+                mediaFrame = frame
+                coverTimeMs = cover
+                framedPreview = preview
+                showFrameEditor = false
+            }
+        )
+    }
+
     // ── Leave / discard confirmation ───────────────────────────────────────
     if (showDiscardDialog) {
         if (isEditing) {
@@ -1224,6 +1322,13 @@ private fun hasLocationPermission(context: Context): Boolean =
 private fun mediaPermission(): String =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
         Manifest.permission.READ_MEDIA_IMAGES
+    else
+        Manifest.permission.READ_EXTERNAL_STORAGE
+
+/** Videos need their own permission on Android 13+; older versions share READ_EXTERNAL_STORAGE. */
+private fun videoPermission(): String =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        Manifest.permission.READ_MEDIA_VIDEO
     else
         Manifest.permission.READ_EXTERNAL_STORAGE
 
