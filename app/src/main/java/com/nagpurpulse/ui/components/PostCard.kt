@@ -9,6 +9,8 @@
 
 package com.nagpurpulse.ui.components
 
+import com.nagpurpulse.data.model.isVideo
+import androidx.compose.foundation.layout.fillMaxSize
 import android.app.Activity
 import android.content.Intent
 import android.widget.Toast
@@ -156,24 +158,10 @@ fun PostCard(
 
     val shareUrl = remember(post.id) { PostLinks.shareUrl(post.id) }
 
+    var showShareSheet by remember { mutableStateOf(false) }
+
     fun sharePost() {
-        val text = buildString {
-            append(post.title)
-            sharePreview(post.body)?.let { append("\n\n").append(it) }
-            shareUrl?.let { append("\n\n").append(it) }
-            append("\n\n").append(shareFooter)
-        }
-        val send = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, text)
-        }
-        val chooser = Intent.createChooser(send, null)
-        if (context !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            context.startActivity(chooser)
-        } catch (_: Exception) {
-            // No app can handle the share intent; nothing sensible to show.
-        }
+        showShareSheet = true
     }
 
     var menuExpanded by remember { mutableStateOf(false) }
@@ -469,17 +457,22 @@ fun PostCard(
                         modifier = Modifier.weight(1f)
                     )
                     if (hasImage) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(post.imageUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
+                        Box(
                             modifier = Modifier
                                 .size(thumbnailSize)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(post.imageUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            if (post.isVideo) VideoBadgeOverlay(post.videoDurationMs, compact = true)
+                        }
                     }
                 }
                 if (!post.body.isNullOrBlank()) {
@@ -519,13 +512,19 @@ fun PostCard(
                 }
                 if (hasImage) {
                     Spacer(Modifier.height(10.dp))
-                    AdaptivePostImage(
-                        imageUrl = post.imageUrl!!,
-                        modifier = Modifier.fillMaxWidth(),
-                        minRatio = 0.75f,   // tallest shown uncropped: 3:4
-                        maxRatio = 1.78f,   // widest shown uncropped: 16:9
-                        cornerRadius = 0.dp // the card already clips the corners
-                    )
+                    Box {
+                        AdaptivePostImage(
+                            imageUrl = post.imageUrl!!,
+                            modifier = Modifier.fillMaxWidth(),
+                            minRatio = 0.75f,   // tallest shown uncropped: 3:4
+                            maxRatio = 1.78f,   // widest shown uncropped: 16:9
+                            cornerRadius = 0.dp // the card already clips the corners
+                        )
+                        if (post.isVideo) {
+                            // Sits on top of the image box, which sizes the parent Box.
+                            Box(Modifier.matchParentSize()) { VideoBadgeOverlay(post.videoDurationMs) }
+                        }
+                    }
                 }
             }
 
@@ -623,6 +622,10 @@ fun PostCard(
                 )
             }
         }
+    }
+
+    if (showShareSheet) {
+        PostShareSheet(post = post, onDismiss = { showShareSheet = false })
     }
 
     if (showDeleteDialog && onDelete != null) {
